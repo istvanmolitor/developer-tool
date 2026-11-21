@@ -19,6 +19,9 @@ services:
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
         volumes:
             - '.:/var/www/html'
+            - '${DEVELOPER_TOOL_PROJECTS_HOST_PATH:-../projects}:/projects'
+            - '${HOME}/.claude:/home/sail/.claude'
+            - '${HOME}/.claude.json:/home/sail/.claude.json'
         networks:
             - sail
         depends_on:
