@@ -13,8 +13,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('playground', [PlaygroundController::class, 'index'])->name('playground');
     Route::post('playground', [PlaygroundController::class, 'store'])->name('playground.run');
 
-    Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::resource('projects', ProjectController::class);
     Route::post('projects/{project}/runs', [PromptRunController::class, 'store'])->name('projects.runs.store');
 });
 

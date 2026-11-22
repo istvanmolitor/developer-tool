@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm, usePoll } from '@inertiajs/vue3';
-import {
-    CheckCircle2,
-    Clock,
-    Loader2,
-    Send,
-    XCircle,
-} from '@lucide/vue';
+import { CheckCircle2, Clock, Loader2, Send, XCircle } from '@lucide/vue';
 import { computed, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -60,16 +54,24 @@ function submit(): void {
 }
 
 const hasActiveRun = computed(() =>
-    props.runs.some((run) => run.status === 'pending' || run.status === 'running'),
+    props.runs.some(
+        (run) => run.status === 'pending' || run.status === 'running',
+    ),
 );
 
 const { start, stop } = usePoll(4000, { only: ['runs'] }, { autoStart: false });
 
-watch(hasActiveRun, (active) => (active ? start() : stop()), { immediate: true });
+watch(hasActiveRun, (active) => (active ? start() : stop()), {
+    immediate: true,
+});
 
 const statusMeta: Record<
     PromptRunStatus,
-    { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: unknown }
+    {
+        label: string;
+        variant: 'default' | 'secondary' | 'destructive' | 'outline';
+        icon: unknown;
+    }
 > = {
     pending: { label: 'Pending', variant: 'secondary', icon: Clock },
     running: { label: 'Running', variant: 'default', icon: Loader2 },
@@ -104,14 +106,22 @@ function formatDate(value: string): string {
                                 <SelectValue placeholder="Choose a project…" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="name in projects" :key="name" :value="name">
+                                <SelectItem
+                                    v-for="name in projects"
+                                    :key="name"
+                                    :value="name"
+                                >
                                     {{ name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
                         <InputError :message="form.errors.project" />
-                        <p v-if="projects.length === 0" class="text-sm text-muted-foreground">
-                            No projects found. Add a directory to the projects folder first.
+                        <p
+                            v-if="projects.length === 0"
+                            class="text-sm text-muted-foreground"
+                        >
+                            No projects found. Add a directory to the projects
+                            folder first.
                         </p>
                     </div>
 
@@ -122,16 +132,20 @@ function formatDate(value: string): string {
                             v-model="form.prompt"
                             rows="5"
                             placeholder="Describe what claude should change in this project…"
-                            class="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                            class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
                         />
                         <InputError :message="form.errors.prompt" />
                     </div>
 
                     <div class="flex items-center justify-between">
                         <p class="text-xs text-muted-foreground">
-                            Runs <code>claude -p</code> inside the selected project directory.
+                            Runs <code>claude -p</code> inside the selected
+                            project directory.
                         </p>
-                        <Button type="submit" :disabled="form.processing || projects.length === 0">
+                        <Button
+                            type="submit"
+                            :disabled="form.processing || projects.length === 0"
+                        >
                             <Send class="size-4" />
                             {{ form.processing ? 'Queuing…' : 'Run prompt' }}
                         </Button>
@@ -141,9 +155,14 @@ function formatDate(value: string): string {
         </Card>
 
         <div class="flex flex-col gap-3">
-            <h2 class="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <h2
+                class="flex items-center gap-2 text-sm font-medium text-muted-foreground"
+            >
                 Recent runs
-                <span v-if="hasActiveRun" class="inline-flex items-center gap-1">
+                <span
+                    v-if="hasActiveRun"
+                    class="inline-flex items-center gap-1"
+                >
                     <Loader2 class="size-3 animate-spin" /> live
                 </span>
             </h2>
@@ -157,34 +176,54 @@ function formatDate(value: string): string {
 
             <Card v-for="run in runs" :key="run.id">
                 <CardHeader>
-                    <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div
+                        class="flex flex-wrap items-start justify-between gap-2"
+                    >
                         <div class="min-w-0 flex-1">
-                            <Badge variant="outline" class="mb-1">{{ run.project }}</Badge>
-                            <p class="whitespace-pre-wrap break-words text-sm font-medium">{{ run.prompt }}</p>
+                            <Badge variant="outline" class="mb-1">{{
+                                run.project
+                            }}</Badge>
+                            <p
+                                class="text-sm font-medium break-words whitespace-pre-wrap"
+                            >
+                                {{ run.prompt }}
+                            </p>
                         </div>
-                        <Badge :variant="statusMeta[run.status].variant" class="gap-1">
+                        <Badge
+                            :variant="statusMeta[run.status].variant"
+                            class="gap-1"
+                        >
                             <component
                                 :is="statusMeta[run.status].icon"
                                 class="size-3"
-                                :class="run.status === 'running' ? 'animate-spin' : ''"
+                                :class="
+                                    run.status === 'running'
+                                        ? 'animate-spin'
+                                        : ''
+                                "
                             />
                             {{ statusMeta[run.status].label }}
                         </Badge>
                     </div>
                     <p class="text-xs text-muted-foreground">
                         {{ formatDate(run.created_at) }}
-                        <span v-if="run.exit_code !== null"> · exit {{ run.exit_code }}</span>
+                        <span v-if="run.exit_code !== null">
+                            · exit {{ run.exit_code }}</span
+                        >
                     </p>
                 </CardHeader>
-                <CardContent v-if="run.output || run.error_output" class="flex flex-col gap-2">
+                <CardContent
+                    v-if="run.output || run.error_output"
+                    class="flex flex-col gap-2"
+                >
                     <pre
                         v-if="run.output"
                         class="max-h-80 overflow-auto rounded-md bg-muted p-3 text-xs break-words whitespace-pre-wrap"
-                    >{{ run.output }}</pre>
+                        >{{ run.output }}</pre>
                     <pre
                         v-if="run.error_output"
                         class="max-h-80 overflow-auto rounded-md bg-destructive/10 p-3 text-xs break-words whitespace-pre-wrap text-destructive"
-                    >{{ run.error_output }}</pre>
+                        >{{ run.error_output }}</pre>
                 </CardContent>
             </Card>
         </div>

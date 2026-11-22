@@ -2,6 +2,7 @@
 
 use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
+use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
@@ -11,6 +12,8 @@ beforeEach(function () {
     mkdir($this->projectsPath.'/alpha', 0755, true);
 
     config(['developer-tool.projects_path' => $this->projectsPath]);
+
+    Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
 });
 
 afterEach(function () {

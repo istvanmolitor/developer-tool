@@ -3,21 +3,20 @@
 namespace App\Services;
 
 use App\Enums\PromptRunStatus;
+use App\Models\Project;
 use App\Models\PromptRun;
 use Illuminate\Support\Facades\Process;
 use Throwable;
 
 class ClaudePromptRunner
 {
-    public function __construct(private ProjectService $projects) {}
-
     /**
      * Run the prompt of the given PromptRun through `claude -p` inside the
      * project's directory, streaming the result back onto the record.
      */
     public function run(PromptRun $run): PromptRun
     {
-        $project = $this->projects->find($run->project);
+        $project = Project::query()->where('name', $run->project)->first();
 
         if ($project === null) {
             return $this->fail($run, "Project [{$run->project}] no longer exists.");

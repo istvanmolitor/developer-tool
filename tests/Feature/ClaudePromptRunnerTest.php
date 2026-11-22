@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PromptRunStatus;
+use App\Models\Project;
 use App\Models\PromptRun;
 use App\Services\ClaudePromptRunner;
 use Illuminate\Support\Facades\Process;
@@ -14,6 +15,8 @@ beforeEach(function () {
         'developer-tool.claude.binary' => 'claude',
         'developer-tool.claude.skip_permissions' => true,
     ]);
+
+    Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
 });
 
 afterEach(function () {

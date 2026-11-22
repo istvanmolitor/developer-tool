@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateProjectRequest;
+use App\Models\Project;
 use App\Models\PromptRun;
 use App\Services\ProjectService;
-use App\Support\Project;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ProjectController extends Controller
 {
@@ -16,39 +17,77 @@ class ProjectController extends Controller
 
     public function index(): Response
     {
-        $projects = $this->projects->all();
-
-        $stats = PromptRun::query()
-            ->selectRaw('project, count(*) as runs_count, max(created_at) as last_run_at')
-            ->groupBy('project')
-            ->get()
-            ->keyBy('project');
+        $projects = Project::query()
+            ->withCount('promptRuns as runs_count')
+            ->withMax('promptRuns as last_run_at', 'created_at')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('Projects/Index', [
-            'projects' => $projects->map(fn (Project $project): array => [
-                ...$project->toArray(),
-                'runs_count' => (int) ($stats[$project->name]->runs_count ?? 0),
-                'last_run_at' => $stats[$project->name]->last_run_at ?? null,
-            ])->all(),
+            'projects' => $projects,
             'projects_path' => $this->projects->projectsPath(),
         ]);
     }
 
-    public function show(Request $request, string $project): Response
+    public function create(): Response
     {
-        $found = $this->projects->find($project);
+        return Inertia::render('Projects/Create', [
+            'projects_path' => $this->projects->projectsPath(),
+        ]);
+    }
 
-        if ($found === null) {
-            throw new NotFoundHttpException("Project [{$project}] not found.");
-        }
+    public function store(StoreProjectRequest $request): RedirectResponse
+    {
+        Project::create($request->validated());
 
+        return redirect()
+            ->route('projects.index')
+            ->with('status', 'Project created.');
+    }
+
+    public function show(Project $project): Response
+    {
         return Inertia::render('Projects/Show', [
-            'project' => $found->toArray(),
-            'runs' => PromptRun::query()
-                ->where('project', $found->name)
+            'project' => $project,
+            'runs' => $project->promptRuns()
                 ->latest()
                 ->limit(50)
                 ->get(),
         ]);
+    }
+
+    public function edit(Project $project): Response
+    {
+        return Inertia::render('Projects/Edit', [
+            'project' => $project,
+        ]);
+    }
+
+    public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        // Keep prompt-run history attached when a project is renamed, since
+        // runs are linked by the project name rather than its id.
+        if ($validated['name'] !== $project->name) {
+            PromptRun::query()
+                ->where('project', $project->name)
+                ->update(['project' => $validated['name']]);
+        }
+
+        $project->update($validated);
+
+        return redirect()
+            ->route('projects.show', $project)
+            ->with('status', 'Project updated.');
+    }
+
+    public function destroy(Project $project): RedirectResponse
+    {
+        $project->delete();
+
+        return redirect()
+            ->route('projects.index')
+            ->with('status', 'Project removed.');
     }
 }

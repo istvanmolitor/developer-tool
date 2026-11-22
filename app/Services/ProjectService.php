@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Support\Project;
-use Carbon\CarbonImmutable;
+use App\Models\Project;
 use Illuminate\Support\Collection;
 
 class ProjectService
 {
     /**
-     * Absolute path to the directory that contains the projects.
+     * Absolute path to the directory that contains the project directories
+     * this tool can import from.
      */
     public function projectsPath(): string
     {
@@ -17,11 +17,42 @@ class ProjectService
     }
 
     /**
-     * List every project (immediate subdirectory) in the projects directory.
+     * Every registered project, newest activity first.
      *
      * @return Collection<int, Project>
      */
     public function all(): Collection
+    {
+        return Project::query()->orderBy('name')->get();
+    }
+
+    /**
+     * Resolve a single registered project by its (unique) name.
+     */
+    public function find(string $name): ?Project
+    {
+        if (! $this->isValidName($name)) {
+            return null;
+        }
+
+        return Project::query()->where('name', $name)->first();
+    }
+
+    /**
+     * Absolute filesystem path for a directory name inside the projects dir.
+     */
+    public function pathFor(string $name): string
+    {
+        return $this->projectsPath().'/'.$name;
+    }
+
+    /**
+     * Immediate subdirectories of the projects directory. Used to import
+     * existing project directories into the database.
+     *
+     * @return Collection<int, string>
+     */
+    public function scanDirectories(): Collection
     {
         $base = $this->projectsPath();
 
@@ -32,47 +63,31 @@ class ProjectService
         return collect(scandir($base) ?: [])
             ->reject(fn (string $entry): bool => in_array($entry, ['.', '..'], true))
             ->filter(fn (string $entry): bool => is_dir($base.'/'.$entry))
-            ->map(fn (string $entry): Project => $this->makeProject($entry))
-            ->sortByDesc(fn (Project $project): int => $project->lastModifiedAt?->getTimestamp() ?? 0)
             ->values();
     }
 
     /**
-     * Resolve a single project by its directory name, or null when it does
-     * not exist. Rejects any name that would escape the projects directory.
+     * Import any project directory that is not yet registered. Returns the
+     * names that were created.
+     *
+     * @return list<string>
      */
-    public function find(string $name): ?Project
+    public function importFromDisk(): array
     {
-        if (! $this->isValidName($name)) {
-            return null;
-        }
+        $existing = Project::query()->pluck('name')->all();
 
-        if (! is_dir($this->projectsPath().'/'.$name)) {
-            return null;
-        }
+        return $this->scanDirectories()
+            ->reject(fn (string $name): bool => in_array($name, $existing, true))
+            ->map(function (string $name): string {
+                Project::create([
+                    'name' => $name,
+                    'path' => $this->pathFor($name),
+                ]);
 
-        return $this->makeProject($name);
-    }
-
-    /**
-     * Absolute filesystem path for a project directory name.
-     */
-    public function pathFor(string $name): string
-    {
-        return $this->projectsPath().'/'.$name;
-    }
-
-    private function makeProject(string $name): Project
-    {
-        $path = $this->pathFor($name);
-        $modified = @filemtime($path);
-
-        return new Project(
-            name: $name,
-            path: $path,
-            lastModifiedAt: $modified !== false ? CarbonImmutable::createFromTimestamp($modified) : null,
-            isGitRepository: is_dir($path.'/.git'),
-        );
+                return $name;
+            })
+            ->values()
+            ->all();
     }
 
     private function isValidName(string $name): bool

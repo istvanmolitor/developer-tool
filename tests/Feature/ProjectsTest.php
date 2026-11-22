@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -10,6 +11,9 @@ beforeEach(function () {
     mkdir($this->projectsPath.'/beta', 0755, true);
 
     config(['developer-tool.projects_path' => $this->projectsPath]);
+
+    $this->alpha = Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
+    $this->beta = Project::factory()->create(['name' => 'beta', 'path' => $this->projectsPath.'/beta']);
 });
 
 afterEach(function () {
@@ -20,7 +24,7 @@ test('guests are redirected from the projects index', function () {
     $this->get(route('projects.index'))->assertRedirect(route('login'));
 });
 
-test('the projects index lists every project directory', function () {
+test('the projects index lists every registered project', function () {
     PromptRun::factory()->create(['project' => 'alpha']);
 
     $this->actingAs(User::factory()->create())
@@ -38,7 +42,7 @@ test('a project can be viewed with its run history', function () {
     PromptRun::factory()->create(['project' => 'beta']);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('projects.show', 'alpha'))
+        ->get(route('projects.show', $this->alpha))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Projects/Show')
@@ -53,8 +57,71 @@ test('viewing an unknown project returns 404', function () {
         ->assertNotFound();
 });
 
-test('a project name cannot escape the projects directory', function () {
+test('a project can be created', function () {
     $this->actingAs(User::factory()->create())
-        ->get(route('projects.show', 'alpha/../beta'))
-        ->assertNotFound();
+        ->post(route('projects.store'), [
+            'name' => 'gamma',
+            'path' => $this->projectsPath.'/gamma',
+            'description' => 'A fresh project.',
+        ])
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseHas('projects', [
+        'name' => 'gamma',
+        'path' => $this->projectsPath.'/gamma',
+        'description' => 'A fresh project.',
+    ]);
+});
+
+test('a project name must be unique', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'name' => 'alpha',
+            'path' => '/anywhere',
+        ])
+        ->assertSessionHasErrors('name');
+});
+
+test('a project name cannot contain a slash', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'name' => 'nested/name',
+            'path' => '/anywhere',
+        ])
+        ->assertSessionHasErrors('name');
+});
+
+test('a project can be updated', function () {
+    $this->actingAs(User::factory()->create())
+        ->put(route('projects.update', $this->alpha), [
+            'name' => 'alpha',
+            'path' => $this->projectsPath.'/alpha',
+            'description' => 'Updated description.',
+        ])
+        ->assertRedirect(route('projects.show', $this->alpha));
+
+    expect($this->alpha->fresh()->description)->toBe('Updated description.');
+});
+
+test('renaming a project reattaches its run history', function () {
+    PromptRun::factory()->count(2)->create(['project' => 'alpha']);
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('projects.update', $this->alpha), [
+            'name' => 'alpha-renamed',
+            'path' => $this->alpha->path,
+        ])
+        ->assertRedirect();
+
+    expect(PromptRun::where('project', 'alpha-renamed')->count())->toBe(2)
+        ->and(PromptRun::where('project', 'alpha')->count())->toBe(0);
+});
+
+test('a project can be deleted without touching the files on disk', function () {
+    $this->actingAs(User::factory()->create())
+        ->delete(route('projects.destroy', $this->alpha))
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseMissing('projects', ['id' => $this->alpha->id]);
+    expect(is_dir($this->projectsPath.'/alpha'))->toBeTrue();
 });
