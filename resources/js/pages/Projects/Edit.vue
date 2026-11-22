@@ -18,8 +18,8 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Projects', href: projects.index().url },
-            { title: 'Edit', href: '' },
+            { title: 'Projektek', href: projects.index().url },
+            { title: 'Szerkesztés', href: '' },
         ],
     },
 });
@@ -36,17 +36,17 @@ function submit(): void {
 </script>
 
 <template>
-    <Head :title="`Edit ${project.name}`" />
+    <Head :title="`${project.name} szerkesztése`" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            :title="`Edit ${project.name}`"
-            description="Update this project's details."
+            :title="`${project.name} szerkesztése`"
+            description="A projekt adatainak módosítása."
         />
 
         <ProjectForm
             :form="form"
-            submit-label="Save changes"
+            submit-label="Változtatások mentése"
             :cancel-href="projects.show(project.name).url"
             @submit="submit"
         />

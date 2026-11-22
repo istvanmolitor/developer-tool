@@ -31,7 +31,7 @@ class RunClaudePrompt implements ShouldQueue
     {
         $this->promptRun->forceFill([
             'status' => PromptRunStatus::Failed,
-            'error_output' => $exception?->getMessage() ?? 'The job failed unexpectedly.',
+            'error_output' => $exception?->getMessage() ?? 'A feladat váratlanul meghiúsult.',
             'finished_at' => now(),
         ])->save();
     }

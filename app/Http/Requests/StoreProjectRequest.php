@@ -36,7 +36,7 @@ class StoreProjectRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.regex' => 'The name cannot contain slashes.',
+            'name.regex' => 'A név nem tartalmazhat perjelet.',
         ];
     }
 }

@@ -19,7 +19,7 @@ class ClaudePromptRunner
         $project = Project::query()->where('name', $run->project)->first();
 
         if ($project === null) {
-            return $this->fail($run, "Project [{$run->project}] no longer exists.");
+            return $this->fail($run, "A(z) [{$run->project}] projekt már nem létezik.");
         }
 
         $run->forceFill([

@@ -21,6 +21,6 @@ class PromptRunController extends Controller
 
         RunClaudePrompt::dispatch($run);
 
-        return back()->with('status', 'Prompt queued.');
+        return back()->with('status', 'Prompt sorba állítva.');
     }
 }

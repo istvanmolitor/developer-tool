@@ -35,18 +35,18 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projects', href: projectRoutes.index().url }],
+        breadcrumbs: [{ title: 'Projektek', href: projectRoutes.index().url }],
     },
 });
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString() : '—';
+    return value ? new Date(value).toLocaleString('hu-HU') : '—';
 }
 
 function destroy(project: Project): void {
     if (
         !window.confirm(
-            `Remove "${project.name}" from the list? The files on disk are kept.`,
+            `Eltávolítod a(z) „${project.name}” projektet a listáról? A lemezen lévő fájlok megmaradnak.`,
         )
     ) {
         return;
@@ -59,18 +59,18 @@ function destroy(project: Project): void {
 </script>
 
 <template>
-    <Head title="Projects" />
+    <Head title="Projektek" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading
-                title="Projects"
-                :description="`Run claude prompts against your registered projects (import root: ${projects_path})`"
+                title="Projektek"
+                :description="`Claude promptok futtatása a regisztrált projektjeiden (import gyökér: ${projects_path})`"
             />
             <Button as-child>
                 <Link :href="projectRoutes.create().url">
                     <Plus class="size-4" />
-                    New project
+                    Új projekt
                 </Link>
             </Button>
         </div>
@@ -80,21 +80,23 @@ function destroy(project: Project): void {
             class="rounded-xl border border-dashed p-10 text-center"
         >
             <Folder class="mx-auto mb-3 size-8 text-muted-foreground" />
-            <p class="font-medium">No projects yet</p>
+            <p class="font-medium">Még nincsenek projektek</p>
             <p class="mt-1 text-sm text-muted-foreground">
-                Add one with
+                Adj hozzá egyet az
                 <Link
                     :href="projectRoutes.create().url"
                     class="font-medium underline"
-                    >New project</Link
-                >, or import the directories under
+                    >Új projekt</Link
+                >
+                gombbal, vagy importáld a(z)
                 <code class="rounded bg-muted px-1 py-0.5">{{
                     projects_path
                 }}</code>
-                with
+                alatti könyvtárakat a
                 <code class="rounded bg-muted px-1 py-0.5"
                     >php artisan projects:import</code
-                >.
+                >
+                paranccsal.
             </p>
         </div>
 
@@ -144,8 +146,7 @@ function destroy(project: Project): void {
                 >
                     <Badge variant="secondary" class="gap-1">
                         <Terminal class="size-3" />
-                        {{ project.runs_count }}
-                        {{ project.runs_count === 1 ? 'run' : 'runs' }}
+                        {{ project.runs_count }} futtatás
                     </Badge>
                     <Badge v-if="project.is_git_repository" variant="outline"
                         >git</Badge
@@ -156,10 +157,10 @@ function destroy(project: Project): void {
                         class="gap-1"
                     >
                         <TriangleAlert class="size-3" />
-                        missing
+                        hiányzik
                     </Badge>
                     <span class="ml-auto"
-                        >Updated
+                        >Frissítve
                         {{ formatDate(project.last_modified_at) }}</span
                     >
                     <div
@@ -168,7 +169,7 @@ function destroy(project: Project): void {
                         <Button variant="ghost" size="sm" as-child>
                             <Link :href="projectRoutes.edit(project.name).url">
                                 <Pencil class="size-3.5" />
-                                Edit
+                                Szerkesztés
                             </Link>
                         </Button>
                         <Button
@@ -178,7 +179,7 @@ function destroy(project: Project): void {
                             @click="destroy(project)"
                         >
                             <Trash2 class="size-3.5" />
-                            Delete
+                            Törlés
                         </Button>
                     </div>
                 </CardContent>

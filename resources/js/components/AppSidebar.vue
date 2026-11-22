@@ -20,12 +20,12 @@ import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Vezérlőpult',
         href: dashboard(),
         icon: LayoutGrid,
     },
     {
-        title: 'Projects',
+        title: 'Projektek',
         href: projects.index(),
         icon: FolderKanban,
     },
@@ -33,12 +33,12 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
+        title: 'Tároló',
         href: 'https://github.com/laravel/vue-starter-kit',
         icon: FolderGit2,
     },
     {
-        title: 'Documentation',
+        title: 'Dokumentáció',
         href: 'https://laravel.com/docs/starter-kits#vue',
         icon: BookOpen,
     },

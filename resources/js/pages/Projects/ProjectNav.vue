@@ -12,13 +12,13 @@ const page = usePage();
 
 const items = computed(() => [
     {
-        title: 'Overview',
+        title: 'Áttekintés',
         icon: LayoutDashboard,
         href: projects.show(props.name).url,
         component: 'Projects/Show',
     },
     {
-        title: 'Prompts',
+        title: 'Promptok',
         icon: Terminal,
         href: projects.prompts(props.name).url,
         component: 'Projects/Prompts',

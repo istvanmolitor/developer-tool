@@ -42,7 +42,7 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.index')
-            ->with('status', 'Project created.');
+            ->with('status', 'Projekt létrehozva.');
     }
 
     public function show(Project $project): Response
@@ -88,7 +88,7 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.show', $project)
-            ->with('status', 'Project updated.');
+            ->with('status', 'Projekt frissítve.');
     }
 
     public function destroy(Project $project): RedirectResponse
@@ -97,6 +97,6 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.index')
-            ->with('status', 'Project removed.');
+            ->with('status', 'Projekt eltávolítva.');
     }
 }

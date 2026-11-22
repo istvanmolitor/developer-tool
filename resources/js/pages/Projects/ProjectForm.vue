@@ -27,7 +27,7 @@ const emit = defineEmits<{ submit: [] }>();
         @submit.prevent="emit('submit')"
     >
         <div class="flex flex-col gap-2">
-            <Label for="name">Name</Label>
+            <Label for="name">Név</Label>
             <Input
                 id="name"
                 v-model="form.name"
@@ -36,13 +36,13 @@ const emit = defineEmits<{ submit: [] }>();
                 autocomplete="off"
             />
             <p class="text-xs text-muted-foreground">
-                Shown in the sidebar and used in the project URL.
+                Megjelenik az oldalsávban, és a projekt URL-jében szerepel.
             </p>
             <InputError :message="form.errors.name" />
         </div>
 
         <div class="flex flex-col gap-2">
-            <Label for="path">Path</Label>
+            <Label for="path">Útvonal</Label>
             <Input
                 id="path"
                 v-model="form.path"
@@ -58,14 +58,14 @@ const emit = defineEmits<{ submit: [] }>();
 
         <div class="flex flex-col gap-2">
             <Label for="description"
-                >Description
-                <span class="text-muted-foreground">(optional)</span></Label
+                >Leírás
+                <span class="text-muted-foreground">(opcionális)</span></Label
             >
             <textarea
                 id="description"
                 v-model="form.description"
                 rows="3"
-                placeholder="What is this project about?"
+                placeholder="Miről szól ez a projekt?"
                 class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
             />
             <InputError :message="form.errors.description" />
@@ -76,7 +76,7 @@ const emit = defineEmits<{ submit: [] }>();
                 submitLabel
             }}</Button>
             <Button type="button" variant="ghost" as-child>
-                <a :href="cancelHref">Cancel</a>
+                <a :href="cancelHref">Mégse</a>
             </Button>
         </div>
     </form>

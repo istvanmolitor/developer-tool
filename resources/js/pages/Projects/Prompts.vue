@@ -51,7 +51,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projects', href: projects.index().url }],
+        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
     },
 });
 
@@ -60,7 +60,7 @@ const form = useForm({ prompt: '' });
 function destroy(): void {
     if (
         !window.confirm(
-            `Remove "${props.project.name}" from the list? The files on disk are kept.`,
+            `Eltávolítod a(z) „${props.project.name}” projektet a listáról? A lemezen lévő fájlok megmaradnak.`,
         )
     ) {
         return;
@@ -96,19 +96,19 @@ const statusMeta: Record<
         icon: unknown;
     }
 > = {
-    pending: { label: 'Pending', variant: 'secondary', icon: Clock },
-    running: { label: 'Running', variant: 'default', icon: Loader2 },
-    completed: { label: 'Completed', variant: 'default', icon: CheckCircle2 },
-    failed: { label: 'Failed', variant: 'destructive', icon: XCircle },
+    pending: { label: 'Függőben', variant: 'secondary', icon: Clock },
+    running: { label: 'Fut', variant: 'default', icon: Loader2 },
+    completed: { label: 'Kész', variant: 'default', icon: CheckCircle2 },
+    failed: { label: 'Sikertelen', variant: 'destructive', icon: XCircle },
 };
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString() : '—';
+    return value ? new Date(value).toLocaleString('hu-HU') : '—';
 }
 </script>
 
 <template>
-    <Head :title="`Prompts — ${project.name}`" />
+    <Head :title="`Promptok — ${project.name}`" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex items-start justify-between gap-4">
@@ -117,7 +117,7 @@ function formatDate(value: string | null): string {
                 <Button variant="outline" size="sm" as-child>
                     <Link :href="projects.edit(project.name).url">
                         <Pencil class="size-4" />
-                        Edit
+                        Szerkesztés
                     </Link>
                 </Button>
                 <Button
@@ -127,7 +127,7 @@ function formatDate(value: string | null): string {
                     @click="destroy"
                 >
                     <Trash2 class="size-4" />
-                    Delete
+                    Törlés
                 </Button>
             </div>
         </div>
@@ -139,31 +139,31 @@ function formatDate(value: string | null): string {
             class="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
             <TriangleAlert class="size-4 shrink-0" />
-            The directory <code class="font-mono">{{ project.path }}</code> does
-            not exist — prompts will fail until it does.
+            A(z) <code class="font-mono">{{ project.path }}</code> könyvtár nem
+            létezik — a promptok hibára futnak, amíg létre nem jön.
         </div>
 
         <Card>
             <CardHeader>
-                <CardTitle class="text-base">Run a claude prompt</CardTitle>
+                <CardTitle class="text-base">Claude prompt futtatása</CardTitle>
             </CardHeader>
             <CardContent>
                 <form class="flex flex-col gap-3" @submit.prevent="submit">
                     <textarea
                         v-model="form.prompt"
                         rows="4"
-                        placeholder="Describe what claude should change in this project…"
+                        placeholder="Írd le, mit változtasson a claude ezen a projekten…"
                         class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
                     />
                     <InputError :message="form.errors.prompt" />
                     <div class="flex items-center justify-between">
                         <p class="text-xs text-muted-foreground">
-                            Runs <code>claude -p</code> inside the project
-                            directory.
+                            A <code>claude -p</code> parancsot futtatja a projekt
+                            könyvtárában.
                         </p>
                         <Button type="submit" :disabled="form.processing">
                             <Send class="size-4" />
-                            {{ form.processing ? 'Queuing…' : 'Run prompt' }}
+                            {{ form.processing ? 'Sorba állítás…' : 'Prompt futtatása' }}
                         </Button>
                     </div>
                 </form>
@@ -172,12 +172,12 @@ function formatDate(value: string | null): string {
 
         <div class="flex flex-col gap-3">
             <h2 class="text-sm font-medium text-muted-foreground">
-                History
+                Előzmények
                 <span
                     v-if="hasActiveRun"
                     class="ml-1 inline-flex items-center gap-1"
                 >
-                    <Loader2 class="size-3 animate-spin" /> live
+                    <Loader2 class="size-3 animate-spin" /> élő
                 </span>
             </h2>
 
@@ -185,7 +185,7 @@ function formatDate(value: string | null): string {
                 v-if="runs.length === 0"
                 class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground"
             >
-                No prompts have been run against this project yet.
+                Ezen a projekten még nem futott egyetlen prompt sem.
             </p>
 
             <Card v-for="run in runs" :key="run.id">
@@ -217,7 +217,7 @@ function formatDate(value: string | null): string {
                     <p class="text-xs text-muted-foreground">
                         {{ formatDate(run.created_at) }}
                         <span v-if="run.exit_code !== null">
-                            · exit {{ run.exit_code }}</span
+                            · kilépési kód {{ run.exit_code }}</span
                         >
                     </p>
                 </CardHeader>

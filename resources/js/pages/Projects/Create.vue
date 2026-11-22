@@ -11,8 +11,8 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Projects', href: projects.index().url },
-            { title: 'New', href: projects.create().url },
+            { title: 'Projektek', href: projects.index().url },
+            { title: 'Új', href: projects.create().url },
         ],
     },
 });
@@ -29,19 +29,19 @@ function submit(): void {
 </script>
 
 <template>
-    <Head title="New project" />
+    <Head title="Új projekt" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
-            title="New project"
-            description="Register a project directory to run claude prompts against."
+            title="Új projekt"
+            description="Regisztrálj egy projektkönyvtárat, amelyen claude promptokat futtathatsz."
         />
 
         <ProjectForm
             :form="form"
-            submit-label="Create project"
+            submit-label="Projekt létrehozása"
             :cancel-href="projects.index().url"
-            :path-hint="`Absolute path as seen by the queue worker, e.g. ${projects_path}/my-project`"
+            :path-hint="`Abszolút útvonal a queue worker szemszögéből, pl. ${projects_path}/my-project`"
             @submit="submit"
         />
     </div>

@@ -32,14 +32,14 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projects', href: projects.index().url }],
+        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
     },
 });
 
 function destroy(): void {
     if (
         !window.confirm(
-            `Remove "${props.project.name}" from the list? The files on disk are kept.`,
+            `Eltávolítod a(z) „${props.project.name}” projektet a listáról? A lemezen lévő fájlok megmaradnak.`,
         )
     ) {
         return;
@@ -49,12 +49,12 @@ function destroy(): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString() : '—';
+    return value ? new Date(value).toLocaleString('hu-HU') : '—';
 }
 </script>
 
 <template>
-    <Head :title="`${project.name} — Projects`" />
+    <Head :title="`${project.name} — Projektek`" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex items-start justify-between gap-4">
@@ -63,7 +63,7 @@ function formatDate(value: string | null): string {
                 <Button variant="outline" size="sm" as-child>
                     <Link :href="projects.edit(project.name).url">
                         <Pencil class="size-4" />
-                        Edit
+                        Szerkesztés
                     </Link>
                 </Button>
                 <Button
@@ -73,7 +73,7 @@ function formatDate(value: string | null): string {
                     @click="destroy"
                 >
                     <Trash2 class="size-4" />
-                    Delete
+                    Törlés
                 </Button>
             </div>
         </div>
@@ -85,40 +85,40 @@ function formatDate(value: string | null): string {
             class="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
             <TriangleAlert class="size-4 shrink-0" />
-            The directory <code class="font-mono">{{ project.path }}</code> does
-            not exist — prompts will fail until it does.
+            A(z) <code class="font-mono">{{ project.path }}</code> könyvtár nem
+            létezik — a promptok hibára futnak, amíg létre nem jön.
         </div>
 
         <Card>
             <CardHeader>
-                <CardTitle class="text-base">Details</CardTitle>
+                <CardTitle class="text-base">Részletek</CardTitle>
             </CardHeader>
             <CardContent class="flex flex-col gap-4 text-sm">
                 <div v-if="project.description">
                     <p class="text-xs font-medium text-muted-foreground">
-                        Description
+                        Leírás
                     </p>
                     <p class="mt-1">{{ project.description }}</p>
                 </div>
 
                 <div>
-                    <p class="text-xs font-medium text-muted-foreground">Path</p>
+                    <p class="text-xs font-medium text-muted-foreground">Útvonal</p>
                     <p class="mt-1 font-mono break-all">{{ project.path }}</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
                     <Badge v-if="project.is_git_repository" variant="outline" class="gap-1">
                         <FolderGit2 class="size-3" />
-                        git repository
+                        git tároló
                     </Badge>
                     <Badge variant="secondary" class="gap-1">
                         <Terminal class="size-3" />
-                        {{ runs_count }} {{ runs_count === 1 ? 'run' : 'runs' }}
+                        {{ runs_count }} futtatás
                     </Badge>
                     <span class="text-xs text-muted-foreground">
-                        Updated {{ formatDate(project.last_modified_at) }}
+                        Frissítve {{ formatDate(project.last_modified_at) }}
                         <template v-if="last_run_at">
-                            · last run {{ formatDate(last_run_at) }}
+                            · utolsó futtatás {{ formatDate(last_run_at) }}
                         </template>
                     </span>
                 </div>
@@ -127,7 +127,7 @@ function formatDate(value: string | null): string {
                     <Button as-child>
                         <Link :href="projects.prompts(project.name).url">
                             <Terminal class="size-4" />
-                            Go to prompts
+                            Ugrás a promptokhoz
                         </Link>
                     </Button>
                 </div>
