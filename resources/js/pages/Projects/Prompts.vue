@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { Head, useForm, usePoll } from '@inertiajs/vue3';
-import { CheckCircle2, Clock, Loader2, Send, XCircle } from '@lucide/vue';
+import { Head, Link, router, useForm, usePoll } from '@inertiajs/vue3';
+import {
+    CheckCircle2,
+    Clock,
+    Loader2,
+    Pencil,
+    Send,
+    Trash2,
+    TriangleAlert,
+    XCircle,
+} from '@lucide/vue';
 import { computed, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import playgroundRoutes from '@/routes/playground';
+import projects from '@/routes/projects';
+import ProjectNav from './ProjectNav.vue';
 
 type PromptRunStatus = 'pending' | 'running' | 'completed' | 'failed';
 
@@ -27,27 +29,48 @@ type PromptRun = {
     exit_code: number | null;
     output: string | null;
     error_output: string | null;
+    started_at: string | null;
+    finished_at: string | null;
     created_at: string;
 };
 
+type Project = {
+    id: number;
+    name: string;
+    path: string;
+    description: string | null;
+    exists: boolean;
+    is_git_repository: boolean;
+    last_modified_at: string | null;
+};
+
 const props = defineProps<{
-    projects: string[];
+    project: Project;
     runs: PromptRun[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Playground', href: '/playground' }],
+        breadcrumbs: [{ title: 'Projects', href: projects.index().url }],
     },
 });
 
-const form = useForm({
-    project: props.projects[0] ?? '',
-    prompt: '',
-});
+const form = useForm({ prompt: '' });
+
+function destroy(): void {
+    if (
+        !window.confirm(
+            `Remove "${props.project.name}" from the list? The files on disk are kept.`,
+        )
+    ) {
+        return;
+    }
+
+    router.delete(projects.destroy(props.project.name).url);
+}
 
 function submit(): void {
-    form.post(playgroundRoutes.run().url, {
+    form.post(projects.runs.store(props.project.name).url, {
         preserveScroll: true,
         onSuccess: () => form.reset('prompt'),
     });
@@ -79,73 +102,66 @@ const statusMeta: Record<
     failed: { label: 'Failed', variant: 'destructive', icon: XCircle },
 };
 
-function formatDate(value: string): string {
-    return new Date(value).toLocaleString();
+function formatDate(value: string | null): string {
+    return value ? new Date(value).toLocaleString() : '—';
 }
 </script>
 
 <template>
-    <Head title="Playground" />
+    <Head :title="`Prompts — ${project.name}`" />
 
-    <div class="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-6 p-4">
-        <Heading
-            title="Playground"
-            description="Pick a project, write a prompt, and run claude against it to test."
-        />
+    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+        <div class="flex items-start justify-between gap-4">
+            <Heading :title="project.name" :description="project.path" />
+            <div class="flex shrink-0 items-center gap-1">
+                <Button variant="outline" size="sm" as-child>
+                    <Link :href="projects.edit(project.name).url">
+                        <Pencil class="size-4" />
+                        Edit
+                    </Link>
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    class="text-destructive hover:text-destructive"
+                    @click="destroy"
+                >
+                    <Trash2 class="size-4" />
+                    Delete
+                </Button>
+            </div>
+        </div>
+
+        <ProjectNav :name="project.name" />
+
+        <div
+            v-if="!project.exists"
+            class="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+            <TriangleAlert class="size-4 shrink-0" />
+            The directory <code class="font-mono">{{ project.path }}</code> does
+            not exist — prompts will fail until it does.
+        </div>
 
         <Card>
             <CardHeader>
-                <CardTitle class="text-base">Run a prompt</CardTitle>
+                <CardTitle class="text-base">Run a claude prompt</CardTitle>
             </CardHeader>
             <CardContent>
-                <form class="flex flex-col gap-4" @submit.prevent="submit">
-                    <div class="flex flex-col gap-2">
-                        <Label for="project">Project</Label>
-                        <Select v-model="form.project">
-                            <SelectTrigger id="project" class="w-full">
-                                <SelectValue placeholder="Choose a project…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    v-for="name in projects"
-                                    :key="name"
-                                    :value="name"
-                                >
-                                    {{ name }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.project" />
-                        <p
-                            v-if="projects.length === 0"
-                            class="text-sm text-muted-foreground"
-                        >
-                            No projects found. Add a directory to the projects
-                            folder first.
-                        </p>
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <Label for="prompt">Prompt</Label>
-                        <textarea
-                            id="prompt"
-                            v-model="form.prompt"
-                            rows="5"
-                            placeholder="Describe what claude should change in this project…"
-                            class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
-                        />
-                        <InputError :message="form.errors.prompt" />
-                    </div>
-
+                <form class="flex flex-col gap-3" @submit.prevent="submit">
+                    <textarea
+                        v-model="form.prompt"
+                        rows="4"
+                        placeholder="Describe what claude should change in this project…"
+                        class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+                    />
+                    <InputError :message="form.errors.prompt" />
                     <div class="flex items-center justify-between">
                         <p class="text-xs text-muted-foreground">
-                            Runs <code>claude -p</code> inside the selected
-                            project directory.
+                            Runs <code>claude -p</code> inside the project
+                            directory.
                         </p>
-                        <Button
-                            type="submit"
-                            :disabled="form.processing || projects.length === 0"
-                        >
+                        <Button type="submit" :disabled="form.processing">
                             <Send class="size-4" />
                             {{ form.processing ? 'Queuing…' : 'Run prompt' }}
                         </Button>
@@ -155,13 +171,11 @@ function formatDate(value: string): string {
         </Card>
 
         <div class="flex flex-col gap-3">
-            <h2
-                class="flex items-center gap-2 text-sm font-medium text-muted-foreground"
-            >
-                Recent runs
+            <h2 class="text-sm font-medium text-muted-foreground">
+                History
                 <span
                     v-if="hasActiveRun"
-                    class="inline-flex items-center gap-1"
+                    class="ml-1 inline-flex items-center gap-1"
                 >
                     <Loader2 class="size-3 animate-spin" /> live
                 </span>
@@ -171,7 +185,7 @@ function formatDate(value: string): string {
                 v-if="runs.length === 0"
                 class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground"
             >
-                No runs yet. Submit a prompt above to test it.
+                No prompts have been run against this project yet.
             </p>
 
             <Card v-for="run in runs" :key="run.id">
@@ -179,16 +193,11 @@ function formatDate(value: string): string {
                     <div
                         class="flex flex-wrap items-start justify-between gap-2"
                     >
-                        <div class="min-w-0 flex-1">
-                            <Badge variant="outline" class="mb-1">{{
-                                run.project
-                            }}</Badge>
-                            <p
-                                class="text-sm font-medium break-words whitespace-pre-wrap"
-                            >
-                                {{ run.prompt }}
-                            </p>
-                        </div>
+                        <p
+                            class="min-w-0 flex-1 text-sm font-medium break-words whitespace-pre-wrap"
+                        >
+                            {{ run.prompt }}
+                        </p>
                         <Badge
                             :variant="statusMeta[run.status].variant"
                             class="gap-1"

@@ -49,6 +49,15 @@ class ProjectController extends Controller
     {
         return Inertia::render('Projects/Show', [
             'project' => $project,
+            'runs_count' => $project->promptRuns()->count(),
+            'last_run_at' => $project->promptRuns()->max('created_at'),
+        ]);
+    }
+
+    public function prompts(Project $project): Response
+    {
+        return Inertia::render('Projects/Prompts', [
+            'project' => $project,
             'runs' => $project->promptRuns()
                 ->latest()
                 ->limit(50)
