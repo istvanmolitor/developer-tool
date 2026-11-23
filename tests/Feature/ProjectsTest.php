@@ -3,6 +3,7 @@
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
+use Database\Seeders\ProjectSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -124,4 +125,65 @@ test('a project can be deleted without touching the files on disk', function () 
 
     $this->assertDatabaseMissing('projects', ['id' => $this->alpha->id]);
     expect(is_dir($this->projectsPath.'/alpha'))->toBeTrue();
+});
+
+test('the seeder creates a single system project pointing at the app itself', function () {
+    (new ProjectSeeder)->run();
+
+    $system = Project::where('name', Project::SYSTEM_NAME)->firstOrFail();
+
+    expect($system->is_system)->toBeTrue()
+        ->and($system->path)->toBe(base_path());
+
+    // Running it again is idempotent — still exactly one system project.
+    (new ProjectSeeder)->run();
+
+    expect(Project::where('is_system', true)->count())->toBe(1);
+});
+
+test('the system project cannot be deleted', function () {
+    (new ProjectSeeder)->run();
+    $system = Project::where('name', Project::SYSTEM_NAME)->firstOrFail();
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('projects.destroy', $system))
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseHas('projects', ['id' => $system->id]);
+});
+
+test('the system project path cannot be changed through the edit form', function () {
+    (new ProjectSeeder)->run();
+    $system = Project::where('name', Project::SYSTEM_NAME)->firstOrFail();
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('projects.update', $system), [
+            'name' => $system->name,
+            'path' => '/somewhere/else',
+            'description' => 'Updated description.',
+        ])
+        ->assertRedirect(route('projects.show', $system));
+
+    $fresh = $system->fresh();
+
+    // Path stays pinned to the application, but other fields still update.
+    expect($fresh->path)->toBe(base_path())
+        ->and($fresh->description)->toBe('Updated description.');
+});
+
+test('the system project path cannot be changed at the model level', function () {
+    (new ProjectSeeder)->run();
+    $system = Project::where('name', Project::SYSTEM_NAME)->firstOrFail();
+
+    expect(fn () => $system->update(['path' => '/somewhere/else']))
+        ->toThrow(RuntimeException::class);
+    expect($system->fresh()->path)->toBe(base_path());
+});
+
+test('the system project cannot be deleted at the model level', function () {
+    (new ProjectSeeder)->run();
+    $system = Project::where('name', Project::SYSTEM_NAME)->firstOrFail();
+
+    expect(fn () => $system->delete())->toThrow(RuntimeException::class);
+    $this->assertDatabaseHas('projects', ['id' => $system->id]);
 });

@@ -21,6 +21,7 @@ type Project = {
     description: string | null;
     exists: boolean;
     is_git_repository: boolean;
+    is_system: boolean;
     last_modified_at: string | null;
 };
 
@@ -67,6 +68,7 @@ function formatDate(value: string | null): string {
                     </Link>
                 </Button>
                 <Button
+                    v-if="!project.is_system"
                     variant="ghost"
                     size="sm"
                     class="text-destructive hover:text-destructive"
@@ -107,6 +109,9 @@ function formatDate(value: string | null): string {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
+                    <Badge v-if="project.is_system" variant="outline">
+                        rendszer
+                    </Badge>
                     <Badge v-if="project.is_git_repository" variant="outline" class="gap-1">
                         <FolderGit2 class="size-3" />
                         git tároló

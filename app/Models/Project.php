@@ -14,11 +14,48 @@ class Project extends Model
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
 
+    /**
+     * Name of the single system project — the developer tool's own codebase.
+     * Seeded by {@see \Database\Seeders\ProjectSeeder}, never deletable.
+     */
+    public const SYSTEM_NAME = 'developer-tool';
+
     protected $fillable = [
         'name',
         'path',
         'description',
     ];
+
+    /**
+     * `is_system` is intentionally NOT fillable: it is set only by the seeder,
+     * so it can never be flipped through the create/update forms.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_system' => 'boolean',
+        ];
+    }
+
+    /**
+     * Guard the system project against deletion, even from tinker or the CLI.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Project $project): void {
+            if ($project->is_system) {
+                throw new \RuntimeException('A rendszer saját projektje nem törölhető.');
+            }
+        });
+
+        static::updating(function (Project $project): void {
+            if ($project->is_system && $project->isDirty('path')) {
+                throw new \RuntimeException('A rendszer saját projektjének útvonala nem módosítható.');
+            }
+        });
+    }
 
     /**
      * Computed, filesystem-derived attributes appended to array/JSON output.

@@ -23,6 +23,7 @@ type Project = {
     description: string | null;
     exists: boolean;
     is_git_repository: boolean;
+    is_system: boolean;
     last_modified_at: string | null;
     runs_count: number;
     last_run_at: string | null;
@@ -148,6 +149,9 @@ function destroy(project: Project): void {
                         <Terminal class="size-3" />
                         {{ project.runs_count }} futtatás
                     </Badge>
+                    <Badge v-if="project.is_system" variant="outline"
+                        >rendszer</Badge
+                    >
                     <Badge v-if="project.is_git_repository" variant="outline"
                         >git</Badge
                     >
@@ -173,6 +177,7 @@ function destroy(project: Project): void {
                             </Link>
                         </Button>
                         <Button
+                            v-if="!project.is_system"
                             variant="ghost"
                             size="sm"
                             class="text-destructive hover:text-destructive"

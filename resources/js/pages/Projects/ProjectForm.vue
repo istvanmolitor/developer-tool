@@ -16,6 +16,7 @@ defineProps<{
     submitLabel: string;
     cancelHref: string;
     pathHint?: string;
+    pathLocked?: boolean;
 }>();
 
 const emit = defineEmits<{ submit: [] }>();
@@ -49,6 +50,8 @@ const emit = defineEmits<{ submit: [] }>();
                 type="text"
                 placeholder="/projects/my-project"
                 autocomplete="off"
+                :disabled="pathLocked"
+                :readonly="pathLocked"
             />
             <p v-if="pathHint" class="text-xs text-muted-foreground">
                 {{ pathHint }}

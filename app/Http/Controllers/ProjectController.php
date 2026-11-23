@@ -76,6 +76,12 @@ class ProjectController extends Controller
     {
         $validated = $request->validated();
 
+        // The system project always points at the application itself — its
+        // path is fixed and cannot be changed through the edit form.
+        if ($project->is_system) {
+            $validated['path'] = $project->path;
+        }
+
         // Keep prompt-run history attached when a project is renamed, since
         // runs are linked by the project name rather than its id.
         if ($validated['name'] !== $project->name) {
@@ -93,6 +99,12 @@ class ProjectController extends Controller
 
     public function destroy(Project $project): RedirectResponse
     {
+        if ($project->is_system) {
+            return redirect()
+                ->route('projects.index')
+                ->with('status', 'A rendszer saját projektje nem törölhető.');
+        }
+
         $project->delete();
 
         return redirect()

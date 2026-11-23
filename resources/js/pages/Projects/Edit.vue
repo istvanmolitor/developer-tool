@@ -9,6 +9,7 @@ type Project = {
     name: string;
     path: string;
     description: string | null;
+    is_system: boolean;
 };
 
 const props = defineProps<{
@@ -48,6 +49,12 @@ function submit(): void {
             :form="form"
             submit-label="Változtatások mentése"
             :cancel-href="projects.show(project.name).url"
+            :path-locked="project.is_system"
+            :path-hint="
+                project.is_system
+                    ? 'A rendszer saját projektjének útvonala rögzített, nem módosítható.'
+                    : undefined
+            "
             @submit="submit"
         />
     </div>
