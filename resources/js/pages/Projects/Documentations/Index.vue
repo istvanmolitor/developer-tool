@@ -10,8 +10,13 @@ import {
     Trash2,
 } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
+import ListSearchInput from '@/components/ListSearchInput.vue';
+import PaginationBar from '@/components/PaginationBar.vue';
+import type { Paginator } from '@/components/PaginationBar.vue';
+import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useListFilters } from '@/composables/useListFilters';
 import projects from '@/routes/projects';
 import ProjectNav from '../ProjectNav.vue';
 
@@ -30,9 +35,14 @@ type Project = {
 
 const props = defineProps<{
     project: Project;
-    documentations: Documentation[];
+    documentations: Paginator & { data: Documentation[] };
+    filters: { q: string };
+    search_degraded: boolean;
+    has_documentations: boolean;
     documentations_path: string;
 }>();
+
+const { filters, isFiltered } = useListFilters({ ...props.filters });
 
 defineOptions({
     layout: {
@@ -91,7 +101,7 @@ function formatDate(value: string | null): string {
                     {{ syncForm.processing ? 'Betöltés…' : 'Frissítés' }}
                 </Button>
                 <Button
-                    v-if="documentations.length > 0"
+                    v-if="has_documentations"
                     variant="outline"
                     size="sm"
                     as-child
@@ -124,21 +134,36 @@ function formatDate(value: string | null): string {
             meglévőket felülírja, a már törölt fájlok sorait eltávolítja).
         </p>
 
+        <ListSearchInput
+            v-model="filters.q"
+            placeholder="Keresés a dokumentációban…"
+        />
+
+        <SearchUnavailableAlert v-if="search_degraded" />
+
         <div
-            v-if="documentations.length === 0"
+            v-if="documentations.data.length === 0"
             class="rounded-xl border border-dashed p-10 text-center"
         >
             <BookText class="mx-auto mb-3 size-8 text-muted-foreground" />
-            <p class="font-medium">Még nincs dokumentáció</p>
-            <p class="mt-1 text-sm text-muted-foreground">
-                Nyomd meg a <strong>Frissítés</strong> gombot a lemezen lévő
-                fájlok betöltéséhez, vagy hozz létre egyet kézzel.
-            </p>
+            <template v-if="isFiltered()">
+                <p class="font-medium">Nincs találat</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Egyik dokumentáció sem tartalmazza a keresett kifejezést.
+                </p>
+            </template>
+            <template v-else>
+                <p class="font-medium">Még nincs dokumentáció</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Nyomd meg a <strong>Frissítés</strong> gombot a lemezen lévő
+                    fájlok betöltéséhez, vagy hozz létre egyet kézzel.
+                </p>
+            </template>
         </div>
 
         <div v-else class="flex flex-col gap-2">
             <Card
-                v-for="doc in documentations"
+                v-for="doc in documentations.data"
                 :key="doc.id"
                 class="transition-colors hover:border-primary/50"
             >
@@ -197,5 +222,7 @@ function formatDate(value: string | null): string {
                 </CardHeader>
             </Card>
         </div>
+
+        <PaginationBar :paginator="documentations" noun="dokumentáció" />
     </div>
 </template>

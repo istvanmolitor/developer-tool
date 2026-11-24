@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MailEncryption;
+use App\Services\Search\SearchService;
 use Database\Factories\MailboxFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -77,6 +78,11 @@ class Mailbox extends Model
             $mailbox->incomingEmails()->each(
                 fn (IncomingEmail $incomingEmail) => Storage::disk('local')->deleteDirectory($incomingEmail->attachmentsDirectory()),
             );
+        });
+
+        // The cascaded mails leave the search index together.
+        static::deleted(function (Mailbox $mailbox): void {
+            app(SearchService::class)->removeWhere('mailbox_id', $mailbox->id);
         });
     }
 

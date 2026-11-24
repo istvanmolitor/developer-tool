@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\SearchType;
+use App\Services\Search\IndexedInSearch;
+use App\Services\Search\Searchable;
 use Carbon\CarbonImmutable;
 use Database\Factories\TaskCommentFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,10 +26,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read User|null $user
  * @property-read Agent|null $agent
  */
-class TaskComment extends Model
+class TaskComment extends Model implements Searchable
 {
     /** @use HasFactory<TaskCommentFactory> */
     use HasFactory;
+
+    use IndexedInSearch;
 
     protected $fillable = [
         'task_id',
@@ -78,6 +84,36 @@ class TaskComment extends Model
                 $this->agent_id !== null => ['type' => 'agent', 'name' => $this->agent?->name],
                 default => ['type' => null, 'name' => null],
             },
+        ];
+    }
+
+    public static function searchType(): SearchType
+    {
+        return SearchType::Comment;
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    public static function searchableQuery(): Builder
+    {
+        return static::query()->with(['task:id,project_id,title', 'user:id,name', 'agent:id,name']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchDocument(): array
+    {
+        return [
+            'title' => $this->task->title,
+            'body' => $this->body,
+            'extra' => ($this->user ?? $this->agent)?->name,
+            'task_id' => $this->task_id,
+            'project_id' => $this->task->project_id,
+            'agent_ids' => $this->agent_id === null ? [] : [$this->agent_id],
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

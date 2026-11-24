@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     Bot,
     CalendarClock,
@@ -9,20 +9,26 @@ import {
     Pencil,
     Plus,
     Trash2,
-} from "@lucide/vue";
-import Heading from "@/components/Heading.vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+} from '@lucide/vue';
+import FilterSelect from '@/components/FilterSelect.vue';
+import Heading from '@/components/Heading.vue';
+import ListSearchInput from '@/components/ListSearchInput.vue';
+import PaginationBar from '@/components/PaginationBar.vue';
+import type { Paginator } from '@/components/PaginationBar.vue';
+import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import projects from "@/routes/projects";
-import ProjectNav from "../ProjectNav.vue";
+} from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
+import projects from '@/routes/projects';
+import ProjectNav from '../ProjectNav.vue';
 
 type Option = { value: string; label: string };
 
@@ -39,19 +45,39 @@ type Task = {
 
 type Project = { id: number; name: string; path: string };
 
+type Filters = {
+    q: string;
+    status: string | null;
+    priority: string | null;
+    type: string | null;
+    agent: number | null;
+};
+
 const props = defineProps<{
     project: Project;
-    tasks: Task[];
+    tasks: Paginator & { data: Task[] };
+    filters: Filters;
+    search_degraded: boolean;
     statuses: Option[];
     priorities: Option[];
     types: Option[];
+    agents: { id: number; name: string }[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
+        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
     },
 });
+
+const { filters, reset, isFiltered } = useListFilters<Filters>({
+    ...props.filters,
+});
+
+const agentOptions = props.agents.map((agent) => ({
+    value: agent.id,
+    label: agent.name,
+}));
 
 function statusLabel(value: string): string {
     return props.statuses.find((o) => o.value === value)?.label ?? value;
@@ -65,18 +91,18 @@ function typeLabel(value: string): string {
     return props.types.find((o) => o.value === value)?.label ?? value;
 }
 
-function statusVariant(status: string): "secondary" | "default" | "outline" {
-    if (status === "done") return "secondary";
-    if (status === "in_progress") return "default";
-    return "outline";
+function statusVariant(status: string): 'secondary' | 'default' | 'outline' {
+    if (status === 'done') return 'secondary';
+    if (status === 'in_progress') return 'default';
+    return 'outline';
 }
 
 function priorityVariant(
     priority: string,
-): "destructive" | "default" | "outline" {
-    if (priority === "high") return "destructive";
-    if (priority === "medium") return "default";
-    return "outline";
+): 'destructive' | 'default' | 'outline' {
+    if (priority === 'high') return 'destructive';
+    if (priority === 'medium') return 'default';
+    return 'outline';
 }
 
 function changeStatus(task: Task, status: string): void {
@@ -103,7 +129,7 @@ function destroy(task: Task): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleDateString("hu-HU") : "";
+    return value ? new Date(value).toLocaleDateString('hu-HU') : '';
 }
 </script>
 
@@ -131,21 +157,70 @@ function formatDate(value: string | null): string {
 
         <ProjectNav :name="project.name" />
 
+        <div class="flex flex-wrap items-center gap-2">
+            <ListSearchInput
+                v-model="filters.q"
+                placeholder="Keresés a feladatokban…"
+            />
+            <FilterSelect
+                v-model="filters.status"
+                :options="statuses"
+                all-label="Minden státusz"
+                label="Státusz"
+            />
+            <FilterSelect
+                v-model="filters.priority"
+                :options="priorities"
+                all-label="Minden prioritás"
+                label="Prioritás"
+            />
+            <FilterSelect
+                v-model="filters.type"
+                :options="types"
+                all-label="Minden típus"
+                label="Típus"
+            />
+            <FilterSelect
+                v-model="filters.agent"
+                :options="agentOptions"
+                all-label="Minden felelős"
+                label="Felelős"
+            />
+            <Button
+                v-if="isFiltered()"
+                variant="ghost"
+                size="sm"
+                @click="reset"
+            >
+                Szűrők törlése
+            </Button>
+        </div>
+
+        <SearchUnavailableAlert v-if="search_degraded" />
+
         <div
-            v-if="tasks.length === 0"
+            v-if="tasks.data.length === 0"
             class="rounded-xl border border-dashed p-10 text-center"
         >
             <ListTodo class="mx-auto mb-3 size-8 text-muted-foreground" />
-            <p class="font-medium">Még nincs feladat</p>
-            <p class="mt-1 text-sm text-muted-foreground">
-                Hozz létre egyet az <strong>Új feladat</strong> gombbal, vagy
-                kérd meg Claude-ot az MCP-n keresztül.
-            </p>
+            <template v-if="isFiltered()">
+                <p class="font-medium">Nincs a szűrésnek megfelelő feladat</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Módosítsd a keresést vagy a szűrőket.
+                </p>
+            </template>
+            <template v-else>
+                <p class="font-medium">Még nincs feladat</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Hozz létre egyet az <strong>Új feladat</strong> gombbal,
+                    vagy kérd meg Claude-ot az MCP-n keresztül.
+                </p>
+            </template>
         </div>
 
         <div v-else class="flex flex-col gap-2">
             <Card
-                v-for="task in tasks"
+                v-for="task in tasks.data"
                 :key="task.id"
                 class="transition-colors hover:border-primary/50"
                 :class="task.status === 'done' ? 'opacity-70' : ''"
@@ -252,5 +327,7 @@ function formatDate(value: string | null): string {
                 </CardHeader>
             </Card>
         </div>
+
+        <PaginationBar :paginator="tasks" noun="feladat" />
     </div>
 </template>

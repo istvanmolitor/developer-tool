@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\SearchType;
+use App\Services\Search\IndexedInSearch;
+use App\Services\Search\Searchable;
 use Database\Factories\DocumentationFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,10 +12,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-class Documentation extends Model
+class Documentation extends Model implements Searchable
 {
     /** @use HasFactory<DocumentationFactory> */
     use HasFactory;
+
+    use IndexedInSearch;
 
     protected $fillable = [
         'project_id',
@@ -45,5 +50,26 @@ class Documentation extends Model
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
         ]));
+    }
+
+    public static function searchType(): SearchType
+    {
+        return SearchType::Documentation;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchDocument(): array
+    {
+        return [
+            'title' => $this->title ?? $this->path,
+            'body' => $this->content,
+            'extra' => $this->path,
+            'path' => $this->path,
+            'project_id' => $this->project_id,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
     }
 }

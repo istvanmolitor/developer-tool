@@ -3,7 +3,12 @@
 namespace App\Models;
 
 use App\Enums\OutgoingEmailStatus;
+use App\Enums\SearchType;
+use App\Services\Search\IndexedInSearch;
+use App\Services\Search\Searchable;
+use Carbon\CarbonImmutable;
 use Database\Factories\OutgoingEmailFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,11 +18,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property list<string> $to
  * @property OutgoingEmailStatus $status
+ * @property CarbonImmutable|null $sent_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
-class OutgoingEmail extends Model
+class OutgoingEmail extends Model implements Searchable
 {
     /** @use HasFactory<OutgoingEmailFactory> */
     use HasFactory;
+
+    use IndexedInSearch;
 
     protected $fillable = [
         'mailbox_id',
@@ -70,5 +80,38 @@ class OutgoingEmail extends Model
     public function promptRun(): BelongsTo
     {
         return $this->belongsTo(PromptRun::class);
+    }
+
+    public static function searchType(): SearchType
+    {
+        return SearchType::Mail;
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    public static function searchableQuery(): Builder
+    {
+        return static::query()->with('mailbox:id,agent_id,project_id');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchDocument(): array
+    {
+        return [
+            'title' => $this->subject ?: '(nincs tárgy)',
+            'body' => $this->body_text,
+            'extra' => implode(' ', (array) $this->to),
+            'direction' => 'outgoing',
+            'status' => $this->status->value,
+            'mailbox_id' => $this->mailbox_id,
+            'incoming_email_id' => $this->incoming_email_id,
+            'project_id' => $this->mailbox?->project_id,
+            'agent_ids' => $this->mailbox?->agent_id === null ? [] : [$this->mailbox->agent_id],
+            'created_at' => $this->sent_at?->toIso8601String() ?? $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
     }
 }

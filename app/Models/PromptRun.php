@@ -3,16 +3,25 @@
 namespace App\Models;
 
 use App\Enums\PromptRunStatus;
+use App\Enums\SearchType;
+use App\Services\Search\IndexedInSearch;
+use App\Services\Search\Searchable;
 use Database\Factories\PromptRunFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
-class PromptRun extends Model
+/**
+ * @property PromptRunStatus $status
+ */
+class PromptRun extends Model implements Searchable
 {
     /** @use HasFactory<PromptRunFactory> */
     use HasFactory;
+
+    use IndexedInSearch;
 
     /**
      * A run is created once and streamed onto in place; there is no
@@ -86,5 +95,27 @@ class PromptRun extends Model
     public function incomingEmail(): HasOne
     {
         return $this->hasOne(IncomingEmail::class);
+    }
+
+    public static function searchType(): SearchType
+    {
+        return SearchType::Prompt;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchDocument(): array
+    {
+        return [
+            'title' => Str::limit(Str::squish($this->prompt), 150),
+            'body' => $this->prompt,
+            // The output can be huge; its beginning is plenty to find a run by.
+            'extra' => Str::limit((string) $this->output, 20000, ''),
+            'project_id' => $this->project_id,
+            'agent_ids' => $this->agent_id === null ? [] : [$this->agent_id],
+            'status' => $this->status->value,
+            'created_at' => $this->created_at?->toIso8601String(),
+        ];
     }
 }

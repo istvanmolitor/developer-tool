@@ -141,3 +141,10 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer components {
+    /* Matched terms in search results (server-escaped <mark> highlights). */
+    .search-highlight mark {
+        @apply rounded-sm bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/30;
+    }
+}

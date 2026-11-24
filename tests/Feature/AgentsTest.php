@@ -95,12 +95,12 @@ test('the agent tasks list its open tasks by priority, then oldest first', funct
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Agents/Tasks')
-            ->has('tasks', 4)
-            ->where('tasks.0.title', 'old high')
-            ->where('tasks.1.title', 'new high')
-            ->where('tasks.2.title', 'medium')
-            ->where('tasks.3.title', 'new low')
-            ->where('tasks.0.project.name', $project->name)
+            ->has('tasks.data', 4)
+            ->where('tasks.data.0.title', 'old high')
+            ->where('tasks.data.1.title', 'new high')
+            ->where('tasks.data.2.title', 'medium')
+            ->where('tasks.data.3.title', 'new low')
+            ->where('tasks.data.0.project.name', $project->name)
         );
 });
 

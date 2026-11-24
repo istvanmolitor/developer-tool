@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\SearchType;
+use App\Services\Search\IndexedInSearch;
+use App\Services\Search\Searchable;
 use Carbon\CarbonImmutable;
 use Database\Factories\AgentMessageFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,10 +28,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Agent|null $sender
  * @property-read Agent $recipient
  */
-class AgentMessage extends Model
+class AgentMessage extends Model implements Searchable
 {
     /** @use HasFactory<AgentMessageFactory> */
     use HasFactory;
+
+    use IndexedInSearch;
 
     protected $fillable = [
         'project_id',
@@ -99,6 +104,36 @@ class AgentMessage extends Model
             'is_read' => $this->is_read,
             'read_at' => $this->read_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
+
+    public static function searchType(): SearchType
+    {
+        return SearchType::Message;
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    public static function searchableQuery(): Builder
+    {
+        return static::query()->with(['sender:id,name', 'recipient:id,name']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchDocument(): array
+    {
+        return [
+            'title' => ($this->sender === null ? 'Törölt agent' : $this->sender->name).' → '.$this->recipient->name,
+            'body' => $this->body,
+            'project_id' => $this->project_id,
+            'agent_ids' => array_values(array_filter([$this->sender_agent_id, $this->recipient_agent_id])),
+            'sender_agent_id' => $this->sender_agent_id,
+            'recipient_agent_id' => $this->recipient_agent_id,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

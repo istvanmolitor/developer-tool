@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProjectProvisionStatus;
 use App\Jobs\ProvisionProject;
+use App\Services\Search\SearchService;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProjectFactory;
 use Database\Seeders\ProjectSeeder;
@@ -55,6 +56,12 @@ class Project extends Model
             if ($project->is_system) {
                 throw new \RuntimeException('A rendszer saját projektje nem törölhető.');
             }
+        });
+
+        // The database cascades the project's rows away without model events,
+        // so their search documents are dropped in one go.
+        static::deleted(function (Project $project): void {
+            app(SearchService::class)->removeWhere('project_id', $project->id);
         });
 
         static::updating(function (Project $project): void {

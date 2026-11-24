@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SearchType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Http\Requests\StoreAgentRequest;
@@ -9,7 +10,10 @@ use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
 use App\Models\AgentMessage;
 use App\Models\Project;
+use App\Models\Task;
 use App\Services\AgentSyncService;
+use App\Services\Search\SearchCriteria;
+use App\Services\Search\SearchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -66,23 +70,45 @@ class AgentController extends Controller
     }
 
     /**
-     * The open tasks assigned to the agent, highest priority first and the
-     * oldest first within the same priority.
+     * The tasks assigned to the agent from the search index — by default the
+     * open ones — highest priority first and the oldest first within the same
+     * priority; filterable by text, status, priority and project, and paginated.
      */
-    public function tasks(Agent $agent): Response
+    public function tasks(Request $request, Agent $agent, SearchService $search): Response
     {
+        $status = $request->string('status')->toString();
+
+        $filters = [
+            'q' => trim($request->string('q')->toString()),
+            // "open" (the default) hides done tasks, "all" shows every status.
+            'status' => $status === 'all' || TaskStatus::tryFrom($status) !== null ? $status : 'open',
+            'priority' => TaskPriority::tryFrom($request->string('priority')->toString())?->value,
+            'project' => $request->integer('project') ?: null,
+        ];
+
+        $criteria = SearchCriteria::for(SearchType::Task)
+            ->matching($filters['q'])
+            ->where('agent_ids', $agent->id)
+            ->where('priority', $filters['priority'])
+            ->where('project_id', $filters['project'])
+            ->orderBy('priority_rank')
+            ->orderBy('created_at')
+            ->paginate($request->integer('page', 1), 20);
+
+        match ($filters['status']) {
+            'open' => $criteria->whereNot('status', TaskStatus::Done->value),
+            'all' => null,
+            default => $criteria->where('status', $filters['status']),
+        };
+
+        $results = $search->search($criteria);
+
         return Inertia::render('Agents/Tasks', [
             'agent' => $agent->only(['id', 'name', 'slug']),
-            'tasks' => $agent->tasks()
-                ->with('project:id,name')
-                ->where('status', '!=', TaskStatus::Done)
-                ->orderByRaw('case priority when ? then 0 when ? then 1 else 2 end', [
-                    TaskPriority::High->value,
-                    TaskPriority::Medium->value,
-                ])
-                ->orderBy('created_at')
-                ->orderBy('id')
-                ->get(),
+            'tasks' => $results->paginate(Task::query()->with('project:id,name'), $request),
+            'filters' => $filters,
+            'search_degraded' => $results->degraded,
+            'projects' => Project::query()->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name']),
             'statuses' => collect(TaskStatus::cases())->map(
                 fn (TaskStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
             ),

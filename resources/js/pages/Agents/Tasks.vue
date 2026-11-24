@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { Head, Link } from "@inertiajs/vue3";
-import { CalendarClock, ChevronRight, FolderGit2, ListTodo } from "@lucide/vue";
-import Heading from "@/components/Heading.vue";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import agents from "@/routes/agents";
-import projects from "@/routes/projects";
-import AgentNav from "./AgentNav.vue";
+import { Head, Link } from '@inertiajs/vue3';
+import { CalendarClock, ChevronRight, FolderGit2, ListTodo } from '@lucide/vue';
+import FilterSelect from '@/components/FilterSelect.vue';
+import Heading from '@/components/Heading.vue';
+import ListSearchInput from '@/components/ListSearchInput.vue';
+import PaginationBar from '@/components/PaginationBar.vue';
+import type { Paginator } from '@/components/PaginationBar.vue';
+import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { useListFilters } from '@/composables/useListFilters';
+import agents from '@/routes/agents';
+import projects from '@/routes/projects';
+import AgentNav from './AgentNav.vue';
 
 type Agent = {
     id: number;
@@ -31,14 +37,38 @@ type Task = {
 
 const props = defineProps<{
     agent: Agent;
-    tasks: Task[];
+    tasks: Paginator & { data: Task[] };
+    filters: {
+        q: string;
+        status: string | null;
+        priority: string | null;
+        project: number | null;
+    };
+    search_degraded: boolean;
+    projects: { id: number; name: string }[];
     statuses: Option[];
     priorities: Option[];
 }>();
 
+// "open" is the server's default status filter, so it stays out of the URL.
+const { filters, isFiltered } = useListFilters({
+    ...props.filters,
+    status: props.filters.status === 'open' ? null : props.filters.status,
+});
+
+const statusOptions = [
+    { value: 'all', label: 'Minden státusz' },
+    ...props.statuses,
+];
+
+const projectOptions = props.projects.map((project) => ({
+    value: project.id,
+    label: project.name,
+}));
+
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Agentek", href: agents.index().url }],
+        breadcrumbs: [{ title: 'Agentek', href: agents.index().url }],
     },
 });
 
@@ -52,20 +82,20 @@ function priorityLabel(value: string): string {
 
 function priorityVariant(
     priority: string,
-): "destructive" | "default" | "secondary" {
-    if (priority === "high") {
-        return "destructive";
+): 'destructive' | 'default' | 'secondary' {
+    if (priority === 'high') {
+        return 'destructive';
     }
 
-    if (priority === "medium") {
-        return "default";
+    if (priority === 'medium') {
+        return 'default';
     }
 
-    return "secondary";
+    return 'secondary';
 }
 
 function formatDate(value: string): string {
-    return new Date(value).toLocaleDateString("hu-HU");
+    return new Date(value).toLocaleDateString('hu-HU');
 }
 </script>
 
@@ -82,22 +112,52 @@ function formatDate(value: string): string {
 
         <AgentNav :agent-id="agent.id" />
 
+        <div class="flex flex-wrap items-center gap-2">
+            <ListSearchInput
+                v-model="filters.q"
+                placeholder="Keresés a feladatokban…"
+            />
+            <FilterSelect
+                v-model="filters.status"
+                :options="statusOptions"
+                all-label="Nyitott"
+                label="Státusz"
+            />
+            <FilterSelect
+                v-model="filters.priority"
+                :options="priorities"
+                all-label="Minden prioritás"
+                label="Prioritás"
+            />
+            <FilterSelect
+                v-model="filters.project"
+                :options="projectOptions"
+                all-label="Minden projekt"
+                label="Projekt"
+            />
+        </div>
+
         <p class="text-xs text-muted-foreground">
-            Nyitott feladatok — a magasabb prioritás elöl, azon belül a
-            legrégebbi.
+            A magasabb prioritás elöl, azon belül a legrégebbi.
         </p>
 
+        <SearchUnavailableAlert v-if="search_degraded" />
+
         <div
-            v-if="tasks.length === 0"
+            v-if="tasks.data.length === 0"
             class="flex flex-col items-center gap-2 rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground"
         >
             <ListTodo class="size-8" />
-            Nincs az agenthez rendelt nyitott feladat.
+            {{
+                isFiltered()
+                    ? 'Nincs a szűrésnek megfelelő feladat.'
+                    : 'Nincs az agenthez rendelt nyitott feladat.'
+            }}
         </div>
 
         <div v-else class="flex flex-col gap-2">
             <Card
-                v-for="task in tasks"
+                v-for="task in tasks.data"
                 :key="task.id"
                 class="transition-colors hover:border-primary/50"
             >
@@ -152,5 +212,7 @@ function formatDate(value: string): string {
                 </CardHeader>
             </Card>
         </div>
+
+        <PaginationBar :paginator="tasks" noun="feladat" />
     </div>
 </template>

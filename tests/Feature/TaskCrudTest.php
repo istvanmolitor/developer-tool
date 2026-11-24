@@ -27,8 +27,8 @@ test('the index lists the project tasks', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Projects/Tasks/Index')
-            ->has('tasks', 1)
-            ->where('tasks.0.title', 'Első feladat'),
+            ->has('tasks.data', 1)
+            ->where('tasks.data.0.title', 'Első feladat'),
         );
 });
 

@@ -67,7 +67,7 @@ test('a mailbox can be viewed with its incoming emails', function () {
             ->component('Mailboxes/Show')
             ->where('mailbox.id', $mailbox->id)
             ->missing('mailbox.password')
-            ->has('incomingEmails', 3)
+            ->has('incomingEmails.data', 3)
             ->where('incomingEmailsCount', 3)
         );
 });
@@ -326,7 +326,7 @@ test('the mailbox pages report the unread email counts', function () {
         ->get(route('mailboxes.show', $mailbox))
         ->assertInertia(fn (Assert $page) => $page
             ->where('unreadEmailsCount', 2)
-            ->has('incomingEmails.0.read_at'));
+            ->has('incomingEmails.data.0.read_at'));
 });
 
 /**
@@ -411,8 +411,8 @@ test('the mailbox page lists the attachments of each email', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('mailboxes.show', $email->mailbox))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('incomingEmails.0.attachments.0.filename', 'terv.docx')
-            ->missing('incomingEmails.0.attachments.0.path'));
+            ->where('incomingEmails.data.0.attachments.0.filename', 'terv.docx')
+            ->missing('incomingEmails.data.0.attachments.0.path'));
 });
 
 test('the mailbox page lists the agent replies of each email', function () {
@@ -426,8 +426,8 @@ test('the mailbox page lists the agent replies of each email', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('mailboxes.show', $email->mailbox))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('incomingEmails.0.replies.0.body_text', 'Javítottuk.')
-            ->where('incomingEmails.0.replies.0.status', 'draft'));
+            ->where('incomingEmails.data.0.replies.0.body_text', 'Javítottuk.')
+            ->where('incomingEmails.data.0.replies.0.status', 'draft'));
 });
 
 test('the fetch action downloads mail through the service', function () {

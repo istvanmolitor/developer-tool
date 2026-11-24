@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { useForm } from "@inertiajs/vue3";
-import { Bot, MessageSquare, User } from "@lucide/vue";
-import InputError from "@/components/InputError.vue";
-import { Button } from "@/components/ui/button";
-import projects from "@/routes/projects";
+import { useForm } from '@inertiajs/vue3';
+import { Bot, MessageSquare, User } from '@lucide/vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import projects from '@/routes/projects';
 
 export type TaskComment = {
     id: number;
     body: string;
     created_at: string | null;
-    author: { type: "user" | "agent" | null; name: string | null };
+    author: { type: 'user' | 'agent' | null; name: string | null };
 };
 
 const props = defineProps<{
@@ -18,7 +18,7 @@ const props = defineProps<{
     taskId: number;
 }>();
 
-const form = useForm({ body: "" });
+const form = useForm({ body: '' });
 
 function submit(): void {
     form.post(
@@ -34,14 +34,14 @@ function submit(): void {
 }
 
 function formatDateTime(value: string | null): string {
-    return value ? new Date(value).toLocaleString("hu-HU") : "—";
+    return value ? new Date(value).toLocaleString('hu-HU') : '—';
 }
 
-function authorName(author: TaskComment["author"]): string {
-    if (author.type === null) return "Ismeretlen (MCP)";
+function authorName(author: TaskComment['author']): string {
+    if (author.type === null) return 'Ismeretlen (MCP)';
     return (
         author.name ??
-        (author.type === "agent" ? "Törölt agent" : "Törölt felhasználó")
+        (author.type === 'agent' ? 'Törölt agent' : 'Törölt felhasználó')
     );
 }
 </script>
@@ -54,6 +54,7 @@ function authorName(author: TaskComment["author"]): string {
         >
             <li
                 v-for="comment in comments"
+                :id="`comment-${comment.id}`"
                 :key="comment.id"
                 class="flex flex-col gap-2 p-4 text-sm"
             >

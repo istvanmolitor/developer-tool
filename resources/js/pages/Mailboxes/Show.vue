@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     BookOpenCheck,
     Download,
@@ -9,15 +9,21 @@ import {
     Reply as ReplyIcon,
     Send,
     Trash2,
-} from "@lucide/vue";
-import { computed, ref } from "vue";
-import Heading from "@/components/Heading.vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import agents from "@/routes/agents";
-import mailboxes from "@/routes/mailboxes";
-import projects from "@/routes/projects";
+} from '@lucide/vue';
+import { computed, ref } from 'vue';
+import FilterSelect from '@/components/FilterSelect.vue';
+import Heading from '@/components/Heading.vue';
+import ListSearchInput from '@/components/ListSearchInput.vue';
+import PaginationBar from '@/components/PaginationBar.vue';
+import type { Paginator } from '@/components/PaginationBar.vue';
+import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useListFilters } from '@/composables/useListFilters';
+import agents from '@/routes/agents';
+import mailboxes from '@/routes/mailboxes';
+import projects from '@/routes/projects';
 
 type Mailbox = {
     id: number;
@@ -52,7 +58,7 @@ type Reply = {
     to: string[];
     subject: string;
     body_text: string;
-    status: "draft" | "sent" | "failed";
+    status: 'draft' | 'sent' | 'failed';
     error: string | null;
     sent_at: string | null;
     created_at: string;
@@ -73,14 +79,23 @@ type IncomingEmail = {
 
 const props = defineProps<{
     mailbox: Mailbox;
-    incomingEmails: IncomingEmail[];
+    incomingEmails: Paginator & { data: IncomingEmail[] };
     incomingEmailsCount: number;
     unreadEmailsCount: number;
+    filters: { q: string; read: string | null };
+    search_degraded: boolean;
 }>();
+
+const { filters, isFiltered } = useListFilters({ ...props.filters });
+
+const readOptions = [
+    { value: 'unread', label: 'Olvasatlan' },
+    { value: 'read', label: 'Olvasott' },
+];
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Postafiókok", href: mailboxes.index().url }],
+        breadcrumbs: [{ title: 'Postafiókok', href: mailboxes.index().url }],
     },
 });
 
@@ -94,20 +109,20 @@ const canAgentRead = computed(
 );
 
 const promptRunStatusLabels: Record<string, string> = {
-    pending: "sorban áll",
-    running: "fut",
-    completed: "kész",
-    failed: "sikertelen",
+    pending: 'sorban áll',
+    running: 'fut',
+    completed: 'kész',
+    failed: 'sikertelen',
 };
 
-const replyStatusLabels: Record<Reply["status"], string> = {
-    draft: "Piszkozat — jóváhagyásra vár",
-    sent: "Elküldve",
-    failed: "A küldés nem sikerült",
+const replyStatusLabels: Record<Reply['status'], string> = {
+    draft: 'Piszkozat — jóváhagyásra vár',
+    sent: 'Elküldve',
+    failed: 'A küldés nem sikerült',
 };
 
 function hasPendingReply(email: IncomingEmail): boolean {
-    return email.replies.some((reply) => reply.status !== "sent");
+    return email.replies.some((reply) => reply.status !== 'sent');
 }
 
 /**
@@ -132,7 +147,7 @@ function sendReply(reply: Reply): void {
 function discardReply(reply: Reply): void {
     if (
         !window.confirm(
-            "Elveted az agent válaszát? A levél nem megy ki a feladónak.",
+            'Elveted az agent válaszát? A levél nem megy ki a feladónak.',
         )
     ) {
         return;
@@ -174,7 +189,7 @@ function destroy(): void {
 function destroyEmail(email: IncomingEmail): void {
     if (
         !window.confirm(
-            `Törlöd a(z) „${email.subject || "(nincs tárgy)"}” levelet? A levél csak itt törlődik, a levelezőszerveren megmarad.`,
+            `Törlöd a(z) „${email.subject || '(nincs tárgy)'}” levelet? A levél csak itt törlődik, a levelezőszerveren megmarad.`,
         )
     ) {
         return;
@@ -232,7 +247,7 @@ function formatSize(bytes: number): string {
         return `${bytes} B`;
     }
 
-    const units = ["KB", "MB", "GB"];
+    const units = ['KB', 'MB', 'GB'];
     let size = bytes / 1024;
     let unit = 0;
 
@@ -241,11 +256,11 @@ function formatSize(bytes: number): string {
         unit++;
     }
 
-    return `${size.toLocaleString("hu-HU", { maximumFractionDigits: 1 })} ${units[unit]}`;
+    return `${size.toLocaleString('hu-HU', { maximumFractionDigits: 1 })} ${units[unit]}`;
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString("hu-HU") : "—";
+    return value ? new Date(value).toLocaleString('hu-HU') : '—';
 }
 </script>
 
@@ -258,7 +273,7 @@ function formatDate(value: string | null): string {
             <div class="flex shrink-0 flex-wrap items-center gap-1">
                 <Button size="sm" :disabled="fetching" @click="fetchMail">
                     <Download class="size-4" />
-                    {{ fetching ? "Letöltés…" : "Levelek letöltése" }}
+                    {{ fetching ? 'Letöltés…' : 'Levelek letöltése' }}
                 </Button>
                 <Button variant="outline" size="sm" as-child>
                     <Link :href="mailboxes.edit(mailbox.id).url">
@@ -284,7 +299,7 @@ function formatDate(value: string | null): string {
                     Kapcsolat
                     <Badge
                         :variant="mailbox.is_active ? 'secondary' : 'outline'"
-                        >{{ mailbox.is_active ? "Aktív" : "Inaktív" }}</Badge
+                        >{{ mailbox.is_active ? 'Aktív' : 'Inaktív' }}</Badge
                     >
                 </CardTitle>
             </CardHeader>
@@ -329,8 +344,8 @@ function formatDate(value: string | null): string {
                         <dd class="mt-1">
                             {{
                                 mailbox.auto_read
-                                    ? "Az agent automatikusan elolvassa az új leveleket"
-                                    : "Kézzel, levelenként"
+                                    ? 'Az agent automatikusan elolvassa az új leveleket'
+                                    : 'Kézzel, levelenként'
                             }}
                         </dd>
                     </div>
@@ -341,8 +356,8 @@ function formatDate(value: string | null): string {
                         <dd class="mt-1">
                             {{
                                 mailbox.auto_reply
-                                    ? "Az agent válaszai azonnal kimennek"
-                                    : "Jóváhagyás után mennek ki"
+                                    ? 'Az agent válaszai azonnal kimennek'
+                                    : 'Jóváhagyás után mennek ki'
                             }}
                         </dd>
                     </div>
@@ -406,16 +421,39 @@ function formatDate(value: string | null): string {
                 </p>
             </CardHeader>
             <CardContent>
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <ListSearchInput
+                        v-model="filters.q"
+                        placeholder="Keresés a levelekben…"
+                    />
+                    <FilterSelect
+                        v-model="filters.read"
+                        :options="readOptions"
+                        all-label="Minden levél"
+                        label="Olvasottság"
+                    />
+                </div>
+
+                <SearchUnavailableAlert v-if="search_degraded" class="mb-3" />
+
                 <div
-                    v-if="incomingEmails.length === 0"
+                    v-if="incomingEmails.data.length === 0"
                     class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground"
                 >
                     <Inbox class="mx-auto mb-2 size-6" />
-                    Még nincs letöltött levél.
+                    {{
+                        isFiltered()
+                            ? 'Nincs a szűrésnek megfelelő levél.'
+                            : 'Még nincs letöltött levél.'
+                    }}
                 </div>
 
                 <ul v-else class="divide-y rounded-md border">
-                    <li v-for="email in incomingEmails" :key="email.id">
+                    <li
+                        v-for="email in incomingEmails.data"
+                        :id="`email-${email.id}`"
+                        :key="email.id"
+                    >
                         <div class="flex items-center">
                             <button
                                 type="button"
@@ -445,14 +483,14 @@ function formatDate(value: string | null): string {
                                         >{{
                                             email.from_name ||
                                             email.from_address ||
-                                            "—"
+                                            '—'
                                         }}</span
                                     >
                                 </span>
                                 <span
                                     class="min-w-0 flex-1 truncate pl-4 sm:pl-0"
                                     :class="{ 'font-semibold': !email.read_at }"
-                                    >{{ email.subject || "(nincs tárgy)" }}
+                                    >{{ email.subject || '(nincs tárgy)' }}
                                     <span v-if="!email.read_at" class="sr-only"
                                         >(az agent még nem olvasta)</span
                                     ></span
@@ -556,7 +594,7 @@ function formatDate(value: string | null): string {
                                 class="max-h-96 overflow-auto px-3 py-2 font-mono text-xs whitespace-pre-wrap"
                                 >{{
                                     email.body_text ||
-                                    "(nincs szöveges tartalom)"
+                                    '(nincs szöveges tartalom)'
                                 }}</pre>
                             <ul
                                 v-if="email.attachments.length > 0"
@@ -608,7 +646,7 @@ function formatDate(value: string | null): string {
                                             class="font-medium text-foreground"
                                             >Az agent válasza</span
                                         >
-                                        → {{ reply.to.join(", ") }}
+                                        → {{ reply.to.join(', ') }}
                                         <Badge
                                             :variant="
                                                 reply.status === 'failed'
@@ -639,10 +677,10 @@ function formatDate(value: string | null): string {
                                             <Send class="size-3.5" />
                                             {{
                                                 sendingReplyId === reply.id
-                                                    ? "Küldés…"
-                                                    : reply.status === "failed"
-                                                      ? "Újraküldés"
-                                                      : "Küldés"
+                                                    ? 'Küldés…'
+                                                    : reply.status === 'failed'
+                                                      ? 'Újraküldés'
+                                                      : 'Küldés'
                                             }}
                                         </Button>
                                         <Button
@@ -672,6 +710,12 @@ function formatDate(value: string | null): string {
                         </div>
                     </li>
                 </ul>
+
+                <PaginationBar
+                    :paginator="incomingEmails"
+                    noun="levél"
+                    class="mt-3"
+                />
             </CardContent>
         </Card>
     </div>

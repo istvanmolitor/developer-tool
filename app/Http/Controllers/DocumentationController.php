@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SearchType;
 use App\Http\Requests\StoreDocumentationRequest;
 use App\Http\Requests\UpdateDocumentationRequest;
 use App\Models\Documentation;
 use App\Models\Project;
 use App\Services\DocumentationService;
+use App\Services\Search\SearchCriteria;
+use App\Services\Search\SearchService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,13 +22,31 @@ class DocumentationController extends Controller
 {
     public function __construct(private DocumentationService $documentations) {}
 
-    public function index(Project $project): Response
+    /**
+     * The project's documentation from the search index: searchable by title,
+     * path and content, and paginated.
+     */
+    public function index(Request $request, Project $project, SearchService $search): Response
     {
+        $filters = ['q' => trim($request->string('q')->toString())];
+
+        $results = $search->search(
+            SearchCriteria::for(SearchType::Documentation)
+                ->matching($filters['q'])
+                ->where('project_id', $project->id)
+                ->orderBy('path')
+                ->paginate($request->integer('page', 1), 25),
+        );
+
         return Inertia::render('Projects/Documentations/Index', [
             'project' => $project,
-            'documentations' => $project->documentations()
-                ->orderBy('path')
-                ->get(['id', 'path', 'title', 'updated_at']),
+            'documentations' => $results->paginate(
+                Documentation::query()->select(['id', 'path', 'title', 'updated_at']),
+                $request,
+            ),
+            'filters' => $filters,
+            'search_degraded' => $results->degraded,
+            'has_documentations' => $project->documentations()->exists(),
             'documentations_path' => $this->documentations->directoryFor($project),
         ]);
     }

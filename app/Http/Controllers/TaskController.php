@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SearchType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
@@ -11,25 +12,51 @@ use App\Models\Agent;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Services\Search\SearchCriteria;
+use App\Services\Search\SearchService;
 use App\Services\TaskChangeFormatter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TaskController extends Controller
 {
-    public function index(Project $project): Response
+    /**
+     * The project's tasks from the search index: filterable by free text,
+     * status, priority, type and assignee, and paginated.
+     */
+    public function index(Request $request, Project $project, SearchService $search): Response
     {
+        $filters = [
+            'q' => trim($request->string('q')->toString()),
+            'status' => TaskStatus::tryFrom($request->string('status')->toString())?->value,
+            'priority' => TaskPriority::tryFrom($request->string('priority')->toString())?->value,
+            'type' => TaskType::tryFrom($request->string('type')->toString())?->value,
+            'agent' => $request->integer('agent') ?: null,
+        ];
+
+        $results = $search->search(
+            SearchCriteria::for(SearchType::Task)
+                ->matching($filters['q'])
+                ->where('project_id', $project->id)
+                ->where('status', $filters['status'])
+                ->where('priority', $filters['priority'])
+                ->where('task_type', $filters['type'])
+                ->where('agent_ids', $filters['agent'])
+                ->orderBy('position')
+                ->paginate($request->integer('page', 1), 20),
+        );
+
         return Inertia::render('Projects/Tasks/Index', [
             'project' => $project,
-            'tasks' => $project->tasks()
-                ->with('agent:id,name')
-                ->orderBy('position')
-                ->orderByDesc('id')
-                ->get(),
+            'tasks' => $results->paginate(Task::query()->with('agent:id,name'), $request),
+            'filters' => $filters,
+            'search_degraded' => $results->degraded,
             'statuses' => $this->statusOptions(),
             'priorities' => $this->priorityOptions(),
             'types' => $this->typeOptions(),
+            'agents' => $this->agentOptions(),
         ]);
     }
 

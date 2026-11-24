@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\SearchType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Observers\TaskObserver;
+use App\Services\Search\IndexedInSearch;
+use App\Services\Search\Searchable;
 use Carbon\CarbonImmutable;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -34,10 +37,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Collection<int, TaskComment> $comments
  */
 #[ObservedBy(TaskObserver::class)]
-class Task extends Model
+class Task extends Model implements Searchable
 {
     /** @use HasFactory<TaskFactory> */
     use HasFactory;
+
+    use IndexedInSearch;
 
     protected $fillable = [
         'agent_id',
@@ -101,5 +106,35 @@ class Task extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(TaskComment::class)->oldest('id');
+    }
+
+    public static function searchType(): SearchType
+    {
+        return SearchType::Task;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchDocument(): array
+    {
+        return [
+            'title' => $this->title,
+            'body' => $this->description,
+            'project_id' => $this->project_id,
+            'agent_ids' => $this->agent_id === null ? [] : [$this->agent_id],
+            'status' => $this->status->value,
+            'priority' => $this->priority->value,
+            'priority_rank' => match ($this->priority) {
+                TaskPriority::High => 0,
+                TaskPriority::Medium => 1,
+                default => 2,
+            },
+            'task_type' => $this->type->value,
+            'position' => $this->position,
+            'due_date' => $this->due_date?->toDateString(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
     }
 }

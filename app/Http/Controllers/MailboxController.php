@@ -3,14 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MailEncryption;
+use App\Enums\SearchType;
 use App\Http\Requests\StoreMailboxRequest;
 use App\Http\Requests\UpdateMailboxRequest;
 use App\Models\Agent;
+use App\Models\IncomingEmail;
 use App\Models\Mailbox;
 use App\Models\Project;
 use App\Services\MailboxService;
+use App\Services\Search\SearchCriteria;
+use App\Services\Search\SearchService;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -49,20 +54,43 @@ class MailboxController extends Controller
             ->with('status', 'Postafiók létrehozva.');
     }
 
-    public function show(Mailbox $mailbox): Response
+    /**
+     * The mailbox with its received mails from the search index, newest first,
+     * filterable by text (subject, body, sender) and read state, and paginated.
+     */
+    public function show(Request $request, Mailbox $mailbox, SearchService $search): Response
     {
+        $readState = $request->string('read')->toString();
+
+        $filters = [
+            'q' => trim($request->string('q')->toString()),
+            'read' => in_array($readState, ['read', 'unread'], true) ? $readState : null,
+        ];
+
+        $results = $search->search(
+            SearchCriteria::for(SearchType::Mail)
+                ->matching($filters['q'])
+                ->where('mailbox_id', $mailbox->id)
+                ->where('direction', 'incoming')
+                ->where('is_read', $filters['read'] === null ? null : $filters['read'] === 'read')
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->integer('page', 1), 25),
+        );
+
         return Inertia::render('Mailboxes/Show', [
             'mailbox' => $mailbox->load(['agent:id,name', 'project:id,name']),
-            'incomingEmails' => $mailbox->incomingEmails()
-                ->with([
-                    'attachments:id,incoming_email_id,filename,mime_type,size',
-                    'promptRun:id,status',
-                    'replies:id,incoming_email_id,to,subject,body_text,status,error,sent_at,created_at',
-                ])
-                ->latest('received_at')
-                ->latest('id')
-                ->limit(50)
-                ->get(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id']),
+            'incomingEmails' => $results->paginate(
+                IncomingEmail::query()
+                    ->select(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id'])
+                    ->with([
+                        'attachments:id,incoming_email_id,filename,mime_type,size',
+                        'promptRun:id,status',
+                        'replies:id,incoming_email_id,to,subject,body_text,status,error,sent_at,created_at',
+                    ]),
+                $request,
+            ),
+            'filters' => $filters,
+            'search_degraded' => $results->degraded,
             'incomingEmailsCount' => $mailbox->incomingEmails()->count(),
             'unreadEmailsCount' => $mailbox->incomingEmails()->whereNull('read_at')->count(),
         ]);

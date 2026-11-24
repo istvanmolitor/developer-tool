@@ -70,9 +70,12 @@ class DocumentationService
 
         // Drop rows for files that have since been removed (or all of them when
         // the folder is gone/empty — whereNotIn([]) matches every project row).
+        // Deleted one by one so each leaves the search index too.
         Documentation::query()
             ->where('project_id', $project->id)
             ->whereNotIn('id', $seen)
+            ->get()
+            ->each
             ->delete();
 
         return $project->documentations()->orderBy('path')->get();

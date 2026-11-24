@@ -35,8 +35,8 @@ test('the index lists the project documentations', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Projects/Documentations/Index')
-            ->has('documentations', 1)
-            ->where('documentations.0.path', 'README.md'),
+            ->has('documentations.data', 1)
+            ->where('documentations.data.0.path', 'README.md'),
         );
 });
 

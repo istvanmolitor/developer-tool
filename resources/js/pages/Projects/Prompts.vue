@@ -12,8 +12,13 @@ import {
 } from '@lucide/vue';
 import { Bot } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import FilterSelect from '@/components/FilterSelect.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import ListSearchInput from '@/components/ListSearchInput.vue';
+import PaginationBar from '@/components/PaginationBar.vue';
+import type { Paginator } from '@/components/PaginationBar.vue';
+import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
 import projects from '@/routes/projects';
 import ProjectNav from './ProjectNav.vue';
 
@@ -62,8 +68,18 @@ type Project = {
 const props = defineProps<{
     project: Project;
     agents: Agent[];
-    runs: PromptRun[];
+    runs: Paginator & { data: PromptRun[] };
+    filters: { q: string; status: string | null; agent: number | null };
+    search_degraded: boolean;
+    statuses: { value: string; label: string }[];
 }>();
+
+const { filters, reset, isFiltered } = useListFilters({ ...props.filters });
+
+const agentOptions = props.agents.map((agent) => ({
+    value: agent.id,
+    label: agent.name,
+}));
 
 defineOptions({
     layout: {
@@ -109,7 +125,7 @@ function submit(): void {
 }
 
 const hasActiveRun = computed(() =>
-    props.runs.some(
+    props.runs.data.some(
         (run) => run.status === 'pending' || run.status === 'running',
     ),
 );
@@ -273,14 +289,47 @@ function formatCost(value: string | null): string | null {
                 </span>
             </h2>
 
+            <div class="flex flex-wrap items-center gap-2">
+                <ListSearchInput
+                    v-model="filters.q"
+                    placeholder="Keresés a promptokban és kimenetekben…"
+                />
+                <FilterSelect
+                    v-model="filters.status"
+                    :options="statuses"
+                    all-label="Minden státusz"
+                    label="Státusz"
+                />
+                <FilterSelect
+                    v-model="filters.agent"
+                    :options="agentOptions"
+                    all-label="Minden agent"
+                    label="Agent"
+                />
+                <Button
+                    v-if="isFiltered()"
+                    variant="ghost"
+                    size="sm"
+                    @click="reset"
+                >
+                    Szűrők törlése
+                </Button>
+            </div>
+
+            <SearchUnavailableAlert v-if="search_degraded" />
+
             <p
-                v-if="runs.length === 0"
+                v-if="runs.data.length === 0"
                 class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground"
             >
-                Ezen a projekten még nem futott egyetlen prompt sem.
+                {{
+                    isFiltered()
+                        ? 'Nincs a szűrésnek megfelelő futtatás.'
+                        : 'Ezen a projekten még nem futott egyetlen prompt sem.'
+                }}
             </p>
 
-            <Card v-for="run in runs" :key="run.id">
+            <Card v-for="run in runs.data" :key="run.id">
                 <CardHeader>
                     <div
                         class="flex flex-wrap items-start justify-between gap-2"
@@ -340,6 +389,8 @@ function formatCost(value: string | null): string | null {
                         >{{ run.error_output }}</pre>
                 </CardContent>
             </Card>
+
+            <PaginationBar :paginator="runs" noun="futtatás" />
         </div>
     </div>
 </template>
