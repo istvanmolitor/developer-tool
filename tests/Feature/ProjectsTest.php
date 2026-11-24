@@ -63,6 +63,7 @@ test('a project can be created', function () {
         ->post(route('projects.store'), [
             'name' => 'gamma',
             'path' => $this->projectsPath.'/gamma',
+            'git_url' => 'https://github.com/user/gamma.git',
             'description' => 'A fresh project.',
         ])
         ->assertRedirect(route('projects.index'));
@@ -70,6 +71,7 @@ test('a project can be created', function () {
     $this->assertDatabaseHas('projects', [
         'name' => 'gamma',
         'path' => $this->projectsPath.'/gamma',
+        'git_url' => 'https://github.com/user/gamma.git',
         'description' => 'A fresh project.',
     ]);
 });

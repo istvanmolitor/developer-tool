@@ -18,6 +18,7 @@ type Project = {
     id: number;
     name: string;
     path: string;
+    git_url: string | null;
     description: string | null;
     exists: boolean;
     is_git_repository: boolean;
@@ -106,6 +107,20 @@ function formatDate(value: string | null): string {
                 <div>
                     <p class="text-xs font-medium text-muted-foreground">Útvonal</p>
                     <p class="mt-1 font-mono break-all">{{ project.path }}</p>
+                </div>
+
+                <div v-if="project.git_url">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Git link
+                    </p>
+                    <a
+                        :href="project.git_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="mt-1 inline-block font-mono break-all text-primary underline-offset-4 hover:underline"
+                    >
+                        {{ project.git_url }}
+                    </a>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">

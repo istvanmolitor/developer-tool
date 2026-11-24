@@ -26,6 +26,7 @@ class StoreProjectRequest extends FormRequest
                 Rule::unique('projects', 'name'),
             ],
             'path' => ['required', 'string', 'max:1024'],
+            'git_url' => ['nullable', 'string', 'max:1024'],
             'description' => ['nullable', 'string', 'max:2000'],
         ];
     }

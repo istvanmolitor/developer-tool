@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 type ProjectForm = {
     name: string;
     path: string;
+    git_url: string;
     description: string;
 };
 
@@ -57,6 +58,24 @@ const emit = defineEmits<{ submit: [] }>();
                 {{ pathHint }}
             </p>
             <InputError :message="form.errors.path" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <Label for="git_url"
+                >Git link
+                <span class="text-muted-foreground">(opcionális)</span></Label
+            >
+            <Input
+                id="git_url"
+                v-model="form.git_url"
+                type="text"
+                placeholder="https://github.com/user/repo.git"
+                autocomplete="off"
+            />
+            <p class="text-xs text-muted-foreground">
+                A tároló URL-je (HTTPS vagy SSH), pl. git clone címe.
+            </p>
+            <InputError :message="form.errors.git_url" />
         </div>
 
         <div class="flex flex-col gap-2">

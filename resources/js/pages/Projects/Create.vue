@@ -20,6 +20,7 @@ defineOptions({
 const form = useForm({
     name: '',
     path: '',
+    git_url: '',
     description: '',
 });
 

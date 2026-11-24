@@ -8,6 +8,7 @@ type Project = {
     id: number;
     name: string;
     path: string;
+    git_url: string | null;
     description: string | null;
     is_system: boolean;
 };
@@ -28,6 +29,7 @@ defineOptions({
 const form = useForm({
     name: props.project.name,
     path: props.project.path,
+    git_url: props.project.git_url ?? '',
     description: props.project.description ?? '',
 });
 

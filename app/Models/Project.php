@@ -24,6 +24,7 @@ class Project extends Model
     protected $fillable = [
         'name',
         'path',
+        'git_url',
         'description',
     ];
 
