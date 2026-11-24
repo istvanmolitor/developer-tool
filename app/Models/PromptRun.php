@@ -28,6 +28,7 @@ class PromptRun extends Model
         'exit_code',
         'output',
         'error_output',
+        'cost_usd',
         'started_at',
         'finished_at',
     ];
@@ -40,6 +41,7 @@ class PromptRun extends Model
         return [
             'status' => PromptRunStatus::class,
             'exit_code' => 'integer',
+            'cost_usd' => 'decimal:6',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

@@ -29,7 +29,7 @@ afterEach(function () {
 test('the command includes the skip-permissions flag when enabled', function () {
     $command = app(ClaudePromptRunner::class)->command('Do the thing');
 
-    expect($command)->toBe(['claude', '-p', 'Do the thing', '--dangerously-skip-permissions']);
+    expect($command)->toBe(['claude', '-p', 'Do the thing', '--output-format', 'json', '--dangerously-skip-permissions']);
 });
 
 test('the command omits the skip-permissions flag when disabled', function () {
@@ -37,7 +37,15 @@ test('the command omits the skip-permissions flag when disabled', function () {
 
     $command = app(ClaudePromptRunner::class)->command('Do the thing');
 
-    expect($command)->toBe(['claude', '-p', 'Do the thing']);
+    expect($command)->toBe(['claude', '-p', 'Do the thing', '--output-format', 'json']);
+});
+
+test('the command requests json output so usage can be captured', function () {
+    $command = app(ClaudePromptRunner::class)->command('Do the thing');
+
+    $formatIndex = array_search('--output-format', $command, true);
+    expect($formatIndex)->not->toBeFalse();
+    expect($command[$formatIndex + 1])->toBe('json');
 });
 
 test('an agent is injected into the command as --agents/--agent flags', function () {
@@ -115,6 +123,44 @@ test('a successful process marks the run completed with output', function () {
         ->status->toBe(PromptRunStatus::Completed)
         ->exit_code->toBe(0)
         ->output->toContain('Done!');
+});
+
+test('a json result is parsed into its text and persisted cost', function () {
+    Process::fake([
+        '*' => Process::result(
+            output: json_encode([
+                'type' => 'result',
+                'subtype' => 'success',
+                'is_error' => false,
+                'result' => 'A README fájl elkészült.',
+                'total_cost_usd' => 0.0123456,
+            ]),
+            exitCode: 0,
+        ),
+    ]);
+
+    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    expect($run->fresh())
+        ->status->toBe(PromptRunStatus::Completed)
+        ->output->toBe('A README fájl elkészült.')
+        ->cost_usd->toEqual('0.012346');
+});
+
+test('a non-json result keeps the raw output and leaves the cost null', function () {
+    Process::fake([
+        '*' => Process::result(output: 'Plain text result', exitCode: 0),
+    ]);
+
+    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    expect($run->fresh())
+        ->output->toContain('Plain text result')
+        ->cost_usd->toBeNull();
 });
 
 test('a failing process marks the run failed with its error output', function () {

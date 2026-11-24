@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Models\Agent;
 use App\Models\Project;
 use App\Services\ProjectService;
 use Illuminate\Http\RedirectResponse;
@@ -57,7 +58,11 @@ class ProjectController extends Controller
     {
         return Inertia::render('Projects/Prompts', [
             'project' => $project,
+            'agents' => Agent::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'description']),
             'runs' => $project->promptRuns()
+                ->with('agent:id,name')
                 ->latest()
                 ->limit(50)
                 ->get(),

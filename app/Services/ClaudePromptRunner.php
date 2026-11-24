@@ -72,11 +72,14 @@ class ClaudePromptRunner
             return $this->fail($run, $exception->getMessage());
         }
 
+        $parsed = $this->parseResult($result->output());
+
         $run->forceFill([
             'status' => $result->successful() ? PromptRunStatus::Completed : PromptRunStatus::Failed,
             'exit_code' => $result->exitCode(),
-            'output' => $result->output(),
+            'output' => $parsed['output'],
             'error_output' => $result->errorOutput(),
+            'cost_usd' => $parsed['cost_usd'],
             'finished_at' => now(),
         ])->save();
 
@@ -84,11 +87,40 @@ class ClaudePromptRunner
     }
 
     /**
+     * Pull the human-readable text and the USD cost (the "credits" a run burns)
+     * out of claude's `--output-format json` stdout. Falls back to the raw
+     * output and a null cost when the payload isn't the expected result object.
+     *
+     * @return array{output: ?string, cost_usd: ?float}
+     */
+    private function parseResult(string $stdout): array
+    {
+        $decoded = json_decode(trim($stdout), true);
+
+        if (! is_array($decoded)) {
+            return [
+                'output' => $stdout === '' ? null : $stdout,
+                'cost_usd' => null,
+            ];
+        }
+
+        $text = $decoded['result'] ?? null;
+        $cost = $decoded['total_cost_usd'] ?? null;
+
+        return [
+            'output' => is_string($text) ? $text : $stdout,
+            'cost_usd' => is_numeric($cost) ? (float) $cost : null,
+        ];
+    }
+
+    /**
      * @return list<string>
      */
     public function command(string $prompt, ?Agent $agent = null): array
     {
-        $command = [config('developer-tool.claude.binary'), '-p', $prompt];
+        // JSON output carries the run's usage/cost (total_cost_usd) alongside
+        // the text result, so the "credits" a run burns can be persisted.
+        $command = [config('developer-tool.claude.binary'), '-p', $prompt, '--output-format', 'json'];
 
         if ($agent !== null) {
             array_push($command, ...$this->agentOptions($agent));

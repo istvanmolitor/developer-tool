@@ -10,16 +10,30 @@ import {
     TriangleAlert,
     XCircle,
 } from '@lucide/vue';
-import { computed, watch } from 'vue';
+import { Bot } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import projects from '@/routes/projects';
 import ProjectNav from './ProjectNav.vue';
 
 type PromptRunStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+type Agent = {
+    id: number;
+    name: string;
+    description: string | null;
+};
 
 type PromptRun = {
     id: number;
@@ -31,6 +45,8 @@ type PromptRun = {
     started_at: string | null;
     finished_at: string | null;
     created_at: string;
+    cost_usd: string | null;
+    agent: { id: number; name: string } | null;
 };
 
 type Project = {
@@ -45,6 +61,7 @@ type Project = {
 
 const props = defineProps<{
     project: Project;
+    agents: Agent[];
     runs: PromptRun[];
 }>();
 
@@ -54,7 +71,23 @@ defineOptions({
     },
 });
 
-const form = useForm({ prompt: '' });
+const NO_AGENT = 'none';
+
+const form = useForm({ prompt: '', agent_id: null as number | null });
+
+// reka-ui's Select works with string values; keep the chosen agent id as a
+// string locally and translate it onto the form (null = plain claude run).
+const selectedAgent = ref<string>(NO_AGENT);
+
+watch(selectedAgent, (value) => {
+    form.agent_id = value === NO_AGENT ? null : Number(value);
+});
+
+const selectedAgentName = computed(
+    () =>
+        props.agents.find((agent) => String(agent.id) === selectedAgent.value)
+            ?.name ?? null,
+);
 
 function destroy(): void {
     if (
@@ -104,6 +137,21 @@ const statusMeta: Record<
 function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleString('hu-HU') : '—';
 }
+
+function formatCost(value: string | null): string | null {
+    if (value === null) {
+        return null;
+    }
+
+    const amount = Number(value);
+
+    return Number.isFinite(amount)
+        ? `$${amount.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 4,
+          })}`
+        : null;
+}
 </script>
 
 <template>
@@ -148,10 +196,46 @@ function formatDate(value: string | null): string {
             </CardHeader>
             <CardContent>
                 <form class="flex flex-col gap-3" @submit.prevent="submit">
+                    <div class="flex flex-col gap-1.5">
+                        <label
+                            class="text-xs font-medium text-muted-foreground"
+                            for="agent-select"
+                        >
+                            Agent
+                        </label>
+                        <Select v-model="selectedAgent">
+                            <SelectTrigger id="agent-select" class="w-full">
+                                <SelectValue placeholder="Nincs — sima claude futtatás">
+                                    <span class="flex items-center gap-2">
+                                        <Bot class="size-4" />
+                                        {{ selectedAgentName ?? 'Nincs — sima claude futtatás' }}
+                                    </span>
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="NO_AGENT">
+                                    Nincs — sima claude futtatás
+                                </SelectItem>
+                                <SelectItem
+                                    v-for="agent in agents"
+                                    :key="agent.id"
+                                    :value="String(agent.id)"
+                                >
+                                    {{ agent.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <InputError :message="form.errors.agent_id" />
+                    </div>
+
                     <textarea
                         v-model="form.prompt"
                         rows="4"
-                        placeholder="Írd le, mit változtasson a claude ezen a projekten…"
+                        :placeholder="
+                            selectedAgentName
+                                ? 'Feladat az agentnek (opcionális — üresen hagyva az agent leírása indítja)…'
+                                : 'Írd le, mit változtasson a claude ezen a projekten…'
+                        "
                         class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
                     />
                     <InputError :message="form.errors.prompt" />
@@ -213,10 +297,23 @@ function formatDate(value: string | null): string {
                             {{ statusMeta[run.status].label }}
                         </Badge>
                     </div>
-                    <p class="text-xs text-muted-foreground">
-                        {{ formatDate(run.created_at) }}
+                    <p
+                        class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
+                    >
+                        <span>{{ formatDate(run.created_at) }}</span>
+                        <Badge
+                            v-if="run.agent"
+                            variant="outline"
+                            class="gap-1 font-normal"
+                        >
+                            <Bot class="size-3" />
+                            {{ run.agent.name }}
+                        </Badge>
                         <span v-if="run.exit_code !== null">
                             · kilépési kód {{ run.exit_code }}</span
+                        >
+                        <span v-if="formatCost(run.cost_usd)">
+                            · {{ formatCost(run.cost_usd) }} kredit</span
                         >
                     </p>
                 </CardHeader>

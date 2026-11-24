@@ -17,7 +17,8 @@ class StorePromptRunRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'prompt' => ['required', 'string', 'min:3', 'max:20000'],
+            'prompt' => ['nullable', 'string', 'min:3', 'max:20000', 'required_without:agent_id'],
+            'agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ];
     }
 }

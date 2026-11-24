@@ -80,6 +80,16 @@ class Project extends Model
     }
 
     /**
+     * Documentation files imported from this project's docs/documentations folder.
+     *
+     * @return HasMany<Documentation, $this>
+     */
+    public function documentations(): HasMany
+    {
+        return $this->hasMany(Documentation::class);
+    }
+
+    /**
      * Use the project name in URLs so links stay human readable.
      */
     public function getRouteKeyName(): string
