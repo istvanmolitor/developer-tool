@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Bot,
     ChevronRight,
@@ -7,17 +7,18 @@ import {
     Plus,
     RefreshCw,
     Trash2,
-} from '@lucide/vue';
-import { ref } from 'vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import agentRoutes from '@/routes/agents';
+} from "@lucide/vue";
+import { ref } from "vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import agentRoutes from "@/routes/agents";
 
 type Agent = {
     id: number;
     name: string;
+    slug: string;
     model: string | null;
     source_path: string | null;
 };
@@ -28,7 +29,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Agentek', href: agentRoutes.index().url }],
+        breadcrumbs: [{ title: "Agentek", href: agentRoutes.index().url }],
     },
 });
 
@@ -138,6 +139,7 @@ function destroy(agent: Agent): void {
                 <CardContent
                     class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
                 >
+                    <code class="font-mono">{{ agent.slug }}</code>
                     <Badge v-if="agent.model" variant="secondary">{{
                         agent.model
                     }}</Badge>

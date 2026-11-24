@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import agents from '@/routes/agents';
-import AgentForm from './AgentForm.vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import agents from "@/routes/agents";
+import AgentForm from "./AgentForm.vue";
 
 type Agent = {
     id: number;
     name: string;
+    slug: string;
     description: string | null;
     model: string | null;
     tools: string[] | null;
@@ -20,17 +21,18 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Agentek', href: agents.index().url },
-            { title: 'Szerkesztés', href: '' },
+            { title: "Agentek", href: agents.index().url },
+            { title: "Szerkesztés", href: "" },
         ],
     },
 });
 
 const form = useForm({
     name: props.agent.name,
-    description: props.agent.description ?? '',
-    model: props.agent.model ?? '',
-    tools: (props.agent.tools ?? []).join(', '),
+    slug: props.agent.slug,
+    description: props.agent.description ?? "",
+    model: props.agent.model ?? "",
+    tools: (props.agent.tools ?? []).join(", "),
     system_prompt: props.agent.system_prompt,
 });
 

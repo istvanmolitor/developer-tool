@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import type { InertiaForm } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import type { InertiaForm } from "@inertiajs/vue3";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type AgentForm = {
     name: string;
+    slug: string;
     description: string;
     model: string;
     tools: string;
@@ -27,19 +28,38 @@ const emit = defineEmits<{ submit: [] }>();
         class="flex max-w-2xl flex-col gap-5"
         @submit.prevent="emit('submit')"
     >
-        <div class="flex flex-col gap-2">
-            <Label for="name">Név</Label>
-            <Input
-                id="name"
-                v-model="form.name"
-                type="text"
-                placeholder="documentarian"
-                autocomplete="off"
-            />
-            <p class="text-xs text-muted-foreground">
-                Gép-olvasható azonosító, az agent URL-jében is szerepel.
-            </p>
-            <InputError :message="form.errors.name" />
+        <div class="grid gap-5 sm:grid-cols-2">
+            <div class="flex flex-col gap-2">
+                <Label for="name">Név</Label>
+                <Input
+                    id="name"
+                    v-model="form.name"
+                    type="text"
+                    placeholder="Dokumentáció-író"
+                    autocomplete="off"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Olvasható név, ez jelenik meg a felületen.
+                </p>
+                <InputError :message="form.errors.name" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <Label for="slug">Azonosító</Label>
+                <Input
+                    id="slug"
+                    v-model="form.slug"
+                    type="text"
+                    placeholder="documentarian"
+                    autocomplete="off"
+                    class="font-mono"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Angol slug (kisbetű, szám, kötőjel) — a definíciós fájl neve
+                    és a Claude Code agent neve.
+                </p>
+                <InputError :message="form.errors.slug" />
+            </div>
         </div>
 
         <div class="flex flex-col gap-2">

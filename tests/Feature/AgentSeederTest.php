@@ -23,6 +23,7 @@ test('it loads an agent definition from a markdown file', function () {
     writeAgent($this->agentsPath.'/documentarian.md', <<<'MD'
         ---
         name: documentarian
+        title: Dokumentáció-író
         description: Writes docs from the current code.
         model: claude-sonnet-5
         tools: Read, Grep, Edit, Write
@@ -33,9 +34,10 @@ test('it loads an agent definition from a markdown file', function () {
 
     $this->seed(AgentSeeder::class);
 
-    $agent = Agent::where('name', 'documentarian')->firstOrFail();
+    $agent = Agent::where('slug', 'documentarian')->firstOrFail();
 
-    expect($agent->description)->toBe('Writes docs from the current code.')
+    expect($agent->name)->toBe('Dokumentáció-író')
+        ->and($agent->description)->toBe('Writes docs from the current code.')
         ->and($agent->model)->toBe('claude-sonnet-5')
         ->and($agent->tools)->toBe(['Read', 'Grep', 'Edit', 'Write'])
         ->and($agent->system_prompt)->toBe('You write documentation.')
@@ -43,11 +45,19 @@ test('it loads an agent definition from a markdown file', function () {
 });
 
 test('it falls back to the filename when name front matter is missing', function () {
-    writeAgent($this->agentsPath.'/reviewer.md', "No front matter, just a prompt.");
+    writeAgent($this->agentsPath.'/reviewer.md', 'No front matter, just a prompt.');
 
     $this->seed(AgentSeeder::class);
 
-    expect(Agent::where('name', 'reviewer')->exists())->toBeTrue();
+    expect(Agent::where('slug', 'reviewer')->value('name'))->toBe('reviewer');
+});
+
+test('the slug comes from the filename, not the name front matter', function () {
+    writeAgent($this->agentsPath.'/code-reviewer.md', "---\nname: kod-ellenorzo\ntitle: Kód-ellenőrző\n---\nReview.");
+
+    $this->seed(AgentSeeder::class);
+
+    expect(Agent::where('slug', 'code-reviewer')->value('name'))->toBe('Kód-ellenőrző');
 });
 
 test('re-seeding updates existing agents instead of duplicating them', function () {
@@ -57,8 +67,8 @@ test('re-seeding updates existing agents instead of duplicating them', function 
     writeAgent($this->agentsPath.'/documentarian.md', "---\nname: documentarian\nmodel: claude-opus-4-8\n---\nv2");
     $this->seed(AgentSeeder::class);
 
-    expect(Agent::where('name', 'documentarian')->count())->toBe(1)
-        ->and(Agent::where('name', 'documentarian')->first())
+    expect(Agent::where('slug', 'documentarian')->count())->toBe(1)
+        ->and(Agent::where('slug', 'documentarian')->first())
         ->model->toBe('claude-opus-4-8')
         ->system_prompt->toBe('v2');
 });

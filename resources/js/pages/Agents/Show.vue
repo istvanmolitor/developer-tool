@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm, usePoll } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePoll } from "@inertiajs/vue3";
 import {
     CheckCircle2,
     ChevronDown,
@@ -10,26 +10,27 @@ import {
     Send,
     Trash2,
     XCircle,
-} from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
-import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@lucide/vue";
+import { computed, ref, watch } from "vue";
+import Heading from "@/components/Heading.vue";
+import InputError from "@/components/InputError.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import agents from '@/routes/agents';
-import projectRoutes from '@/routes/projects';
+} from "@/components/ui/select";
+import agents from "@/routes/agents";
+import projectRoutes from "@/routes/projects";
 
 type Agent = {
     id: number;
     name: string;
+    slug: string;
     description: string | null;
     model: string | null;
     tools: string[] | null;
@@ -42,7 +43,7 @@ type Project = {
     name: string;
 };
 
-type PromptRunStatus = 'pending' | 'running' | 'completed' | 'failed';
+type PromptRunStatus = "pending" | "running" | "completed" | "failed";
 
 type PromptRun = {
     id: number;
@@ -63,7 +64,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Agentek', href: agents.index().url }],
+        breadcrumbs: [{ title: "Agentek", href: agents.index().url }],
     },
 });
 
@@ -73,20 +74,20 @@ const DESCRIPTION_COLLAPSE_LENGTH = 160;
 const descriptionExpanded = ref(false);
 
 const isDescriptionLong = computed(
-    () => (props.agent.description ?? '').length > DESCRIPTION_COLLAPSE_LENGTH,
+    () => (props.agent.description ?? "").length > DESCRIPTION_COLLAPSE_LENGTH,
 );
 
 const selectedProject = ref<string>(
-    props.projects.length === 1 ? props.projects[0].name : '',
+    props.projects.length === 1 ? props.projects[0].name : "",
 );
 
-const form = useForm({ prompt: '', agent_id: props.agent.id });
+const form = useForm({ prompt: "", agent_id: props.agent.id });
 
 const projectError = ref<string | null>(null);
 
 function submit(): void {
     if (!selectedProject.value) {
-        projectError.value = 'Válassz projektet.';
+        projectError.value = "Válassz projektet.";
 
         return;
     }
@@ -95,7 +96,7 @@ function submit(): void {
 
     form.post(projectRoutes.runs.store(selectedProject.value).url, {
         preserveScroll: true,
-        onSuccess: () => form.reset('prompt'),
+        onSuccess: () => form.reset("prompt"),
     });
 }
 
@@ -113,11 +114,11 @@ function destroy(): void {
 
 const hasActiveRun = computed(() =>
     props.runs.some(
-        (run) => run.status === 'pending' || run.status === 'running',
+        (run) => run.status === "pending" || run.status === "running",
     ),
 );
 
-const { start, stop } = usePoll(4000, { only: ['runs'] }, { autoStart: false });
+const { start, stop } = usePoll(4000, { only: ["runs"] }, { autoStart: false });
 
 watch(hasActiveRun, (active) => (active ? start() : stop()), {
     immediate: true,
@@ -127,18 +128,18 @@ const statusMeta: Record<
     PromptRunStatus,
     {
         label: string;
-        variant: 'default' | 'secondary' | 'destructive' | 'outline';
+        variant: "default" | "secondary" | "destructive" | "outline";
         icon: unknown;
     }
 > = {
-    pending: { label: 'Függőben', variant: 'secondary', icon: Clock },
-    running: { label: 'Fut', variant: 'default', icon: Loader2 },
-    completed: { label: 'Kész', variant: 'default', icon: CheckCircle2 },
-    failed: { label: 'Sikertelen', variant: 'destructive', icon: XCircle },
+    pending: { label: "Függőben", variant: "secondary", icon: Clock },
+    running: { label: "Fut", variant: "default", icon: Loader2 },
+    completed: { label: "Kész", variant: "default", icon: CheckCircle2 },
+    failed: { label: "Sikertelen", variant: "destructive", icon: XCircle },
 };
 
 function formatDate(value: string): string {
-    return new Date(value).toLocaleString('hu-HU');
+    return new Date(value).toLocaleString("hu-HU");
 }
 </script>
 
@@ -149,6 +150,9 @@ function formatDate(value: string): string {
         <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
                 <Heading :title="agent.name" variant="small" />
+                <p class="font-mono text-xs text-muted-foreground">
+                    {{ agent.slug }}
+                </p>
                 <template v-if="agent.description">
                     <p
                         class="text-sm whitespace-pre-line text-muted-foreground"
@@ -166,7 +170,7 @@ function formatDate(value: string): string {
                         :aria-expanded="descriptionExpanded"
                         @click="descriptionExpanded = !descriptionExpanded"
                     >
-                        {{ descriptionExpanded ? 'Kevesebb' : 'Továbbiak' }}
+                        {{ descriptionExpanded ? "Kevesebb" : "Továbbiak" }}
                         <ChevronDown
                             class="size-3.5 transition-transform"
                             :class="{ 'rotate-180': descriptionExpanded }"
@@ -251,8 +255,8 @@ function formatDate(value: string): string {
                             <Send class="size-4" />
                             {{
                                 form.processing
-                                    ? 'Sorba állítás…'
-                                    : 'Prompt futtatása'
+                                    ? "Sorba állítás…"
+                                    : "Prompt futtatása"
                             }}
                         </Button>
                     </div>

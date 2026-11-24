@@ -37,6 +37,13 @@ class UpdateAgentRequest extends FormRequest
                 'regex:/^[^\/\\\\]+$/',
                 Rule::unique('agents', 'name')->ignore($this->route('agent')),
             ],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::unique('agents', 'slug')->ignore($this->route('agent')),
+            ],
             'description' => ['nullable', 'string', 'max:2000'],
             'model' => ['nullable', 'string', 'max:255'],
             'tools' => ['nullable', 'array'],
@@ -52,6 +59,7 @@ class UpdateAgentRequest extends FormRequest
     {
         return [
             'name.regex' => 'A név nem tartalmazhat perjelet.',
+            'slug.regex' => 'Az azonosító csak kisbetűket, számokat és kötőjelet tartalmazhat (pl. database-expert).',
         ];
     }
 }

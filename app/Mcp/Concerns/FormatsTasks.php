@@ -20,12 +20,13 @@ trait FormatsTasks
     }
 
     /**
-     * Resolve an agent by its name (preferred) or numeric id.
+     * Resolve an agent by its name (preferred), slug or numeric id.
      */
     protected function resolveAgent(string $agent): ?Agent
     {
         return Agent::query()
             ->where('name', $agent)
+            ->orWhere('slug', $agent)
             ->when(is_numeric($agent), fn ($query) => $query->orWhere('id', (int) $agent))
             ->first();
     }

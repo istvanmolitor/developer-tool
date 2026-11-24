@@ -52,6 +52,7 @@ test('the command requests json output so usage can be captured', function () {
 test('an agent is injected into the command as --agents/--agent flags', function () {
     $agent = Agent::factory()->create([
         'name' => 'Kód Átnéző',
+        'slug' => 'code-reviewer',
         'description' => 'Átnézi a kódot.',
         'system_prompt' => 'Te egy alapos kódátnéző vagy.',
         'model' => 'claude-sonnet-5',
@@ -70,7 +71,7 @@ test('an agent is injected into the command as --agents/--agent flags', function
     $definition = json_decode($command[$agentsIndex + 1], true);
     $slug = $command[array_search('--agent', $command, true) + 1];
 
-    expect($slug)->toBe('kod-atnezo');
+    expect($slug)->toBe('code-reviewer');
     expect($definition[$slug])->toMatchArray([
         'description' => 'Átnézi a kódot.',
         'prompt' => 'Te egy alapos kódátnéző vagy.',

@@ -55,7 +55,8 @@ test('the agent page offers the projects and lists only its own runs', function 
 test('an agent can be created with comma-separated tools', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('agents.store'), [
-            'name' => 'documentarian',
+            'name' => 'Dokumentáció-író',
+            'slug' => 'documentarian',
             'description' => 'Writes docs.',
             'model' => 'claude-sonnet-5',
             'tools' => 'Read, Grep, Edit',
@@ -63,9 +64,10 @@ test('an agent can be created with comma-separated tools', function () {
         ])
         ->assertRedirect(route('agents.index'));
 
-    $agent = Agent::where('name', 'documentarian')->firstOrFail();
+    $agent = Agent::where('slug', 'documentarian')->firstOrFail();
 
-    expect($agent->tools)->toBe(['Read', 'Grep', 'Edit'])
+    expect($agent->name)->toBe('Dokumentáció-író')
+        ->and($agent->tools)->toBe(['Read', 'Grep', 'Edit'])
         ->and($agent->model)->toBe('claude-sonnet-5')
         ->and($agent->system_prompt)->toBe('You write documentation.');
 });
@@ -76,15 +78,38 @@ test('an agent name must be unique', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('agents.store'), [
             'name' => 'documentarian',
+            'slug' => 'other',
             'system_prompt' => 'x',
         ])
         ->assertSessionHasErrors('name');
 });
 
+test('an agent slug must be unique', function () {
+    Agent::factory()->create(['slug' => 'documentarian']);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('agents.store'), [
+            'name' => 'Dokumentáció-író',
+            'slug' => 'documentarian',
+            'system_prompt' => 'x',
+        ])
+        ->assertSessionHasErrors('slug');
+});
+
+test('an agent slug must be a lowercase slug', function (string $slug) {
+    $this->actingAs(User::factory()->create())
+        ->post(route('agents.store'), [
+            'name' => 'Dokumentáció-író',
+            'slug' => $slug,
+            'system_prompt' => 'x',
+        ])
+        ->assertSessionHasErrors('slug');
+})->with(['Documentarian', 'dokumentáció-író', 'doc writer', 'docs/writer', '-docs']);
+
 test('an agent requires a name and a system prompt', function () {
     $this->actingAs(User::factory()->create())
-        ->post(route('agents.store'), ['name' => '', 'system_prompt' => ''])
-        ->assertSessionHasErrors(['name', 'system_prompt']);
+        ->post(route('agents.store'), ['name' => '', 'slug' => '', 'system_prompt' => ''])
+        ->assertSessionHasErrors(['name', 'slug', 'system_prompt']);
 });
 
 test('an agent name cannot contain a slash', function () {
@@ -101,7 +126,8 @@ test('an agent can be updated', function () {
 
     $this->actingAs(User::factory()->create())
         ->put(route('agents.update', $agent), [
-            'name' => 'documentarian',
+            'name' => 'Dokumentáció-író',
+            'slug' => $agent->slug,
             'description' => 'Updated.',
             'model' => 'claude-opus-4-8',
             'tools' => 'Read, Write',
@@ -134,9 +160,9 @@ test('syncing refreshes agents from the definition files', function () {
     mkdir($agentsPath, 0755, true);
     config(['developer-tool.agents_path' => $agentsPath]);
 
-    $existing = Agent::factory()->create(['name' => 'documentarian', 'model' => 'old-model']);
+    $existing = Agent::factory()->create(['slug' => 'documentarian', 'model' => 'old-model']);
 
-    file_put_contents($agentsPath.'/documentarian.md', "---\nname: documentarian\nmodel: claude-sonnet-5\n---\nNew prompt.");
+    file_put_contents($agentsPath.'/documentarian.md', "---\nname: documentarian\ntitle: Dokumentáció-író\nmodel: claude-sonnet-5\n---\nNew prompt.");
     file_put_contents($agentsPath.'/reviewer.md', "---\nname: reviewer\n---\nReview code.");
 
     try {
@@ -149,9 +175,10 @@ test('syncing refreshes agents from the definition files', function () {
 
     expect(Agent::count())->toBe(2)
         ->and($existing->refresh())
+        ->name->toBe('Dokumentáció-író')
         ->model->toBe('claude-sonnet-5')
         ->system_prompt->toBe('New prompt.')
-        ->and(Agent::where('name', 'reviewer')->exists())->toBeTrue();
+        ->and(Agent::where('slug', 'reviewer')->exists())->toBeTrue();
 });
 
 test('syncing with a missing agents directory changes nothing', function () {

@@ -11,7 +11,6 @@ use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Str;
 use Throwable;
 
 class ClaudePromptRunner
@@ -193,7 +192,7 @@ class ClaudePromptRunner
      */
     private function agentOptions(Agent $agent, bool $canReplyToEmail = false): array
     {
-        $slug = Str::slug($agent->name) ?: 'agent-'.$agent->id;
+        $slug = $agent->slug ?: 'agent-'.$agent->id;
         $tools = Agent::normalizeTools($agent->tools);
 
         if ($canReplyToEmail && $tools !== null && ! in_array(self::REPLY_EMAIL_TOOL, $tools, true)) {

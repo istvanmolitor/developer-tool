@@ -19,10 +19,11 @@ class ListAgentsTool extends Tool
     {
         $agents = Agent::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'description'])
+            ->get(['id', 'name', 'slug', 'description'])
             ->map(fn (Agent $agent): array => [
                 'id' => $agent->id,
                 'name' => $agent->name,
+                'slug' => $agent->slug,
                 'description' => $agent->description,
             ])
             ->all();

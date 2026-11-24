@@ -24,10 +24,11 @@ class AgentSyncService
     /**
      * Load every agent definition file into the agents table.
      *
-     * Each file's YAML front matter supplies the name, description, model and
-     * tools, and its Markdown body becomes the system prompt. Agents are
-     * upserted by name, so re-running refreshes existing rows instead of
-     * duplicating them.
+     * The file's name (an English slug, e.g. `database-expert.md`) is the
+     * agent's machine identifier; its YAML front matter supplies the readable
+     * `title`, the description, model and tools, and its Markdown body becomes
+     * the system prompt. Agents are upserted by slug, so re-running refreshes
+     * existing rows instead of duplicating them.
      *
      * @return int The number of agent files synchronized.
      *
@@ -46,11 +47,12 @@ class AgentSyncService
         foreach ($paths as $path) {
             $document = $this->reader->read($path);
 
-            $name = $document->matter('name') ?: pathinfo($path, PATHINFO_FILENAME);
+            $slug = pathinfo($path, PATHINFO_FILENAME);
 
             Agent::updateOrCreate(
-                ['name' => $name],
+                ['slug' => $slug],
                 [
+                    'name' => $document->matter('title') ?: ($document->matter('name') ?: $slug),
                     'description' => $document->matter('description'),
                     'model' => $document->matter('model'),
                     'tools' => Agent::normalizeTools($document->matter('tools')),

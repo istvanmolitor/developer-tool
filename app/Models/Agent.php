@@ -14,6 +14,7 @@ class Agent extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'model',
         'tools',

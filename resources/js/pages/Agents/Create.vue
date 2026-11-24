@@ -1,24 +1,25 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import agents from '@/routes/agents';
-import AgentForm from './AgentForm.vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import agents from "@/routes/agents";
+import AgentForm from "./AgentForm.vue";
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Agentek', href: agents.index().url },
-            { title: 'Új', href: agents.create().url },
+            { title: "Agentek", href: agents.index().url },
+            { title: "Új", href: agents.create().url },
         ],
     },
 });
 
 const form = useForm({
-    name: '',
-    description: '',
-    model: '',
-    tools: '',
-    system_prompt: '',
+    name: "",
+    slug: "",
+    description: "",
+    model: "",
+    tools: "",
+    system_prompt: "",
 });
 
 function submit(): void {
