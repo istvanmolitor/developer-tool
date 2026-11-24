@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ClaudePromptRunner
@@ -33,6 +34,19 @@ class ClaudePromptRunner
     }
 
     /**
+     * Run the given agent against a project, optionally with a task prompt.
+     *
+     * The agent's definition (system prompt, model, tools) is applied to the
+     * claude run through {@see command()}. When no prompt is given, the agent's
+     * description — or a generic kickoff — stands in as the task, so the agent's
+     * own system prompt drives the work.
+     */
+    public function queueAgent(Project $project, Agent $agent, ?string $prompt = null, ?User $user = null): PromptRun
+    {
+        return $this->queue($project, $this->agentPrompt($agent, $prompt), $user, $agent);
+    }
+
+    /**
      * Run the prompt of the given PromptRun through `claude -p` inside the
      * project's directory, streaming the result back onto the record.
      */
@@ -53,7 +67,7 @@ class ClaudePromptRunner
             $result = Process::path($project->path)
                 ->env($this->environment())
                 ->timeout($this->timeout())
-                ->run($this->command($run->prompt));
+                ->run($this->command($run->prompt, $run->agent));
         } catch (Throwable $exception) {
             return $this->fail($run, $exception->getMessage());
         }
@@ -72,15 +86,62 @@ class ClaudePromptRunner
     /**
      * @return list<string>
      */
-    public function command(string $prompt): array
+    public function command(string $prompt, ?Agent $agent = null): array
     {
         $command = [config('developer-tool.claude.binary'), '-p', $prompt];
+
+        if ($agent !== null) {
+            array_push($command, ...$this->agentOptions($agent));
+        }
 
         if (config('developer-tool.claude.skip_permissions')) {
             $command[] = '--dangerously-skip-permissions';
         }
 
         return $command;
+    }
+
+    /**
+     * Resolve the task prompt for an agent run, falling back to the agent's
+     * description, then to a generic kickoff, when none is supplied.
+     */
+    private function agentPrompt(Agent $agent, ?string $prompt): string
+    {
+        $prompt = trim((string) $prompt);
+
+        if ($prompt !== '') {
+            return $prompt;
+        }
+
+        $description = trim((string) $agent->description);
+
+        return $description !== '' ? $description : 'Kezdd el a feladatodat a projekten.';
+    }
+
+    /**
+     * Translate an agent into the `--agents`/`--agent` CLI flags, injecting its
+     * definition inline so it can run against any project regardless of what
+     * agent files happen to live in that project's directory.
+     *
+     * @return list<string>
+     */
+    private function agentOptions(Agent $agent): array
+    {
+        $slug = Str::slug($agent->name) ?: 'agent-'.$agent->id;
+
+        $definition = array_filter([
+            'description' => trim((string) $agent->description) ?: $agent->name,
+            'prompt' => trim((string) $agent->system_prompt) ?: $agent->name,
+            'model' => $agent->model,
+            'tools' => Agent::normalizeTools($agent->tools),
+        ], fn ($value): bool => $value !== null && $value !== '' && $value !== []);
+
+        $json = json_encode(
+            [$slug => $definition],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+
+        return ['--agents', $json, '--agent', $slug];
     }
 
     private function fail(PromptRun $run, string $message): PromptRun

@@ -1,10 +1,13 @@
 <?php
 
 use App\Enums\PromptRunStatus;
+use App\Jobs\RunClaudePrompt;
+use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Services\ClaudePromptRunner;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/dev-tool-'.uniqid();
@@ -35,6 +38,68 @@ test('the command omits the skip-permissions flag when disabled', function () {
     $command = app(ClaudePromptRunner::class)->command('Do the thing');
 
     expect($command)->toBe(['claude', '-p', 'Do the thing']);
+});
+
+test('an agent is injected into the command as --agents/--agent flags', function () {
+    $agent = Agent::factory()->create([
+        'name' => 'Kód Átnéző',
+        'description' => 'Átnézi a kódot.',
+        'system_prompt' => 'Te egy alapos kódátnéző vagy.',
+        'model' => 'claude-sonnet-5',
+        'tools' => ['Read', 'Grep'],
+    ]);
+
+    $command = app(ClaudePromptRunner::class)->command('Nézd át a diffet', $agent);
+
+    expect($command[0])->toBe('claude');
+    expect($command[1])->toBe('-p');
+    expect($command[2])->toBe('Nézd át a diffet');
+
+    $agentsIndex = array_search('--agents', $command, true);
+    expect($agentsIndex)->not->toBeFalse();
+
+    $definition = json_decode($command[$agentsIndex + 1], true);
+    $slug = $command[array_search('--agent', $command, true) + 1];
+
+    expect($slug)->toBe('kod-atnezo');
+    expect($definition[$slug])->toMatchArray([
+        'description' => 'Átnézi a kódot.',
+        'prompt' => 'Te egy alapos kódátnéző vagy.',
+        'model' => 'claude-sonnet-5',
+        'tools' => ['Read', 'Grep'],
+    ]);
+});
+
+test('the command omits agent flags when no agent is given', function () {
+    $command = app(ClaudePromptRunner::class)->command('Do the thing');
+
+    expect($command)->not->toContain('--agents');
+    expect($command)->not->toContain('--agent');
+});
+
+test('queueAgent creates a pending run bound to the agent and dispatches it', function () {
+    Queue::fake();
+
+    $agent = Agent::factory()->create(['name' => 'Builder']);
+
+    $run = app(ClaudePromptRunner::class)->queueAgent($this->alpha, $agent, 'Építsd meg');
+
+    expect($run->status)->toBe(PromptRunStatus::Pending);
+    expect($run->agent_id)->toBe($agent->id);
+    expect($run->project_id)->toBe($this->alpha->id);
+    expect($run->prompt)->toBe('Építsd meg');
+
+    Queue::assertPushed(RunClaudePrompt::class);
+});
+
+test('queueAgent falls back to the agent description when no prompt is given', function () {
+    Queue::fake();
+
+    $agent = Agent::factory()->create(['description' => 'Takarítja a kódot.']);
+
+    $run = app(ClaudePromptRunner::class)->queueAgent($this->alpha, $agent);
+
+    expect($run->prompt)->toBe('Takarítja a kódot.');
 });
 
 test('a successful process marks the run completed with output', function () {
