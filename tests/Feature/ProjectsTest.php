@@ -26,7 +26,7 @@ test('guests are redirected from the projects index', function () {
 });
 
 test('the projects index lists every registered project', function () {
-    PromptRun::factory()->create(['project' => 'alpha']);
+    PromptRun::factory()->create(['project_id' => $this->alpha->id]);
 
     $this->actingAs(User::factory()->create())
         ->get(route('projects.index'))
@@ -39,8 +39,8 @@ test('the projects index lists every registered project', function () {
 });
 
 test('a project can be viewed with its run history', function () {
-    PromptRun::factory()->count(3)->create(['project' => 'alpha']);
-    PromptRun::factory()->create(['project' => 'beta']);
+    PromptRun::factory()->count(3)->create(['project_id' => $this->alpha->id]);
+    PromptRun::factory()->create(['project_id' => $this->beta->id]);
 
     $this->actingAs(User::factory()->create())
         ->get(route('projects.show', $this->alpha))
@@ -48,7 +48,7 @@ test('a project can be viewed with its run history', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Projects/Show')
             ->where('project.name', 'alpha')
-            ->has('runs', 3)
+            ->where('runs_count', 3)
         );
 });
 
@@ -104,8 +104,8 @@ test('a project can be updated', function () {
     expect($this->alpha->fresh()->description)->toBe('Updated description.');
 });
 
-test('renaming a project reattaches its run history', function () {
-    PromptRun::factory()->count(2)->create(['project' => 'alpha']);
+test('renaming a project keeps its run history attached', function () {
+    PromptRun::factory()->count(2)->create(['project_id' => $this->alpha->id]);
 
     $this->actingAs(User::factory()->create())
         ->put(route('projects.update', $this->alpha), [
@@ -114,8 +114,8 @@ test('renaming a project reattaches its run history', function () {
         ])
         ->assertRedirect();
 
-    expect(PromptRun::where('project', 'alpha-renamed')->count())->toBe(2)
-        ->and(PromptRun::where('project', 'alpha')->count())->toBe(0);
+    // Runs are linked by project_id, so a rename leaves them attached.
+    expect($this->alpha->fresh()->promptRuns()->count())->toBe(2);
 });
 
 test('a project can be deleted without touching the files on disk', function () {

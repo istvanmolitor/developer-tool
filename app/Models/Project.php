@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\CarbonImmutable;
 use Database\Factories\ProjectFactory;
+use Database\Seeders\ProjectSeeder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,7 @@ class Project extends Model
 
     /**
      * Name of the single system project — the developer tool's own codebase.
-     * Seeded by {@see \Database\Seeders\ProjectSeeder}, never deletable.
+     * Seeded by {@see ProjectSeeder}, never deletable.
      */
     public const SYSTEM_NAME = 'developer-tool';
 
@@ -69,14 +70,13 @@ class Project extends Model
     ];
 
     /**
-     * Prompt runs are linked by the (stable) project name rather than the id,
-     * which keeps existing history intact and matches the queued job payload.
+     * The prompt runs executed against this project.
      *
      * @return HasMany<PromptRun, $this>
      */
     public function promptRuns(): HasMany
     {
-        return $this->hasMany(PromptRun::class, 'project', 'name');
+        return $this->hasMany(PromptRun::class);
     }
 
     /**

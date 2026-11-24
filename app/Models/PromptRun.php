@@ -6,14 +6,23 @@ use App\Enums\PromptRunStatus;
 use Database\Factories\PromptRunFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PromptRun extends Model
 {
     /** @use HasFactory<PromptRunFactory> */
     use HasFactory;
 
+    /**
+     * A run is created once and streamed onto in place; there is no
+     * "updated_at" column, so disable Eloquent's maintenance of it.
+     */
+    public const UPDATED_AT = null;
+
     protected $fillable = [
-        'project',
+        'project_id',
+        'agent_id',
+        'user_id',
         'prompt',
         'status',
         'exit_code',
@@ -34,5 +43,35 @@ class PromptRun extends Model
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The project this prompt was run against.
+     *
+     * @return BelongsTo<Project, $this>
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * The agent this prompt was run as, if any.
+     *
+     * @return BelongsTo<Agent, $this>
+     */
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class);
+    }
+
+    /**
+     * The user who started this run, if known.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, FolderKanban, LayoutGrid } from '@lucide/vue';
+import { BookOpen, Bot, FolderGit2, FolderKanban, LayoutGrid } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -14,6 +14,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import agents from '@/routes/agents';
 import { dashboard } from '@/routes';
 import projects from '@/routes/projects';
 import type { NavItem } from '@/types';
@@ -28,6 +29,11 @@ const mainNavItems: NavItem[] = [
         title: 'Projektek',
         href: projects.index(),
         icon: FolderKanban,
+    },
+    {
+        title: 'Agentek',
+        href: agents.index(),
+        icon: Bot,
     },
 ];
 

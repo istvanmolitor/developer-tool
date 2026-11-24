@@ -3,23 +3,45 @@
 namespace App\Services;
 
 use App\Enums\PromptRunStatus;
+use App\Jobs\RunClaudePrompt;
+use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
+use App\Models\User;
 use Illuminate\Support\Facades\Process;
 use Throwable;
 
 class ClaudePromptRunner
 {
     /**
+     * Create a pending prompt run for the given project and queue it for
+     * execution. Returns the freshly created record.
+     */
+    public function queue(Project $project, string $prompt, ?User $user = null, ?Agent $agent = null): PromptRun
+    {
+        $run = PromptRun::create([
+            'project_id' => $project->id,
+            'user_id' => $user?->id,
+            'agent_id' => $agent?->id,
+            'prompt' => $prompt,
+            'status' => PromptRunStatus::Pending,
+        ]);
+
+        RunClaudePrompt::dispatch($run);
+
+        return $run;
+    }
+
+    /**
      * Run the prompt of the given PromptRun through `claude -p` inside the
      * project's directory, streaming the result back onto the record.
      */
     public function run(PromptRun $run): PromptRun
     {
-        $project = Project::query()->where('name', $run->project)->first();
+        $project = $run->project;
 
         if ($project === null) {
-            return $this->fail($run, "A(z) [{$run->project}] projekt már nem létezik.");
+            return $this->fail($run, 'A futtatáshoz tartozó projekt már nem létezik.');
         }
 
         $run->forceFill([

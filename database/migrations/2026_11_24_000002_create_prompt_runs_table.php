@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('prompt_runs', function (Blueprint $table) {
             $table->id();
-            $table->string('project');
+            // The project the prompt runs against, the agent it runs as (if
+            // any), and the user who started it. All nullable + null-on-delete
+            // so a run's history survives the deletion of any of them.
+            $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('agent_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->text('prompt');
             $table->string('status')->default('pending')->index();
             $table->integer('exit_code')->nullable();
@@ -21,9 +26,11 @@ return new class extends Migration
             $table->longText('error_output')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('finished_at')->nullable();
-            $table->timestamps();
+            // A run is created once and streamed onto in place — there is no
+            // meaningful "updated_at", so only track when it was created.
+            $table->timestamp('created_at')->nullable();
 
-            $table->index(['project', 'created_at']);
+            $table->index(['project_id', 'created_at']);
         });
     }
 

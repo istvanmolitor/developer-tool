@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\PromptRunStatus;
+use App\Models\Project;
 use App\Models\PromptRun;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,7 +20,9 @@ class PromptRunFactory extends Factory
     public function definition(): array
     {
         return [
-            'project' => 'test-project-1',
+            'project_id' => Project::factory(),
+            'agent_id' => null,
+            'user_id' => null,
             'prompt' => $this->faker->sentence(),
             'status' => PromptRunStatus::Pending,
             'exit_code' => null,

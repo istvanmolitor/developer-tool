@@ -16,7 +16,7 @@ beforeEach(function () {
         'developer-tool.claude.skip_permissions' => true,
     ]);
 
-    Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
+    $this->alpha = Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
 });
 
 afterEach(function () {
@@ -42,7 +42,7 @@ test('a successful process marks the run completed with output', function () {
         '*' => Process::result(output: 'Done!', exitCode: 0),
     ]);
 
-    $run = PromptRun::factory()->create(['project' => 'alpha']);
+    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -57,7 +57,7 @@ test('a failing process marks the run failed with its error output', function ()
         '*' => Process::result(output: '', errorOutput: 'boom', exitCode: 1),
     ]);
 
-    $run = PromptRun::factory()->create(['project' => 'alpha']);
+    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -70,7 +70,11 @@ test('a failing process marks the run failed with its error output', function ()
 test('a run for a missing project is marked failed without running a process', function () {
     Process::fake();
 
-    $run = PromptRun::factory()->create(['project' => 'ghost']);
+    // Deleting the project nulls the run's project_id (null-on-delete), which
+    // is how a run can end up orphaned from the project it was queued against.
+    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    $this->alpha->delete();
+    $run->refresh();
 
     app(ClaudePromptRunner::class)->run($run);
 

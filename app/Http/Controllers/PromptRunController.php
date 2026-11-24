@@ -2,24 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PromptRunStatus;
 use App\Http\Requests\StorePromptRunRequest;
-use App\Jobs\RunClaudePrompt;
 use App\Models\Project;
-use App\Models\PromptRun;
+use App\Services\ClaudePromptRunner;
 use Illuminate\Http\RedirectResponse;
 
 class PromptRunController extends Controller
 {
+    public function __construct(private ClaudePromptRunner $runner) {}
+
     public function store(StorePromptRunRequest $request, Project $project): RedirectResponse
     {
-        $run = PromptRun::create([
-            'project' => $project->name,
-            'prompt' => $request->validated('prompt'),
-            'status' => PromptRunStatus::Pending,
-        ]);
-
-        RunClaudePrompt::dispatch($run);
+        $this->runner->queue($project, $request->validated('prompt'), $request->user());
 
         return back()->with('status', 'Prompt sorba állítva.');
     }

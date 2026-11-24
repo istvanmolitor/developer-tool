@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
-use App\Models\PromptRun;
 use App\Services\ProjectService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -80,14 +79,6 @@ class ProjectController extends Controller
         // path is fixed and cannot be changed through the edit form.
         if ($project->is_system) {
             $validated['path'] = $project->path;
-        }
-
-        // Keep prompt-run history attached when a project is renamed, since
-        // runs are linked by the project name rather than its id.
-        if ($validated['name'] !== $project->name) {
-            PromptRun::query()
-                ->where('project', $project->name)
-                ->update(['project' => $validated['name']]);
         }
 
         $project->update($validated);

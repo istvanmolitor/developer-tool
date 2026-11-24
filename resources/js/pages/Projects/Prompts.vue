@@ -23,7 +23,6 @@ type PromptRunStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 type PromptRun = {
     id: number;
-    project: string;
     prompt: string;
     status: PromptRunStatus;
     exit_code: number | null;

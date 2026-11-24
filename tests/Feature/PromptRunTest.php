@@ -13,7 +13,7 @@ beforeEach(function () {
 
     config(['developer-tool.projects_path' => $this->projectsPath]);
 
-    Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
+    $this->alpha = Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
 });
 
 afterEach(function () {
@@ -23,12 +23,15 @@ afterEach(function () {
 test('submitting a prompt queues a claude run', function () {
     Queue::fake();
 
-    $this->actingAs(User::factory()->create())
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
         ->post(route('projects.runs.store', 'alpha'), ['prompt' => 'Add a README file.'])
         ->assertRedirect();
 
     $run = PromptRun::sole();
-    expect($run->project)->toBe('alpha')
+    expect($run->project_id)->toBe($this->alpha->id)
+        ->and($run->user_id)->toBe($user->id)
         ->and($run->prompt)->toBe('Add a README file.')
         ->and($run->status)->toBe(PromptRunStatus::Pending);
 

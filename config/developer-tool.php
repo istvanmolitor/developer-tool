@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Agents Directory
+    |--------------------------------------------------------------------------
+    |
+    | Absolute path to the directory holding the Claude Code agent definitions
+    | (`*.md` files with YAML front matter). The AgentSeeder reads every file
+    | here through the MarkdownFileReader and upserts it into the agents table.
+    |
+    */
+
+    'agents_path' => env('DEVELOPER_TOOL_AGENTS_PATH', base_path('.claude/agents')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Claude CLI
     |--------------------------------------------------------------------------
     |
