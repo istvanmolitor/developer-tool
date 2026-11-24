@@ -1,9 +1,12 @@
 <?php
 
+use App\Enums\ProjectProvisionStatus;
+use App\Jobs\ProvisionProject;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
 use Database\Seeders\ProjectSeeder;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -58,12 +61,15 @@ test('viewing an unknown project returns 404', function () {
         ->assertNotFound();
 });
 
-test('a project can be created', function () {
+test('a project can be created from an existing folder', function () {
+    Queue::fake();
+    // An on-disk directory that is not yet registered as a project.
+    mkdir($this->projectsPath.'/gamma', 0755, true);
+
     $this->actingAs(User::factory()->create())
         ->post(route('projects.store'), [
-            'name' => 'gamma',
-            'path' => $this->projectsPath.'/gamma',
-            'git_url' => 'https://github.com/user/gamma.git',
+            'mode' => 'existing',
+            'directory' => 'gamma',
             'description' => 'A fresh project.',
         ])
         ->assertRedirect(route('projects.index'));
@@ -71,16 +77,108 @@ test('a project can be created', function () {
     $this->assertDatabaseHas('projects', [
         'name' => 'gamma',
         'path' => $this->projectsPath.'/gamma',
-        'git_url' => 'https://github.com/user/gamma.git',
+        'git_url' => null,
         'description' => 'A fresh project.',
+        'provision_status' => ProjectProvisionStatus::Ready->value,
     ]);
+
+    // An existing folder needs no provisioning.
+    Queue::assertNothingPushed();
+});
+
+test('a new folder project is queued for provisioning', function () {
+    Queue::fake();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'new',
+            'name' => 'gamma',
+        ])
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseHas('projects', [
+        'name' => 'gamma',
+        'path' => $this->projectsPath.'/gamma',
+        'git_url' => null,
+        'provision_status' => ProjectProvisionStatus::Pending->value,
+    ]);
+
+    Queue::assertPushed(ProvisionProject::class, fn ($job) => $job->project->name === 'gamma');
+});
+
+test('a git project derives its folder name from the url and is queued', function () {
+    Queue::fake();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'git',
+            'git_url' => 'https://github.com/user/gamma.git',
+        ])
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseHas('projects', [
+        'name' => 'gamma',
+        'path' => $this->projectsPath.'/gamma',
+        'git_url' => 'https://github.com/user/gamma.git',
+        'provision_status' => ProjectProvisionStatus::Pending->value,
+    ]);
+
+    Queue::assertPushed(ProvisionProject::class);
+});
+
+test('a new folder that already exists on disk is rejected', function () {
+    mkdir($this->projectsPath.'/gamma', 0755, true);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'new',
+            'name' => 'gamma',
+        ])
+        ->assertSessionHasErrors('name');
+});
+
+test('an existing-folder mode requires a known directory', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'existing',
+            'directory' => 'not-on-disk',
+        ])
+        ->assertSessionHasErrors('directory');
+});
+
+test('a git project without a url falls back to creating an empty folder', function () {
+    Queue::fake();
+
+    // No git_url: the name cannot be derived, so it must be given explicitly.
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'git',
+            'name' => 'gamma',
+        ])
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseHas('projects', [
+        'name' => 'gamma',
+        'git_url' => null,
+        'provision_status' => ProjectProvisionStatus::Pending->value,
+    ]);
+
+    Queue::assertPushed(ProvisionProject::class);
+});
+
+test('a git project with neither url nor name is rejected', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'git',
+        ])
+        ->assertSessionHasErrors('name');
 });
 
 test('a project name must be unique', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('projects.store'), [
+            'mode' => 'new',
             'name' => 'alpha',
-            'path' => '/anywhere',
         ])
         ->assertSessionHasErrors('name');
 });
@@ -88,8 +186,8 @@ test('a project name must be unique', function () {
 test('a project name cannot contain a slash', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('projects.store'), [
+            'mode' => 'new',
             'name' => 'nested/name',
-            'path' => '/anywhere',
         ])
         ->assertSessionHasErrors('name');
 });

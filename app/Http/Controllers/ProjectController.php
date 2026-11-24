@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProjectProvisionStatus;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Jobs\ProvisionProject;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Services\ProjectService;
@@ -33,16 +35,40 @@ class ProjectController extends Controller
     {
         return Inertia::render('Projects/Create', [
             'projects_path' => $this->projects->projectsPath(),
+            'directories' => $this->projects->availableDirectories(),
         ]);
     }
 
     public function store(StoreProjectRequest $request): RedirectResponse
     {
-        Project::create($request->validated());
+        $validated = $request->validated();
+        $mode = $validated['mode'];
+
+        // "existing" points at a directory already on disk, so it is ready
+        // straight away. "new"/"git" need the directory created (mkdir/clone),
+        // which happens in a background job.
+        $needsProvisioning = $mode !== 'existing';
+
+        $project = new Project;
+        $project->forceFill([
+            'name' => $validated['name'],
+            'path' => $validated['path'],
+            'git_url' => $mode === 'git' ? ($validated['git_url'] ?? null) : null,
+            'description' => $validated['description'] ?? null,
+            'provision_status' => $needsProvisioning
+                ? ProjectProvisionStatus::Pending
+                : ProjectProvisionStatus::Ready,
+        ])->save();
+
+        if ($needsProvisioning) {
+            ProvisionProject::dispatch($project);
+        }
 
         return redirect()
             ->route('projects.index')
-            ->with('status', 'Projekt létrehozva.');
+            ->with('status', $needsProvisioning
+                ? 'Projekt létrehozva, a mappa előkészítése folyamatban.'
+                : 'Projekt létrehozva.');
     }
 
     public function show(Project $project): Response

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ProjectProvisionStatus;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -23,6 +24,7 @@ class ProjectFactory extends Factory
             'name' => $name,
             'path' => '/projects/'.$name,
             'description' => $this->faker->optional()->sentence(),
+            'provision_status' => ProjectProvisionStatus::Ready,
         ];
     }
 }

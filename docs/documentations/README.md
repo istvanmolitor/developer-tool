@@ -18,38 +18,38 @@ Verziók (`composer.json`, `package.json`): PHP ^8.3, Laravel framework ^13.17, 
 
 ### Útvonalak (`routes/web.php`, auth + verified)
 
-| Útvonal | Leírás |
-|---|---|
-| `GET /` | belépve → dashboard, különben login |
-| `GET /dashboard` | `Dashboard.vue` |
-| `resource agents` | `AgentController` (index, create, store, show, edit, update, destroy) |
-| `resource projects` | `ProjectController` (ugyanígy) |
-| `GET projects/{project}/prompts` | `projects.prompts` – agentek + legutóbbi 50 futtatás |
-| `POST projects/{project}/runs` | `projects.runs.store` – `PromptRunController@store` |
-| `settings/*` | profil, jelszó, security (jelszó-megerősítés kell), appearance |
+| Útvonal                          | Leírás                                                                |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `GET /`                          | belépve → dashboard, különben login                                   |
+| `GET /dashboard`                 | `Dashboard.vue`                                                       |
+| `resource agents`                | `AgentController` (index, create, store, show, edit, update, destroy) |
+| `resource projects`              | `ProjectController` (ugyanígy)                                        |
+| `GET projects/{project}/prompts` | `projects.prompts` – agentek + legutóbbi 50 futtatás                  |
+| `POST projects/{project}/runs`   | `projects.runs.store` – `PromptRunController@store`                   |
+| `settings/*`                     | profil, jelszó, security (jelszó-megerősítés kell), appearance        |
 
 Validáció (`app/Http/Requests`): a futtatásnál `prompt` (3–20000 karakter) kötelező, ha nincs `agent_id`; az `agent_id` létező agent kell legyen. Projekt/agent `name` egyedi és nem tartalmazhat `/` vagy `\` jelet.
 
 ### Modellek (`app/Models`)
 
-| Modell | Lényeg |
-|---|---|
-| `Project` | `is_system`, számított mezők: `exists`, `is_git_repository`, `last_modified_at`; `hasMany PromptRun` |
-| `Agent` | `tools` JSON lista (`Agent::normalizeTools` vesszős stringet is elfogad); `hasMany PromptRun` |
+| Modell      | Lényeg                                                                                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Project`   | `is_system`, számított mezők: `exists`, `is_git_repository`, `last_modified_at`; `hasMany PromptRun`                                                                                       |
+| `Agent`     | `tools` JSON lista (`Agent::normalizeTools` vesszős stringet is elfogad); `hasMany PromptRun`                                                                                              |
 | `PromptRun` | `project_id`, `agent_id`, `user_id` (mind nullable, törléskor null), `prompt`, `status`, `exit_code`, `output`, `error_output`, `cost_usd`, `started_at`, `finished_at`, csak `created_at` |
-| `User` | Fortify felhasználó |
+| `User`      | Fortify felhasználó                                                                                                                                                                        |
 
 Státuszok (`app/Enums/PromptRunStatus.php`): `pending`, `running`, `completed`, `failed`.
 
 ### Szolgáltatások, job, parancsok
 
-| Fájl | Szerep |
-|---|---|
-| `app/Services/ClaudePromptRunner.php` | `queue`/`queueAgent`: `PromptRun` létrehozása + job dispatch; `run`: `claude -p <prompt> --output-format json` futtatása a projekt könyvtárában (`Process`); agent esetén `--agents <json> --agent <slug>` inline definícióval; opcionálisan `--dangerously-skip-permissions` |
-| `app/Jobs/RunClaudePrompt.php` | queue job (timeout 2100 s, 1 próbálkozás); hiba esetén `failed` státusz |
-| `app/Services/ProjectService.php` | projektek könyvtárának kezelése, importálás lemezről |
-| `app/Services/MarkdownFileReader.php`, `ParsedMarkdown.php` | Markdown + YAML front matter beolvasás |
-| `php artisan projects:import` | a projects könyvtár még nem regisztrált alkönyvtárait felveszi projektként |
+| Fájl                                                        | Szerep                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/Services/ClaudePromptRunner.php`                       | `queue`/`queueAgent`: `PromptRun` létrehozása + job dispatch; `run`: `claude -p <prompt> --output-format json` futtatása a projekt könyvtárában (`Process`); agent esetén `--agents <json> --agent <slug>` inline definícióval; opcionálisan `--dangerously-skip-permissions` |
+| `app/Jobs/RunClaudePrompt.php`                              | queue job (timeout 2100 s, 1 próbálkozás); hiba esetén `failed` státusz                                                                                                                                                                                                       |
+| `app/Services/ProjectService.php`                           | projektek könyvtárának kezelése, importálás lemezről                                                                                                                                                                                                                          |
+| `app/Services/MarkdownFileReader.php`, `ParsedMarkdown.php` | Markdown + YAML front matter beolvasás                                                                                                                                                                                                                                        |
+| `php artisan projects:import`                               | a projects könyvtár még nem regisztrált alkönyvtárait felveszi projektként                                                                                                                                                                                                    |
 
 ### Seederek (`database/seeders`)
 
@@ -59,15 +59,15 @@ Státuszok (`app/Enums/PromptRunStatus.php`): `pending`, `running`, `completed`,
 
 Konfiguráció: `config/developer-tool.php`, minták: `.env.example`.
 
-| Env változó | Alapértelmezés | Jelentés |
-|---|---|---|
-| `DEVELOPER_TOOL_PROJECTS_PATH` | `/projects` | a projektek szülőkönyvtára (PHP/queue folyamat szerint) |
-| `DEVELOPER_TOOL_PROJECTS_HOST_PATH` | `../projects` | host oldali könyvtár, ami a konténerben `/projects`-be mountolódik (`compose.yaml`) |
-| `DEVELOPER_TOOL_AGENTS_PATH` | `.claude/agents` (base_path) | agent `*.md` definíciók |
-| `DEVELOPER_TOOL_CLAUDE_BIN` | `claude` | claude futtatható |
-| `DEVELOPER_TOOL_CLAUDE_SKIP_PERMISSIONS` | `true` | `--dangerously-skip-permissions` használata |
-| `DEVELOPER_TOOL_CLAUDE_TIMEOUT` | `1800` | egy futtatás max. ideje (mp) |
-| `DEVELOPER_TOOL_CLAUDE_HOME` | (`.env.example`: `/home/sail`) | `HOME` a claude folyamatnak a hitelesítő adatokhoz |
+| Env változó                              | Alapértelmezés                 | Jelentés                                                                            |
+| ---------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `DEVELOPER_TOOL_PROJECTS_PATH`           | `/projects`                    | a projektek szülőkönyvtára (PHP/queue folyamat szerint)                             |
+| `DEVELOPER_TOOL_PROJECTS_HOST_PATH`      | `../projects`                  | host oldali könyvtár, ami a konténerben `/projects`-be mountolódik (`compose.yaml`) |
+| `DEVELOPER_TOOL_AGENTS_PATH`             | `.claude/agents` (base_path)   | agent `*.md` definíciók                                                             |
+| `DEVELOPER_TOOL_CLAUDE_BIN`              | `claude`                       | claude futtatható                                                                   |
+| `DEVELOPER_TOOL_CLAUDE_SKIP_PERMISSIONS` | `true`                         | `--dangerously-skip-permissions` használata                                         |
+| `DEVELOPER_TOOL_CLAUDE_TIMEOUT`          | `1800`                         | egy futtatás max. ideje (mp)                                                        |
+| `DEVELOPER_TOOL_CLAUDE_HOME`             | (`.env.example`: `/home/sail`) | `HOME` a claude folyamatnak a hitelesítő adatokhoz                                  |
 
 - **Docker**: Laravel Sail (`compose.yaml`): `laravel.test` (PHP 8.5 runtime), `mysql` 8.4, `redis`. A `~/.claude` és `~/.claude.json` be van mountolva a konténerbe.
 - **Queue**: `.env.example` szerint `QUEUE_CONNECTION=database` – a promptok csak futó queue workerrel hajtódnak végre (TODO: ellenőrizni, hogy az `artisan dev` indítja-e a workert).

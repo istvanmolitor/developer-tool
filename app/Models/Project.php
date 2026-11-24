@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectProvisionStatus;
+use App\Jobs\ProvisionProject;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProjectFactory;
 use Database\Seeders\ProjectSeeder;
@@ -29,8 +31,10 @@ class Project extends Model
     ];
 
     /**
-     * `is_system` is intentionally NOT fillable: it is set only by the seeder,
-     * so it can never be flipped through the create/update forms.
+     * `is_system` and `provision_status` are intentionally NOT fillable: the
+     * former is set only by the seeder, the latter only by the controller and
+     * the {@see ProvisionProject} job — neither can be set through a
+     * create/update form.
      *
      * @return array<string, string>
      */
@@ -38,6 +42,7 @@ class Project extends Model
     {
         return [
             'is_system' => 'boolean',
+            'provision_status' => ProjectProvisionStatus::class,
         ];
     }
 

@@ -106,8 +106,7 @@ function destroy(): void {
                     </p>
                     <pre
                         class="mt-1 max-h-[32rem] overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap"
-                        >{{ agent.system_prompt }}</pre
-                    >
+                        >{{ agent.system_prompt }}</pre>
                 </div>
             </CardContent>
         </Card>

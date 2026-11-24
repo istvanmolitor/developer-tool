@@ -4,6 +4,7 @@ import {
     ChevronRight,
     Folder,
     FolderGit2,
+    LoaderCircle,
     Pencil,
     Plus,
     Terminal,
@@ -24,6 +25,8 @@ type Project = {
     exists: boolean;
     is_git_repository: boolean;
     is_system: boolean;
+    provision_status: 'ready' | 'pending' | 'provisioning' | 'failed';
+    provision_error: string | null;
     last_modified_at: string | null;
     runs_count: number;
     last_run_at: string | null;
@@ -156,7 +159,27 @@ function destroy(project: Project): void {
                         >git</Badge
                     >
                     <Badge
-                        v-if="!project.exists"
+                        v-if="
+                            project.provision_status === 'pending' ||
+                            project.provision_status === 'provisioning'
+                        "
+                        variant="secondary"
+                        class="gap-1"
+                    >
+                        <LoaderCircle class="size-3 animate-spin" />
+                        létrehozás folyamatban
+                    </Badge>
+                    <Badge
+                        v-else-if="project.provision_status === 'failed'"
+                        variant="destructive"
+                        class="gap-1"
+                        :title="project.provision_error ?? undefined"
+                    >
+                        <TriangleAlert class="size-3" />
+                        létrehozás sikertelen
+                    </Badge>
+                    <Badge
+                        v-else-if="!project.exists"
                         variant="destructive"
                         class="gap-1"
                     >

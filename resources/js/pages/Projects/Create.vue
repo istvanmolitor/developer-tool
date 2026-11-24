@@ -2,10 +2,11 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import projects from '@/routes/projects';
-import ProjectForm from './ProjectForm.vue';
+import CreateProjectForm, { type ProjectMode } from './CreateProjectForm.vue';
 
 const props = defineProps<{
     projects_path: string;
+    directories: string[];
 }>();
 
 defineOptions({
@@ -18,8 +19,9 @@ defineOptions({
 });
 
 const form = useForm({
+    mode: 'existing' as ProjectMode,
+    directory: '',
     name: '',
-    path: '',
     git_url: '',
     description: '',
 });
@@ -35,14 +37,14 @@ function submit(): void {
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <Heading
             title="Új projekt"
-            description="Regisztrálj egy projektkönyvtárat, amelyen claude promptokat futtathatsz."
+            description="Válassz egy meglévő mappát, adj meg egy új mappanevet, vagy klónozz egy git repót."
         />
 
-        <ProjectForm
+        <CreateProjectForm
             :form="form"
-            submit-label="Projekt létrehozása"
+            :projects-path="props.projects_path"
+            :directories="props.directories"
             :cancel-href="projects.index().url"
-            :path-hint="`Abszolút útvonal a queue worker szemszögéből, pl. ${projects_path}/my-project`"
             @submit="submit"
         />
     </div>

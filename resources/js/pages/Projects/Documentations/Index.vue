@@ -106,9 +106,7 @@ function formatDate(value: string | null): string {
                 </Button>
                 <Button size="sm" as-child>
                     <Link
-                        :href="
-                            projects.documentations.create(project.name).url
-                        "
+                        :href="projects.documentations.create(project.name).url"
                     >
                         <Plus class="size-4" />
                         Új dokumentáció
@@ -144,7 +142,9 @@ function formatDate(value: string | null): string {
                 :key="doc.id"
                 class="transition-colors hover:border-primary/50"
             >
-                <CardHeader class="flex flex-row items-center justify-between gap-3">
+                <CardHeader
+                    class="flex flex-row items-center justify-between gap-3"
+                >
                     <div class="min-w-0">
                         <CardTitle class="min-w-0 text-base">
                             <Link

@@ -51,7 +51,9 @@ function destroy(): void {
 </script>
 
 <template>
-    <Head :title="`${documentation.title ?? documentation.path} — ${project.name}`" />
+    <Head
+        :title="`${documentation.title ?? documentation.path} — ${project.name}`"
+    />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex items-start justify-between gap-4">
@@ -62,9 +64,7 @@ function destroy(): void {
             <div class="flex shrink-0 items-center gap-1">
                 <Button variant="outline" size="sm" as-child>
                     <Link
-                        :href="
-                            projects.documentations.index(project.name).url
-                        "
+                        :href="projects.documentations.index(project.name).url"
                     >
                         <ArrowLeft class="size-4" />
                         Vissza

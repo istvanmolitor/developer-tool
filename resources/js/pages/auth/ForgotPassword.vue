@@ -12,7 +12,8 @@ import { email } from '@/routes/password';
 defineOptions({
     layout: {
         title: 'Elfelejtett jelszó',
-        description: 'Add meg az e-mail címed a jelszó-visszaállító link elküldéséhez',
+        description:
+            'Add meg az e-mail címed a jelszó-visszaállító link elküldéséhez',
     },
 });
 

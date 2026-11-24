@@ -205,10 +205,15 @@ function formatCost(value: string | null): string | null {
                         </label>
                         <Select v-model="selectedAgent">
                             <SelectTrigger id="agent-select" class="w-full">
-                                <SelectValue placeholder="Nincs — sima claude futtatás">
+                                <SelectValue
+                                    placeholder="Nincs — sima claude futtatás"
+                                >
                                     <span class="flex items-center gap-2">
                                         <Bot class="size-4" />
-                                        {{ selectedAgentName ?? 'Nincs — sima claude futtatás' }}
+                                        {{
+                                            selectedAgentName ??
+                                            'Nincs — sima claude futtatás'
+                                        }}
                                     </span>
                                 </SelectValue>
                             </SelectTrigger>
@@ -241,12 +246,16 @@ function formatCost(value: string | null): string | null {
                     <InputError :message="form.errors.prompt" />
                     <div class="flex items-center justify-between">
                         <p class="text-xs text-muted-foreground">
-                            A <code>claude -p</code> parancsot futtatja a projekt
-                            könyvtárában.
+                            A <code>claude -p</code> parancsot futtatja a
+                            projekt könyvtárában.
                         </p>
                         <Button type="submit" :disabled="form.processing">
                             <Send class="size-4" />
-                            {{ form.processing ? 'Sorba állítás…' : 'Prompt futtatása' }}
+                            {{
+                                form.processing
+                                    ? 'Sorba állítás…'
+                                    : 'Prompt futtatása'
+                            }}
                         </Button>
                     </div>
                 </form>

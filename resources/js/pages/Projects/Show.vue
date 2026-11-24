@@ -105,7 +105,9 @@ function formatDate(value: string | null): string {
                 </div>
 
                 <div>
-                    <p class="text-xs font-medium text-muted-foreground">Útvonal</p>
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Útvonal
+                    </p>
                     <p class="mt-1 font-mono break-all">{{ project.path }}</p>
                 </div>
 
@@ -127,7 +129,11 @@ function formatDate(value: string | null): string {
                     <Badge v-if="project.is_system" variant="outline">
                         rendszer
                     </Badge>
-                    <Badge v-if="project.is_git_repository" variant="outline" class="gap-1">
+                    <Badge
+                        v-if="project.is_git_repository"
+                        variant="outline"
+                        class="gap-1"
+                    >
                         <FolderGit2 class="size-3" />
                         git tároló
                     </Badge>

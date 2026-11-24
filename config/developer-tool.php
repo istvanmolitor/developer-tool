@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Clone Timeout
+    |--------------------------------------------------------------------------
+    |
+    | Maximum number of seconds a background `git clone` may run when creating
+    | a project from a git link before it is aborted.
+    |
+    */
+
+    'clone_timeout' => (int) env('DEVELOPER_TOOL_CLONE_TIMEOUT', 900),
+
+    /*
+    |--------------------------------------------------------------------------
     | Agents Directory
     |--------------------------------------------------------------------------
     |

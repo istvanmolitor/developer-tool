@@ -61,16 +61,14 @@ const passwordInput = useTemplateRef('passwordInput');
                             >
                             <DialogDescription>
                                 A fiók törlése után minden hozzá tartozó
-                                erőforrás és adat véglegesen törlődik. Add meg
-                                a jelszavad, hogy megerősítsd a fiók végleges
+                                erőforrás és adat véglegesen törlődik. Add meg a
+                                jelszavad, hogy megerősítsd a fiók végleges
                                 törlését.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div class="grid gap-2">
-                            <Label for="password" class="sr-only"
-                                >Jelszó</Label
-                            >
+                            <Label for="password" class="sr-only">Jelszó</Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
