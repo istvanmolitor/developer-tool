@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
 use App\Http\Controllers\TaskController;
@@ -17,6 +18,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
 
     Route::resource('agents', AgentController::class);
+
+    Route::resource('mailboxes', MailboxController::class);
+    // Download the mailbox's new messages from its IMAP server.
+    Route::post('mailboxes/{mailbox}/fetch', [MailboxController::class, 'fetch'])->name('mailboxes.fetch');
 
     Route::resource('projects', ProjectController::class);
     Route::get('projects/{project}/prompts', [ProjectController::class, 'prompts'])->name('projects.prompts');

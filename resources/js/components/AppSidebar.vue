@@ -6,6 +6,7 @@ import {
     FolderGit2,
     FolderKanban,
     LayoutGrid,
+    Mail,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/sidebar';
 import agents from '@/routes/agents';
 import { dashboard } from '@/routes';
+import mailboxes from '@/routes/mailboxes';
 import projects from '@/routes/projects';
 import type { NavItem } from '@/types';
 
@@ -40,6 +42,11 @@ const mainNavItems: NavItem[] = [
         title: 'Agentek',
         href: agents.index(),
         icon: Bot,
+    },
+    {
+        title: 'Postafiókok',
+        href: mailboxes.index(),
+        icon: Mail,
     },
 ];
 

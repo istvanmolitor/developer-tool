@@ -43,3 +43,6 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+
+# Mailbox credentials (sensitive) — read by MailboxSeeder, never commit
+/mail.md

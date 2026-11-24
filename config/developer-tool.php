@@ -42,6 +42,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mailbox Credentials File
+    |--------------------------------------------------------------------------
+    |
+    | Markdown file listing the mailbox accounts (e-mail address line followed
+    | by its password line) and the IMAP / SMTP server settings. The
+    | MailboxSeeder reads it and upserts one mailbox per account.
+    |
+    */
+
+    'mailboxes_file' => env('DEVELOPER_TOOL_MAILBOXES_FILE', base_path('mail.md')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Claude CLI
     |--------------------------------------------------------------------------
     |
