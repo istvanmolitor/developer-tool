@@ -141,3 +141,20 @@ test('the sync button imports markdown files from disk', function () {
         ->and($doc->title)->toBe('Áttekintés')
         ->and($doc->content)->toContain('Tartalom.');
 });
+
+test('the documentation can be downloaded as a PDF', function () {
+    Documentation::factory()->create([
+        'project_id' => $this->project->id,
+        'path' => 'README.md',
+        'title' => 'Áttekintés',
+        'content' => "# Áttekintés\n\nTartalom.",
+    ]);
+
+    $response = $this->get(route('projects.documentations.pdf', 'alpha'));
+
+    $response->assertOk()
+        ->assertHeader('content-type', 'application/pdf')
+        ->assertDownload('alpha-dokumentacio.pdf');
+
+    expect($response->getContent())->toStartWith('%PDF-');
+});

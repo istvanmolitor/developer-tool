@@ -7,9 +7,12 @@ use App\Http\Requests\UpdateDocumentationRequest;
 use App\Models\Documentation;
 use App\Models\Project;
 use App\Services\DocumentationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class DocumentationController extends Controller
 {
@@ -86,5 +89,26 @@ class DocumentationController extends Controller
         return redirect()
             ->route('projects.documentations.index', $project)
             ->with('status', "{$documentations->count()} dokumentáció betöltve a lemezről.");
+    }
+
+    /**
+     * Download the project's full documentation as a single PDF file.
+     */
+    public function pdf(Project $project): HttpResponse
+    {
+        $documentations = $project->documentations()
+            ->orderBy('path')
+            ->get()
+            ->each->append('content_html');
+
+        $pdf = Pdf::loadView('documentations.pdf', [
+            'project' => $project,
+            'documentations' => $documentations,
+            'generatedAt' => now(),
+        ]);
+
+        $fileName = Str::slug($project->name).'-dokumentacio.pdf';
+
+        return $pdf->download($fileName);
     }
 }

@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     BookText,
     ChevronRight,
+    Download,
     Pencil,
     Plus,
     RefreshCw,
@@ -88,6 +89,20 @@ function formatDate(value: string | null): string {
                         :class="syncForm.processing ? 'animate-spin' : ''"
                     />
                     {{ syncForm.processing ? 'Betöltés…' : 'Frissítés' }}
+                </Button>
+                <Button
+                    v-if="documentations.length > 0"
+                    variant="outline"
+                    size="sm"
+                    as-child
+                >
+                    <a
+                        :href="projects.documentations.pdf(project.name).url"
+                        download
+                    >
+                        <Download class="size-4" />
+                        Letöltés PDF
+                    </a>
                 </Button>
                 <Button size="sm" as-child>
                     <Link

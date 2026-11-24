@@ -24,6 +24,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Reload the project's docs/documentations folder into the database.
     Route::post('projects/{project}/documentations/sync', [DocumentationController::class, 'sync'])
         ->name('projects.documentations.sync');
+    // Download the project's full documentation as a single PDF.
+    Route::get('projects/{project}/documentations/pdf', [DocumentationController::class, 'pdf'])
+        ->name('projects.documentations.pdf');
     Route::resource('projects.documentations', DocumentationController::class)->scoped();
 });
 
