@@ -1,4 +1,4 @@
-<script setup lang='ts'>
+<script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     Bot,
@@ -112,7 +112,7 @@ function destroy(agent: Agent): void {
 
         <div
             v-else
-            class="grid auto-rows-min gap-4 md:grid-cols-2 xl:grid-cols-3"
+            class="grid auto-rows-min gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
             <Card
                 v-for="agent in agents"

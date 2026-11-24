@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Agent;
+use App\Models\Project;
+use App\Models\PromptRun;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -29,6 +31,24 @@ test('an agent can be viewed', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Agents/Show')
             ->where('agent.name', 'documentarian')
+        );
+});
+
+test('the agent page offers the projects and lists only its own runs', function () {
+    $agent = Agent::factory()->create();
+    $project = Project::factory()->create(['name' => 'alpha']);
+    PromptRun::factory()->for($project)->create(['agent_id' => $agent->id, 'prompt' => 'Own run']);
+    PromptRun::factory()->for($project)->create(['agent_id' => Agent::factory()->create()->id]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('agents.show', $agent))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('projects', 1)
+            ->where('projects.0.name', 'alpha')
+            ->has('runs', 1)
+            ->where('runs.0.prompt', 'Own run')
+            ->where('runs.0.project.name', 'alpha')
         );
 });
 

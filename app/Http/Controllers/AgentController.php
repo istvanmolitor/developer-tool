@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAgentRequest;
 use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
+use App\Models\Project;
 use App\Services\AgentSyncService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -38,6 +39,15 @@ class AgentController extends Controller
     {
         return Inertia::render('Agents/Show', [
             'agent' => $agent,
+            'projects' => Project::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map->only(['id', 'name']),
+            'runs' => $agent->promptRuns()
+                ->with('project:id,name,path')
+                ->latest()
+                ->limit(20)
+                ->get(),
         ]);
     }
 
