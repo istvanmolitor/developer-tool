@@ -153,7 +153,7 @@ function formatDate(value: string | null): string {
                     <Button as-child>
                         <Link :href="projects.prompts(project.name).url">
                             <Terminal class="size-4" />
-                            Ugrás a promptokhoz
+                            Ugrás a chathez
                         </Link>
                     </Button>
                 </div>

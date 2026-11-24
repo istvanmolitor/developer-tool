@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
 use App\Http\Requests\StoreAgentRequest;
 use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
@@ -51,6 +53,43 @@ class AgentController extends Controller
         ]);
     }
 
+    /**
+     * The agent's profile: its model, tools, source and system prompt.
+     */
+    public function profile(Agent $agent): Response
+    {
+        return Inertia::render('Agents/Profile', [
+            'agent' => $agent,
+        ]);
+    }
+
+    /**
+     * The open tasks assigned to the agent, highest priority first and the
+     * oldest first within the same priority.
+     */
+    public function tasks(Agent $agent): Response
+    {
+        return Inertia::render('Agents/Tasks', [
+            'agent' => $agent->only(['id', 'name', 'slug']),
+            'tasks' => $agent->tasks()
+                ->with('project:id,name')
+                ->where('status', '!=', TaskStatus::Done)
+                ->orderByRaw('case priority when ? then 0 when ? then 1 else 2 end', [
+                    TaskPriority::High->value,
+                    TaskPriority::Medium->value,
+                ])
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get(),
+            'statuses' => collect(TaskStatus::cases())->map(
+                fn (TaskStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
+            ),
+            'priorities' => collect(TaskPriority::cases())->map(
+                fn (TaskPriority $priority): array => ['value' => $priority->value, 'label' => $priority->label()],
+            ),
+        ]);
+    }
+
     public function edit(Agent $agent): Response
     {
         return Inertia::render('Agents/Edit', [
@@ -63,7 +102,7 @@ class AgentController extends Controller
         $agent->update($request->validated());
 
         return redirect()
-            ->route('agents.show', $agent)
+            ->route('agents.profile', $agent)
             ->with('status', 'Agent frissítve.');
     }
 

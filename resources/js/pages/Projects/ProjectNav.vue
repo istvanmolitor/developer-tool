@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
-import { BookText, LayoutDashboard, ListTodo, Terminal } from '@lucide/vue';
-import { computed } from 'vue';
-import projects from '@/routes/projects';
+import { Link, usePage } from "@inertiajs/vue3";
+import {
+    BookText,
+    LayoutDashboard,
+    ListTodo,
+    MessageSquare,
+} from "@lucide/vue";
+import { computed } from "vue";
+import projects from "@/routes/projects";
 
 const props = defineProps<{
     name: string;
@@ -12,32 +17,32 @@ const page = usePage();
 
 const items = computed(() => [
     {
-        title: 'Áttekintés',
+        title: "Chat",
+        icon: MessageSquare,
+        href: projects.prompts(props.name).url,
+        component: "Projects/Prompts",
+    },
+    {
+        title: "Feladatok",
+        icon: ListTodo,
+        href: projects.tasks.index(props.name).url,
+        component: "Projects/Tasks",
+        // The project-wide change log is reached from the tasks screen.
+        also: ["Projects/TaskChanges"],
+    },
+    {
+        title: "Áttekintés",
         icon: LayoutDashboard,
         href: projects.show(props.name).url,
-        component: 'Projects/Show',
+        component: "Projects/Show",
     },
     {
-        title: 'Promptok',
-        icon: Terminal,
-        href: projects.prompts(props.name).url,
-        component: 'Projects/Prompts',
-    },
-    {
-        title: 'Dokumentáció',
+        title: "Dokumentáció",
         icon: BookText,
         href: projects.documentations.index(props.name).url,
         // The documentation section spans several pages (index, form, show),
         // so match on the folder prefix to keep the tab active throughout.
-        component: 'Projects/Documentations',
-    },
-    {
-        title: 'Feladatok',
-        icon: ListTodo,
-        href: projects.tasks.index(props.name).url,
-        component: 'Projects/Tasks',
-        // The project-wide change log is reached from the tasks screen.
-        also: ['Projects/TaskChanges'],
+        component: "Projects/Documentations",
     },
 ]);
 

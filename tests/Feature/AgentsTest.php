@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
+use App\Models\Task;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -49,6 +52,54 @@ test('the agent page offers the projects and lists only its own runs', function 
             ->has('runs', 1)
             ->where('runs.0.prompt', 'Own run')
             ->where('runs.0.project.name', 'alpha')
+        );
+});
+
+test('the agent profile shows its settings', function () {
+    $agent = Agent::factory()->create(['name' => 'documentarian', 'system_prompt' => 'Write docs.']);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('agents.profile', $agent))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Agents/Profile')
+            ->where('agent.name', 'documentarian')
+            ->where('agent.system_prompt', 'Write docs.')
+        );
+});
+
+test('the agent tasks list its open tasks by priority, then oldest first', function () {
+    $agent = Agent::factory()->create();
+    $project = Project::factory()->create();
+
+    $assign = fn (string $title, TaskPriority $priority, string $createdAt, TaskStatus $status = TaskStatus::Todo) => Task::factory()
+        ->for($project)
+        ->create([
+            'agent_id' => $agent->id,
+            'title' => $title,
+            'priority' => $priority,
+            'status' => $status,
+            'created_at' => $createdAt,
+        ]);
+
+    $assign('new low', TaskPriority::Low, '2026-01-01');
+    $assign('new high', TaskPriority::High, '2026-03-01');
+    $assign('medium', TaskPriority::Medium, '2026-01-01');
+    $assign('old high', TaskPriority::High, '2026-02-01', TaskStatus::InProgress);
+    $assign('done high', TaskPriority::High, '2025-01-01', TaskStatus::Done);
+    Task::factory()->for($project)->create(['agent_id' => Agent::factory()->create()->id, 'status' => TaskStatus::Todo]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('agents.tasks', $agent))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Agents/Tasks')
+            ->has('tasks', 4)
+            ->where('tasks.0.title', 'old high')
+            ->where('tasks.1.title', 'new high')
+            ->where('tasks.2.title', 'medium')
+            ->where('tasks.3.title', 'new low')
+            ->where('tasks.0.project.name', $project->name)
         );
 });
 
@@ -133,7 +184,7 @@ test('an agent can be updated', function () {
             'tools' => 'Read, Write',
             'system_prompt' => 'Updated prompt.',
         ])
-        ->assertRedirect(route('agents.show', $agent));
+        ->assertRedirect(route('agents.profile', $agent));
 
     expect($agent->fresh())
         ->description->toBe('Updated.')

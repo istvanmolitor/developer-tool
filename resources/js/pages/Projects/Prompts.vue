@@ -155,7 +155,7 @@ function formatCost(value: string | null): string | null {
 </script>
 
 <template>
-    <Head :title="`Promptok — ${project.name}`" />
+    <Head :title="`Chat — ${project.name}`" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex items-start justify-between gap-4">

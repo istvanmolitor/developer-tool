@@ -43,6 +43,16 @@ class Agent extends Model
     }
 
     /**
+     * The tasks assigned to this agent.
+     *
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /**
      * The mailboxes this agent sends and receives mail through.
      *
      * @return HasMany<Mailbox, $this>

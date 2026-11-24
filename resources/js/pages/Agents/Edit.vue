@@ -53,7 +53,7 @@ function submit(): void {
         <AgentForm
             :form="form"
             submit-label="Változtatások mentése"
-            :cancel-href="agents.show(agent.id).url"
+            :cancel-href="agents.profile(agent.id).url"
             @submit="submit"
         />
     </div>

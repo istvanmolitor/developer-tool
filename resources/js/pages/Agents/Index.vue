@@ -6,26 +6,45 @@ import {
     Pencil,
     Plus,
     RefreshCw,
+    Search,
     Trash2,
 } from "@lucide/vue";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import agentRoutes from "@/routes/agents";
 
 type Agent = {
     id: number;
     name: string;
     slug: string;
+    description: string | null;
     model: string | null;
     source_path: string | null;
 };
 
-defineProps<{
+const props = defineProps<{
     agents: Agent[];
 }>();
+
+const search = ref("");
+
+const filteredAgents = computed<Agent[]>(() => {
+    const term = search.value.trim().toLocaleLowerCase("hu");
+
+    if (term === "") {
+        return props.agents;
+    }
+
+    return props.agents.filter((agent) =>
+        [agent.name, agent.slug, agent.description, agent.model].some((value) =>
+            value?.toLocaleLowerCase("hu").includes(term),
+        ),
+    );
+});
 
 defineOptions({
     layout: {
@@ -111,59 +130,83 @@ function destroy(agent: Agent): void {
             </p>
         </div>
 
-        <div
-            v-else
-            class="grid auto-rows-min gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        >
-            <Card
-                v-for="agent in agents"
-                :key="agent.id"
-                class="flex h-full flex-col transition-colors hover:border-primary/50"
+        <template v-else>
+            <div class="relative max-w-sm">
+                <Search
+                    class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                    v-model="search"
+                    type="search"
+                    placeholder="Keresés név, slug, leírás vagy modell alapján…"
+                    aria-label="Agentek keresése"
+                    class="pl-8"
+                />
+            </div>
+
+            <p
+                v-if="filteredAgents.length === 0"
+                class="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground"
             >
-                <CardHeader>
-                    <CardTitle class="min-w-0">
-                        <Link
-                            :href="agentRoutes.show(agent.id).url"
-                            class="flex items-center gap-2 break-all outline-none hover:underline focus-visible:underline"
-                        >
-                            <Bot
-                                class="size-4 shrink-0 text-muted-foreground"
-                            />
-                            {{ agent.name }}
-                            <ChevronRight
-                                class="size-4 shrink-0 text-muted-foreground"
-                            />
-                        </Link>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent
-                    class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                Nincs a(z) „{{ search }}” keresésnek megfelelő agent.
+            </p>
+
+            <div
+                v-else
+                class="grid auto-rows-min gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+                <Card
+                    v-for="agent in filteredAgents"
+                    :key="agent.id"
+                    class="relative flex h-full flex-col transition-colors hover:border-primary/50"
                 >
-                    <code class="font-mono">{{ agent.slug }}</code>
-                    <Badge v-if="agent.model" variant="secondary">{{
-                        agent.model
-                    }}</Badge>
-                    <div
-                        class="flex w-full items-center justify-end gap-1 pt-1"
-                    >
-                        <Button variant="ghost" size="sm" as-child>
-                            <Link :href="agentRoutes.edit(agent.id).url">
+                    <div class="absolute top-2 right-2 flex items-center">
+                        <Button variant="ghost" size="icon-sm" as-child>
+                            <Link
+                                :href="agentRoutes.edit(agent.id).url"
+                                :title="`${agent.name} szerkesztése`"
+                                :aria-label="`${agent.name} szerkesztése`"
+                            >
                                 <Pencil class="size-3.5" />
-                                Szerkesztés
                             </Link>
                         </Button>
                         <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
                             class="text-destructive hover:text-destructive"
+                            :title="`${agent.name} törlése`"
+                            :aria-label="`${agent.name} törlése`"
                             @click="destroy(agent)"
                         >
                             <Trash2 class="size-3.5" />
-                            Törlés
                         </Button>
                     </div>
-                </CardContent>
-            </Card>
-        </div>
+                    <CardHeader class="pr-20">
+                        <CardTitle class="min-w-0">
+                            <Link
+                                :href="agentRoutes.show(agent.id).url"
+                                class="flex items-center gap-2 break-all outline-none hover:underline focus-visible:underline"
+                            >
+                                <Bot
+                                    class="size-4 shrink-0 text-muted-foreground"
+                                />
+                                {{ agent.name }}
+                                <ChevronRight
+                                    class="size-4 shrink-0 text-muted-foreground"
+                                />
+                            </Link>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent
+                        class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                    >
+                        <code class="font-mono">{{ agent.slug }}</code>
+                        <Badge v-if="agent.model" variant="secondary">{{
+                            agent.model
+                        }}</Badge>
+                    </CardContent>
+                </Card>
+            </div>
+        </template>
     </div>
 </template>
