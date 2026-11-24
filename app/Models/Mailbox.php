@@ -7,6 +7,7 @@ use Database\Factories\MailboxFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property MailEncryption $imap_encryption
@@ -50,7 +51,20 @@ class Mailbox extends Model
             'smtp_encryption' => MailEncryption::class,
             'is_active' => 'boolean',
             'last_fetched_at' => 'datetime',
+            'last_uid' => 'integer',
         ];
+    }
+
+    /**
+     * The messages are removed by a database cascade, so their attachment files are cleaned up here.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Mailbox $mailbox): void {
+            $mailbox->incomingEmails()->each(
+                fn (IncomingEmail $incomingEmail) => Storage::disk('local')->deleteDirectory($incomingEmail->attachmentsDirectory()),
+            );
+        });
     }
 
     /**

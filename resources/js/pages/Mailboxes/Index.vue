@@ -16,6 +16,7 @@ type Mailbox = {
     is_active: boolean;
     last_fetched_at: string | null;
     incoming_emails_count: number;
+    unread_emails_count: number;
 };
 
 defineProps<{
@@ -120,6 +121,9 @@ function formatDate(value: string | null): string {
                     >
                     <Badge variant="outline"
                         >{{ mailbox.incoming_emails_count }} levél</Badge
+                    >
+                    <Badge v-if="mailbox.unread_emails_count > 0"
+                        >{{ mailbox.unread_emails_count }} olvasatlan</Badge
                     >
                     <span
                         >Utolsó letöltés:

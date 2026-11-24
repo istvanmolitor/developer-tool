@@ -4,11 +4,13 @@ use App\Enums\MailEncryption;
 use App\Mail\MailboxMessage;
 use App\Models\IncomingEmail;
 use App\Models\Mailbox;
+use App\Services\Mail\FetchedAttachment;
 use App\Services\Mail\FetchedEmail;
 use App\Services\Mail\ImapMailFetcher;
 use App\Services\MailboxService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 function fetchedEmail(int $uid, array $overrides = []): FetchedEmail
 {
@@ -55,6 +57,52 @@ test('fetching does not duplicate an already stored message', function () {
 
     expect(app(MailboxService::class)->fetchIncoming($mailbox))->toBe(0)
         ->and($mailbox->incomingEmails()->count())->toBe(1);
+});
+
+test('a deleted newest message is not downloaded again', function () {
+    $mailbox = Mailbox::factory()->create();
+
+    $fetcher = $this->mock(ImapMailFetcher::class);
+    $fetcher->shouldReceive('fetch')
+        ->once()
+        ->withArgs(fn (Mailbox $given, int $afterUid) => $afterUid === 0)
+        ->andReturn([fetchedEmail(4), fetchedEmail(5)]);
+    $fetcher->shouldReceive('fetch')
+        ->once()
+        ->withArgs(fn (Mailbox $given, int $afterUid) => $afterUid === 5)
+        ->andReturn([]);
+
+    $service = app(MailboxService::class);
+    $service->fetchIncoming($mailbox);
+    $mailbox->incomingEmails()->where('uid', 5)->delete();
+
+    expect($service->fetchIncoming($mailbox->fresh()))->toBe(0)
+        ->and($mailbox->fresh()->last_uid)->toBe(5);
+});
+
+test('fetching stores the attachments of a new message on the private disk', function () {
+    Storage::fake('local');
+    $mailbox = Mailbox::factory()->create();
+
+    $this->mock(ImapMailFetcher::class)
+        ->shouldReceive('fetch')
+        ->andReturn([fetchedEmail(3, ['attachments' => [
+            new FetchedAttachment('számla.pdf', 'application/pdf', '%PDF-1.4 content'),
+            new FetchedAttachment('kep.png', 'image/png', 'png-bytes'),
+        ]])]);
+
+    app(MailboxService::class)->fetchIncoming($mailbox);
+
+    $attachments = $mailbox->incomingEmails()->sole()->attachments()->orderBy('id')->get();
+
+    expect($attachments)->toHaveCount(2)
+        ->and($attachments[0])
+        ->filename->toBe('számla.pdf')
+        ->mime_type->toBe('application/pdf')
+        ->size->toBe(16);
+
+    Storage::disk('local')->assertExists($attachments[0]->path);
+    expect(Storage::disk('local')->get($attachments[0]->path))->toBe('%PDF-1.4 content');
 });
 
 test('sending uses a mailer built from the mailbox smtp settings', function () {

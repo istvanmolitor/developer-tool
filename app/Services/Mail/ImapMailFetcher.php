@@ -85,11 +85,11 @@ class ImapMailFetcher
         $headers = imap_rfc822_parse_headers((string) imap_fetchheader($connection, $uid, FT_UID));
         $from = $headers->from[0] ?? null;
 
-        $bodies = ['text' => null, 'html' => null];
+        $content = ['text' => null, 'html' => null, 'attachments' => []];
         $structure = imap_fetchstructure($connection, $uid, FT_UID);
 
         if ($structure !== false) {
-            $this->collectBodies($connection, $uid, $structure, '', $bodies);
+            $this->collectParts($connection, $uid, $structure, '', $content);
         }
 
         return new FetchedEmail(
@@ -100,55 +100,125 @@ class ImapMailFetcher
             to: $this->addressList($headers->to ?? []),
             cc: $this->addressList($headers->cc ?? []),
             subject: isset($headers->subject) ? $this->decodeHeader($headers->subject) : null,
-            bodyText: $bodies['text'],
-            bodyHtml: $bodies['html'],
+            bodyText: $content['text'],
+            bodyHtml: $content['html'],
             receivedAt: $this->parseDate($headers->date ?? null),
+            attachments: $content['attachments'],
         );
     }
 
     /**
-     * Walk the MIME tree and keep the first inline text/plain and text/html parts.
+     * Walk the MIME tree: keep the first inline text/plain and text/html parts as
+     * the bodies and every other leaf part (or attached message) as an attachment.
      *
-     * @param  array{text: ?string, html: ?string}  $bodies
+     * @param  array{text: ?string, html: ?string, attachments: list<FetchedAttachment>}  $content
      */
-    private function collectBodies(Connection $connection, int $uid, stdClass $part, string $section, array &$bodies): void
+    private function collectParts(Connection $connection, int $uid, stdClass $part, string $section, array &$content): void
     {
-        if (! empty($part->parts)) {
-            // Attached messages (message/rfc822) are skipped — their text isn't this mail's body.
-            if ($part->type === TYPEMESSAGE) {
-                return;
-            }
+        // Attached messages (message/rfc822) are kept whole as .eml files, not merged into this mail's body.
+        if ($part->type === TYPEMESSAGE && $section !== '') {
+            $content['attachments'][] = new FetchedAttachment(
+                filename: $this->attachmentFilename($part, $section, 'eml'),
+                mimeType: 'message/rfc822',
+                content: $this->fetchPart($connection, $uid, $part, $section),
+            );
 
+            return;
+        }
+
+        if (! empty($part->parts)) {
             foreach ($part->parts as $index => $child) {
                 $childSection = $section === '' ? (string) ($index + 1) : $section.'.'.($index + 1);
-                $this->collectBodies($connection, $uid, $child, $childSection, $bodies);
+                $this->collectParts($connection, $uid, $child, $childSection, $content);
             }
 
             return;
         }
 
-        if ($part->type !== TYPETEXT || $this->isAttachment($part)) {
+        $bodyKey = $part->type === TYPETEXT && ! $this->isAttachment($part)
+            ? match (strtoupper($part->subtype ?? '')) {
+                'PLAIN' => 'text',
+                'HTML' => 'html',
+                default => null,
+            }
+        : null;
+
+        if ($bodyKey !== null) {
+            if ($content[$bodyKey] === null) {
+                $content[$bodyKey] = $this->toUtf8(
+                    $this->fetchPart($connection, $uid, $part, $section),
+                    $this->partParameter($part, 'charset'),
+                );
+            }
+
             return;
         }
 
-        $key = match (strtoupper($part->subtype ?? '')) {
-            'PLAIN' => 'text',
-            'HTML' => 'html',
-            default => null,
-        };
-
-        if ($key === null || $bodies[$key] !== null) {
+        // Unnamed inline text (e.g. a text/calendar alternative) is not a file the user attached.
+        if ($part->type === TYPETEXT && ! $this->isAttachment($part)) {
             return;
         }
 
+        $content['attachments'][] = new FetchedAttachment(
+            filename: $this->attachmentFilename($part, $section),
+            mimeType: $this->mimeType($part),
+            content: $this->fetchPart($connection, $uid, $part, $section),
+        );
+    }
+
+    /**
+     * Download one MIME part and undo its transfer encoding.
+     */
+    private function fetchPart(Connection $connection, int $uid, stdClass $part, string $section): string
+    {
         $raw = $section === ''
             ? imap_body($connection, $uid, FT_UID | FT_PEEK)
             : imap_fetchbody($connection, $uid, $section, FT_UID | FT_PEEK);
 
-        $bodies[$key] = $this->toUtf8(
-            $this->decodeTransferEncoding((string) $raw, (int) ($part->encoding ?? ENC7BIT)),
-            $this->partParameter($part, 'charset'),
-        );
+        return $this->decodeTransferEncoding((string) $raw, (int) ($part->encoding ?? ENC7BIT));
+    }
+
+    private function mimeType(stdClass $part): string
+    {
+        $type = match ($part->type) {
+            TYPETEXT => 'text',
+            TYPEMULTIPART => 'multipart',
+            TYPEMESSAGE => 'message',
+            TYPEAUDIO => 'audio',
+            TYPEIMAGE => 'image',
+            TYPEVIDEO => 'video',
+            TYPEMODEL => 'model',
+            default => 'application',
+        };
+
+        $subtype = strtolower($part->subtype ?? '');
+
+        return $subtype !== '' ? "{$type}/{$subtype}" : 'application/octet-stream';
+    }
+
+    /**
+     * The decoded file name of the part, or a generated one when the sender gave none.
+     */
+    private function attachmentFilename(stdClass $part, string $section, ?string $fallbackExtension = null): string
+    {
+        $filename = $this->partParameter($part, 'filename') ?? $this->partParameter($part, 'name');
+
+        // Only RFC 2047 encoded-words need decoding; RFC 2231 values are already UTF-8 here.
+        if ($filename !== null && str_contains($filename, '=?')) {
+            $filename = $this->decodeHeader($filename);
+        }
+
+        $filename = trim($filename ?? '');
+
+        // Never let a sender-supplied name carry path segments or control characters.
+        $filename = (string) preg_replace('/[\x00-\x1F\x7F\/\\\\]+/u', '_', $filename);
+
+        if ($filename === '' || $filename === '.' || $filename === '..') {
+            $extension = $fallbackExtension ?? strtolower($part->subtype ?? 'bin');
+            $filename = 'csatolmany-'.str_replace('.', '-', $section ?: '1').'.'.$extension;
+        }
+
+        return mb_substr($filename, 0, 255);
     }
 
     private function isAttachment(stdClass $part): bool
@@ -167,14 +237,49 @@ class ImapMailFetcher
                 continue;
             }
 
+            $extended = [];
+
             foreach ($part->{$property} as $parameter) {
-                if (strtolower($parameter->attribute) === $name) {
+                $attribute = strtolower($parameter->attribute);
+
+                if ($attribute === $name) {
                     return $parameter->value;
                 }
+
+                // RFC 2231 form: name*, or continuations name*0, name*1*, …
+                if (preg_match('/^'.preg_quote($name, '/').'\*(\d*)(\*?)$/', $attribute, $matches) === 1) {
+                    $extended[(int) $matches[1]] = [$parameter->value, $matches[1] === '' || $matches[2] === '*'];
+                }
+            }
+
+            if ($extended !== []) {
+                return $this->decodeExtendedParameter($extended);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Join and decode RFC 2231 parameter pieces (`utf-8''%C3%A1rv%C3%ADz.pdf`).
+     *
+     * @param  array<int, array{0: string, 1: bool}>  $pieces  value and whether it is percent-encoded, keyed by index
+     */
+    private function decodeExtendedParameter(array $pieces): string
+    {
+        ksort($pieces);
+        $charset = null;
+        $value = '';
+
+        foreach ($pieces as $index => [$piece, $isEncoded]) {
+            if ($index === array_key_first($pieces) && $isEncoded && substr_count($piece, "'") >= 2) {
+                [$charset, , $piece] = explode("'", $piece, 3);
+            }
+
+            $value .= $isEncoded ? rawurldecode($piece) : $piece;
+        }
+
+        return $this->toUtf8($value, $charset !== '' ? $charset : null);
     }
 
     private function decodeTransferEncoding(string $raw, int $encoding): string

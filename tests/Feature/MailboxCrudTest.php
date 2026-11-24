@@ -2,10 +2,12 @@
 
 use App\Enums\MailEncryption;
 use App\Models\IncomingEmail;
+use App\Models\IncomingEmailAttachment;
 use App\Models\Mailbox;
 use App\Models\User;
 use App\Services\MailboxService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -123,6 +125,162 @@ test('deleting a mailbox removes its incoming emails', function () {
 
     $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
     $this->assertDatabaseCount('incoming_emails', 0);
+});
+
+test('an incoming email can be deleted from its mailbox', function () {
+    $mailbox = Mailbox::factory()->create();
+    $email = IncomingEmail::factory()->for($mailbox)->create();
+    $other = IncomingEmail::factory()->for($mailbox)->create();
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('mailboxes.emails.destroy', [$mailbox, $email]))
+        ->assertRedirect(route('mailboxes.show', $mailbox));
+
+    $this->assertModelMissing($email);
+    $this->assertModelExists($other);
+});
+
+test('an incoming email cannot be deleted through another mailbox', function () {
+    $email = IncomingEmail::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('mailboxes.emails.destroy', [Mailbox::factory()->create(), $email]))
+        ->assertNotFound();
+
+    $this->assertModelExists($email);
+});
+
+test('opening an incoming email marks it as read once', function () {
+    $mailbox = Mailbox::factory()->create();
+    $email = IncomingEmail::factory()->for($mailbox)->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('mailboxes.emails.read', [$mailbox, $email]))
+        ->assertRedirect(route('mailboxes.show', $mailbox));
+
+    $firstReadAt = $email->fresh()->read_at;
+    expect($firstReadAt)->not->toBeNull();
+
+    $this->travel(1)->hour();
+    $this->actingAs($user)->post(route('mailboxes.emails.read', [$mailbox, $email]));
+
+    expect($email->fresh()->read_at->equalTo($firstReadAt))->toBeTrue();
+});
+
+test('an incoming email cannot be marked as read through another mailbox', function () {
+    $email = IncomingEmail::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('mailboxes.emails.read', [Mailbox::factory()->create(), $email]))
+        ->assertNotFound();
+
+    expect($email->fresh()->read_at)->toBeNull();
+});
+
+test('the mailbox pages report the unread email counts', function () {
+    $mailbox = Mailbox::factory()->create();
+    IncomingEmail::factory()->for($mailbox)->count(2)->create();
+    IncomingEmail::factory()->for($mailbox)->read()->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('mailboxes.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('mailboxes.0.incoming_emails_count', 3)
+            ->where('mailboxes.0.unread_emails_count', 2));
+
+    $this->actingAs($user)
+        ->get(route('mailboxes.show', $mailbox))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('unreadEmailsCount', 2)
+            ->has('incomingEmails.0.read_at'));
+});
+
+/**
+ * Create an attachment for the email with its file written to the (faked) private disk.
+ */
+function storedAttachment(IncomingEmail $email, string $content = 'file content'): IncomingEmailAttachment
+{
+    $path = $email->attachmentsDirectory().'/stored-file';
+    Storage::disk('local')->put($path, $content);
+
+    return IncomingEmailAttachment::factory()->for($email)->create([
+        'filename' => 'jelentés.pdf',
+        'mime_type' => 'application/pdf',
+        'size' => strlen($content),
+        'path' => $path,
+    ]);
+}
+
+test('an attachment can be downloaded with its original file name', function () {
+    Storage::fake('local');
+    $email = IncomingEmail::factory()->create();
+    $attachment = storedAttachment($email, '%PDF-1.4');
+
+    $response = $this->actingAs(User::factory()->create())
+        ->get(route('mailboxes.emails.attachments.download', [$email->mailbox, $email, $attachment]))
+        ->assertOk()
+        ->assertDownload('jelentes.pdf')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+    expect($response->headers->get('Content-Disposition'))->toContain("filename*=utf-8''jelent%C3%A9s.pdf")
+        ->and($response->streamedContent())->toBe('%PDF-1.4');
+});
+
+test('an attachment cannot be downloaded through another email', function () {
+    Storage::fake('local');
+    $email = IncomingEmail::factory()->create();
+    $otherEmail = IncomingEmail::factory()->for($email->mailbox)->create();
+    $attachment = storedAttachment($email);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('mailboxes.emails.attachments.download', [$email->mailbox, $otherEmail, $attachment]))
+        ->assertNotFound();
+});
+
+test('guests cannot download attachments', function () {
+    Storage::fake('local');
+    $email = IncomingEmail::factory()->create();
+    $attachment = storedAttachment($email);
+
+    $this->get(route('mailboxes.emails.attachments.download', [$email->mailbox, $email, $attachment]))
+        ->assertRedirect(route('login'));
+});
+
+test('deleting an email removes its attachment files', function () {
+    Storage::fake('local');
+    $email = IncomingEmail::factory()->create();
+    $attachment = storedAttachment($email);
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('mailboxes.emails.destroy', [$email->mailbox, $email]));
+
+    $this->assertModelMissing($attachment);
+    Storage::disk('local')->assertMissing($attachment->path);
+});
+
+test('deleting a mailbox removes the attachment files of its emails', function () {
+    Storage::fake('local');
+    $email = IncomingEmail::factory()->create();
+    $attachment = storedAttachment($email);
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('mailboxes.destroy', $email->mailbox));
+
+    $this->assertModelMissing($attachment);
+    Storage::disk('local')->assertMissing($attachment->path);
+});
+
+test('the mailbox page lists the attachments of each email', function () {
+    $email = IncomingEmail::factory()->create();
+    IncomingEmailAttachment::factory()->for($email)->create(['filename' => 'terv.docx']);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('mailboxes.show', $email->mailbox))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('incomingEmails.0.attachments.0.filename', 'terv.docx')
+            ->missing('incomingEmails.0.attachments.0.path'));
 });
 
 test('the fetch action downloads mail through the service', function () {

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\IncomingEmailController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
@@ -22,6 +23,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('mailboxes', MailboxController::class);
     // Download the mailbox's new messages from its IMAP server.
     Route::post('mailboxes/{mailbox}/fetch', [MailboxController::class, 'fetch'])->name('mailboxes.fetch');
+    Route::resource('mailboxes.emails', IncomingEmailController::class)
+        ->only('destroy')
+        ->parameters(['emails' => 'incomingEmail'])
+        ->scoped();
+    Route::post('mailboxes/{mailbox}/emails/{incomingEmail}/read', [IncomingEmailController::class, 'markAsRead'])
+        ->scopeBindings()
+        ->name('mailboxes.emails.read');
+    Route::get('mailboxes/{mailbox}/emails/{incomingEmail}/attachments/{attachment}', [IncomingEmailController::class, 'downloadAttachment'])
+        ->scopeBindings()
+        ->name('mailboxes.emails.attachments.download');
 
     Route::resource('projects', ProjectController::class);
     Route::get('projects/{project}/prompts', [ProjectController::class, 'prompts'])->name('projects.prompts');

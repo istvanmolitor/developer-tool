@@ -7,6 +7,7 @@ use App\Http\Requests\StoreMailboxRequest;
 use App\Http\Requests\UpdateMailboxRequest;
 use App\Models\Mailbox;
 use App\Services\MailboxService;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,7 +19,10 @@ class MailboxController extends Controller
     {
         return Inertia::render('Mailboxes/Index', [
             'mailboxes' => Mailbox::query()
-                ->withCount('incomingEmails')
+                ->withCount([
+                    'incomingEmails',
+                    'incomingEmails as unread_emails_count' => fn (Builder $query) => $query->whereNull('read_at'),
+                ])
                 ->orderBy('name')
                 ->get(),
         ]);
@@ -45,11 +49,13 @@ class MailboxController extends Controller
         return Inertia::render('Mailboxes/Show', [
             'mailbox' => $mailbox,
             'incomingEmails' => $mailbox->incomingEmails()
+                ->with('attachments:id,incoming_email_id,filename,mime_type,size')
                 ->latest('received_at')
                 ->latest('id')
                 ->limit(50)
-                ->get(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at']),
+                ->get(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at']),
             'incomingEmailsCount' => $mailbox->incomingEmails()->count(),
+            'unreadEmailsCount' => $mailbox->incomingEmails()->whereNull('read_at')->count(),
         ]);
     }
 

@@ -4,9 +4,17 @@ namespace App\Services;
 
 use App\Enums\MailEncryption;
 use App\Mail\MailboxMessage;
+use App\Models\IncomingEmail;
 use App\Models\Mailbox;
+use App\Services\Mail\FetchedAttachment;
+use App\Services\Mail\FetchedEmail;
 use App\Services\Mail\ImapMailFetcher;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 /**
  * Downloads incoming mail into `incoming_emails` and sends mail through a
@@ -23,33 +31,86 @@ class MailboxService
      */
     public function fetchIncoming(Mailbox $mailbox, int $limit = 100): int
     {
-        $lastUid = (int) $mailbox->incomingEmails()->max('uid');
+        // Deleted messages no longer show up in max('uid'), so the stored high-water mark wins.
+        $lastUid = max((int) $mailbox->last_uid, (int) $mailbox->incomingEmails()->max('uid'));
         $created = 0;
 
         foreach ($this->fetcher->fetch($mailbox, $lastUid, $limit) as $email) {
-            $incoming = $mailbox->incomingEmails()->firstOrCreate(
-                ['uid' => $email->uid],
-                [
-                    'message_id' => $email->messageId,
-                    'from_address' => $email->fromAddress,
-                    'from_name' => $email->fromName,
-                    'to' => $email->to,
-                    'cc' => $email->cc,
-                    'subject' => $email->subject,
-                    'body_text' => $email->bodyText,
-                    'body_html' => $email->bodyHtml,
-                    'received_at' => $email->receivedAt,
-                ],
-            );
-
-            if ($incoming->wasRecentlyCreated) {
+            if ($this->storeIncoming($mailbox, $email)) {
                 $created++;
             }
+
+            $lastUid = max($lastUid, $email->uid);
         }
 
-        $mailbox->forceFill(['last_fetched_at' => now()])->save();
+        $mailbox->forceFill(['last_fetched_at' => now(), 'last_uid' => $lastUid ?: null])->save();
 
         return $created;
+    }
+
+    /**
+     * Store one fetched message with its attachment files, unless it is already stored.
+     *
+     * @return bool Whether the message was newly stored.
+     */
+    private function storeIncoming(Mailbox $mailbox, FetchedEmail $email): bool
+    {
+        $directory = null;
+
+        try {
+            return DB::transaction(function () use ($mailbox, $email, &$directory): bool {
+                $incoming = $mailbox->incomingEmails()->firstOrCreate(
+                    ['uid' => $email->uid],
+                    [
+                        'message_id' => $email->messageId,
+                        'from_address' => $email->fromAddress,
+                        'from_name' => $email->fromName,
+                        'to' => $email->to,
+                        'cc' => $email->cc,
+                        'subject' => $email->subject,
+                        'body_text' => $email->bodyText,
+                        'body_html' => $email->bodyHtml,
+                        'received_at' => $email->receivedAt,
+                    ],
+                );
+
+                if (! $incoming->wasRecentlyCreated) {
+                    return false;
+                }
+
+                $directory = $incoming->attachmentsDirectory();
+
+                foreach ($email->attachments as $attachment) {
+                    $this->storeAttachment($incoming, $attachment);
+                }
+
+                return true;
+            });
+        } catch (Throwable $exception) {
+            // The message row was rolled back, so drop any files already written for it.
+            if ($directory !== null) {
+                Storage::disk('local')->deleteDirectory($directory);
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function storeAttachment(IncomingEmail $incoming, FetchedAttachment $attachment): void
+    {
+        // Files are stored under a random name; the sender's file name is only kept in the database.
+        $path = $incoming->attachmentsDirectory().'/'.Str::uuid();
+
+        if (! Storage::disk('local')->put($path, $attachment->content)) {
+            throw new RuntimeException("Nem sikerült menteni a(z) „{$attachment->filename}” csatolmányt.");
+        }
+
+        $incoming->attachments()->create([
+            'filename' => $attachment->filename,
+            'mime_type' => $attachment->mimeType,
+            'size' => strlen($attachment->content),
+            'path' => $path,
+        ]);
     }
 
     /**

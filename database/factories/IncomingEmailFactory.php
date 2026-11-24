@@ -30,6 +30,17 @@ class IncomingEmailFactory extends Factory
             'body_text' => $this->faker->paragraphs(2, true),
             'body_html' => null,
             'received_at' => $this->faker->dateTimeBetween('-1 month'),
+            'read_at' => null,
         ];
+    }
+
+    /**
+     * Indicate that the message has already been opened.
+     */
+    public function read(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'read_at' => now(),
+        ]);
     }
 }

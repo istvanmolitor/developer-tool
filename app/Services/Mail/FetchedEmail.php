@@ -12,6 +12,7 @@ final readonly class FetchedEmail
     /**
      * @param  list<string>  $to
      * @param  list<string>  $cc
+     * @param  list<FetchedAttachment>  $attachments
      */
     public function __construct(
         public int $uid,
@@ -24,5 +25,6 @@ final readonly class FetchedEmail
         public ?string $bodyText,
         public ?string $bodyHtml,
         public ?CarbonImmutable $receivedAt,
+        public array $attachments = [],
     ) {}
 }
