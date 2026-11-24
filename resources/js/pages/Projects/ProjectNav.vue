@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookText, LayoutDashboard, Terminal } from '@lucide/vue';
+import { BookText, LayoutDashboard, ListTodo, Terminal } from '@lucide/vue';
 import { computed } from 'vue';
 import projects from '@/routes/projects';
 
@@ -30,6 +30,12 @@ const items = computed(() => [
         // The documentation section spans several pages (index, form, show),
         // so match on the folder prefix to keep the tab active throughout.
         component: 'Projects/Documentations',
+    },
+    {
+        title: 'Feladatok',
+        icon: ListTodo,
+        href: projects.tasks.index(props.name).url,
+        component: 'Projects/Tasks',
     },
 ]);
 

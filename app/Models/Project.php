@@ -96,6 +96,16 @@ class Project extends Model
     }
 
     /**
+     * Tasks tracked for this project.
+     *
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /**
      * Use the project name in URLs so links stay human readable.
      */
     public function getRouteKeyName(): string

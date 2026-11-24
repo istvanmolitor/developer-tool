@@ -4,6 +4,7 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('projects/{project}/documentations/pdf', [DocumentationController::class, 'pdf'])
         ->name('projects.documentations.pdf');
     Route::resource('projects.documentations', DocumentationController::class)->scoped();
+
+    Route::resource('projects.tasks', TaskController::class)->scoped();
 });
 
 require __DIR__.'/settings.php';
