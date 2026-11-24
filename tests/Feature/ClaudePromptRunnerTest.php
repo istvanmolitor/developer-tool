@@ -112,6 +112,7 @@ test('a run handling an e-mail gives the agent the mail mcp server bound to the 
         $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
 
         return array_keys($mcpConfig['mcpServers']) === ['tasks', 'mail']
+            && $mcpConfig['mcpServers']['tasks']['env'] === ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id]
             && $mcpConfig['mcpServers']['mail'] === [
                 'command' => 'php',
                 'args' => [base_path('artisan'), 'mcp:start', 'mail'],

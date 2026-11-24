@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAgentRequest;
 use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
+use App\Services\AgentSyncService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class AgentController extends Controller
 {
@@ -62,5 +64,23 @@ class AgentController extends Controller
         return redirect()
             ->route('agents.index')
             ->with('status', 'Agent eltávolítva.');
+    }
+
+    /**
+     * Refresh the agents table from the agent definition files on disk.
+     */
+    public function sync(AgentSyncService $agentSync): RedirectResponse
+    {
+        try {
+            $synced = $agentSync->sync();
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => "{$synced} agent szinkronizálva."]);
+        } catch (RuntimeException $exception) {
+            report($exception);
+
+            Inertia::flash('toast', ['type' => 'error', 'message' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('agents.index');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -21,6 +22,7 @@ class UpdateTaskRequest extends FormRequest
     {
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'type' => ['sometimes', 'required', new Enum(TaskType::class)],
             'agent_id' => ['nullable', 'integer', 'exists:agents,id'],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['sometimes', 'required', new Enum(TaskStatus::class)],

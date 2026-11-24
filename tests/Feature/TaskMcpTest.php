@@ -36,11 +36,13 @@ test('create-task creates a task under a project', function () {
         'project' => 'alpha',
         'title' => 'MCP feladat',
         'priority' => 'high',
+        'type' => 'design',
     ])->assertOk();
 
     $task = Task::sole();
     expect($task->title)->toBe('MCP feladat')
         ->and($task->priority->value)->toBe('high')
+        ->and($task->type->value)->toBe('design')
         ->and($task->project_id)->toBe($this->project->id);
 });
 
@@ -131,4 +133,14 @@ test('delete-task removes the task', function () {
 test('delete-task errors on a missing task', function () {
     TaskServer::tool(DeleteTaskTool::class, ['task_id' => 999999])
         ->assertHasErrors();
+});
+
+test('list-tasks can filter by type', function () {
+    Task::factory()->create(['project_id' => $this->project->id, 'title' => 'Bug feladat', 'type' => 'bug']);
+    Task::factory()->create(['project_id' => $this->project->id, 'title' => 'Design feladat', 'type' => 'design']);
+
+    TaskServer::tool(ListTasksTool::class, ['project' => 'alpha', 'type' => 'bug'])
+        ->assertOk()
+        ->assertSee('Bug feladat')
+        ->assertDontSee('Design feladat');
 });

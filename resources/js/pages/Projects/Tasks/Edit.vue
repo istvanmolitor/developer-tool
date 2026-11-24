@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import projects from '@/routes/projects';
-import TaskForm from './TaskForm.vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import projects from "@/routes/projects";
+import TaskForm from "./TaskForm.vue";
 
 type Option = { value: string; label: string };
 type AgentOption = { id: number; name: string };
@@ -16,6 +16,7 @@ type Project = {
 type Task = {
     id: number;
     title: string;
+    type: string;
     agent_id: number | null;
     description: string | null;
     status: string;
@@ -28,28 +29,30 @@ const props = defineProps<{
     task: Task;
     statuses: Option[];
     priorities: Option[];
+    types: Option[];
     agents: AgentOption[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
 const form = useForm({
     title: props.task.title,
-    agent_id: props.task.agent_id === null ? '' : String(props.task.agent_id),
-    description: props.task.description ?? '',
+    type: props.task.type,
+    agent_id: props.task.agent_id === null ? "" : String(props.task.agent_id),
+    description: props.task.description ?? "",
     status: props.task.status,
     priority: props.task.priority,
-    due_date: props.task.due_date ?? '',
+    due_date: props.task.due_date ?? "",
 });
 
 function submit(): void {
     form.transform((data) => ({
         ...data,
-        agent_id: data.agent_id === '' ? null : Number(data.agent_id),
+        agent_id: data.agent_id === "" ? null : Number(data.agent_id),
     })).put(
         projects.tasks.update({
             project: props.project.name,
@@ -72,6 +75,7 @@ function submit(): void {
             :form="form"
             :statuses="statuses"
             :priorities="priorities"
+            :types="types"
             :agents="agents"
             submit-label="Módosítások mentése"
             :cancel-href="projects.tasks.index(project.name).url"

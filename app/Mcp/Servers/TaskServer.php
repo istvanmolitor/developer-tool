@@ -39,6 +39,12 @@ use Laravel\Mcp\Server\Tool;
 class TaskServer extends Server
 {
     /**
+     * Environment variable holding the id of the prompt run the server was started for.
+     * Task changes made through the server are attributed to that run's agent.
+     */
+    public const PROMPT_RUN_ENV = MailServer::PROMPT_RUN_ENV;
+
+    /**
      * @var array<int, class-string<Tool>>
      */
     protected array $tools = [

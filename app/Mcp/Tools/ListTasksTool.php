@@ -3,9 +3,11 @@
 namespace App\Mcp\Tools;
 
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Mcp\Concerns\FormatsTasks;
 use App\Models\Task;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -15,7 +17,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('list-tasks')]
 #[Title('Feladatok listázása')]
-#[Description('Egy projekt feladatainak listázása, prioritás és sorrend szerint rendezve. Opcionálisan szűrhető státuszra (todo, in_progress, done).')]
+#[Description('Egy projekt feladatainak listázása, prioritás és sorrend szerint rendezve. Opcionálisan szűrhető státuszra (todo, in_progress, done) és típusra (pl. bug).')]
 class ListTasksTool extends Tool
 {
     use FormatsTasks;
@@ -25,6 +27,7 @@ class ListTasksTool extends Tool
         $validated = $request->validate([
             'project' => ['required', 'string'],
             'status' => ['nullable', 'in:todo,in_progress,done'],
+            'type' => ['nullable', new Enum(TaskType::class)],
         ]);
 
         $project = $this->resolveProject($validated['project']);
@@ -37,6 +40,10 @@ class ListTasksTool extends Tool
             ->when(
                 isset($validated['status']),
                 fn ($query) => $query->where('status', $validated['status']),
+            )
+            ->when(
+                isset($validated['type']),
+                fn ($query) => $query->where('type', $validated['type']),
             )
             ->orderBy('position')
             ->orderByDesc('id')
@@ -63,6 +70,9 @@ class ListTasksTool extends Tool
             'status' => $schema->string()
                 ->description('Opcionális státusz-szűrő.')
                 ->enum(array_map(fn (TaskStatus $status): string => $status->value, TaskStatus::cases())),
+            'type' => $schema->string()
+                ->description('Opcionális típus-szűrő.')
+                ->enum(array_map(fn (TaskType $type): string => $type->value, TaskType::cases())),
         ];
     }
 }

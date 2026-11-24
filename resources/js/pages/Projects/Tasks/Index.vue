@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Bot,
     CalendarClock,
@@ -8,26 +8,27 @@ import {
     Pencil,
     Plus,
     Trash2,
-} from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@lucide/vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import projects from '@/routes/projects';
-import ProjectNav from '../ProjectNav.vue';
+} from "@/components/ui/select";
+import projects from "@/routes/projects";
+import ProjectNav from "../ProjectNav.vue";
 
 type Option = { value: string; label: string };
 
 type Task = {
     id: number;
     title: string;
+    type: string;
     description: string | null;
     status: string;
     priority: string;
@@ -42,11 +43,12 @@ const props = defineProps<{
     tasks: Task[];
     statuses: Option[];
     priorities: Option[];
+    types: Option[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
@@ -58,18 +60,22 @@ function priorityLabel(value: string): string {
     return props.priorities.find((o) => o.value === value)?.label ?? value;
 }
 
-function statusVariant(status: string): 'secondary' | 'default' | 'outline' {
-    if (status === 'done') return 'secondary';
-    if (status === 'in_progress') return 'default';
-    return 'outline';
+function typeLabel(value: string): string {
+    return props.types.find((o) => o.value === value)?.label ?? value;
+}
+
+function statusVariant(status: string): "secondary" | "default" | "outline" {
+    if (status === "done") return "secondary";
+    if (status === "in_progress") return "default";
+    return "outline";
 }
 
 function priorityVariant(
     priority: string,
-): 'destructive' | 'default' | 'outline' {
-    if (priority === 'high') return 'destructive';
-    if (priority === 'medium') return 'default';
-    return 'outline';
+): "destructive" | "default" | "outline" {
+    if (priority === "high") return "destructive";
+    if (priority === "medium") return "default";
+    return "outline";
 }
 
 function changeStatus(task: Task, status: string): void {
@@ -96,7 +102,7 @@ function destroy(task: Task): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleDateString('hu-HU') : '';
+    return value ? new Date(value).toLocaleDateString("hu-HU") : "";
 }
 </script>
 
@@ -149,9 +155,7 @@ function formatDate(value: string | null): string {
                                 "
                                 class="flex items-center gap-2 outline-none hover:underline focus-visible:underline"
                                 :class="
-                                    task.status === 'done'
-                                        ? 'line-through'
-                                        : ''
+                                    task.status === 'done' ? 'line-through' : ''
                                 "
                             >
                                 {{ task.title }}
@@ -163,6 +167,15 @@ function formatDate(value: string | null): string {
                         <div
                             class="mt-1.5 flex flex-wrap items-center gap-2 text-xs"
                         >
+                            <Badge
+                                :variant="
+                                    task.type === 'bug'
+                                        ? 'destructive'
+                                        : 'secondary'
+                                "
+                            >
+                                {{ typeLabel(task.type) }}
+                            </Badge>
                             <Badge :variant="priorityVariant(task.priority)">
                                 {{ priorityLabel(task.priority) }}
                             </Badge>

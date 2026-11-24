@@ -4,8 +4,10 @@ namespace App\Mcp\Tools;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Mcp\Concerns\FormatsTasks;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -15,7 +17,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('create-task')]
 #[Title('Feladat létrehozása')]
-#[Description('Új feladat létrehozása egy projekthez. Csak a cím kötelező; a státusz alapból "todo", a prioritás "medium".')]
+#[Description('Új feladat létrehozása egy projekthez. Csak a cím kötelező; a státusz alapból "todo", a prioritás "medium", a típus "development".')]
 class CreateTaskTool extends Tool
 {
     use FormatsTasks;
@@ -25,6 +27,7 @@ class CreateTaskTool extends Tool
         $validated = $request->validate([
             'project' => ['required', 'string'],
             'title' => ['required', 'string', 'max:255'],
+            'type' => ['nullable', new Enum(TaskType::class)],
             'agent' => ['nullable', 'string'],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['nullable', 'in:todo,in_progress,done'],
@@ -53,6 +56,7 @@ class CreateTaskTool extends Tool
         $task = $project->tasks()->create([
             'agent_id' => $agentId,
             'title' => $validated['title'],
+            'type' => $validated['type'] ?? TaskType::Development->value,
             'description' => $validated['description'] ?? null,
             'status' => $validated['status'] ?? TaskStatus::Todo->value,
             'priority' => $validated['priority'] ?? TaskPriority::Medium->value,
@@ -77,6 +81,9 @@ class CreateTaskTool extends Tool
             'title' => $schema->string()
                 ->description('A feladat címe.')
                 ->required(),
+            'type' => $schema->string()
+                ->description('A feladat típusa (development = fejlesztés, design, bug = hiba, documentation = dokumentáció, testing = tesztelés, other = egyéb). Alapértelmezett: development.')
+                ->enum(array_map(fn (TaskType $type): string => $type->value, TaskType::cases())),
             'agent' => $schema->string()
                 ->description('Opcionális: a feladathoz rendelt agent neve (vagy azonosítója). A nevekhez használd a list-agents eszközt.'),
             'description' => $schema->string()

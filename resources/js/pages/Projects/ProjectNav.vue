@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookText, LayoutDashboard, ListTodo, Terminal } from '@lucide/vue';
+import { BookText, History, LayoutDashboard, ListTodo, Terminal } from '@lucide/vue';
 import { computed } from 'vue';
 import projects from '@/routes/projects';
 
@@ -36,6 +36,12 @@ const items = computed(() => [
         icon: ListTodo,
         href: projects.tasks.index(props.name).url,
         component: 'Projects/Tasks',
+    },
+    {
+        title: 'Változásnapló',
+        icon: History,
+        href: projects.taskChanges.index(props.name).url,
+        component: 'Projects/TaskChanges',
     },
 ]);
 

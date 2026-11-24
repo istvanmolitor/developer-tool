@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Bot, Pencil } from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import projects from '@/routes/projects';
+import { Head, Link } from "@inertiajs/vue3";
+import { ArrowLeft, Bot, Pencil } from "@lucide/vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import projects from "@/routes/projects";
+import TaskChangeList from "../TaskChanges/TaskChangeList.vue";
+import type { TaskChangeEntry } from "../TaskChanges/TaskChangeList.vue";
 
 type Project = { id: number; name: string; path: string };
 
 type Task = {
     id: number;
     title: string;
+    type: string;
     description: string | null;
     status: string;
     priority: string;
@@ -24,42 +27,48 @@ type Task = {
 const props = defineProps<{
     project: Project;
     task: Task;
+    types: { value: string; label: string }[];
+    history: TaskChangeEntry[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
 const statusLabels: Record<string, string> = {
-    todo: 'Teendő',
-    in_progress: 'Folyamatban',
-    done: 'Kész',
+    todo: "Teendő",
+    in_progress: "Folyamatban",
+    done: "Kész",
 };
 
 const priorityLabels: Record<string, string> = {
-    low: 'Alacsony',
-    medium: 'Közepes',
-    high: 'Magas',
+    low: "Alacsony",
+    medium: "Közepes",
+    high: "Magas",
 };
 
-function statusVariant(status: string): 'secondary' | 'default' | 'outline' {
-    if (status === 'done') return 'secondary';
-    if (status === 'in_progress') return 'default';
-    return 'outline';
+function typeLabel(value: string): string {
+    return props.types.find((o) => o.value === value)?.label ?? value;
+}
+
+function statusVariant(status: string): "secondary" | "default" | "outline" {
+    if (status === "done") return "secondary";
+    if (status === "in_progress") return "default";
+    return "outline";
 }
 
 function priorityVariant(
     priority: string,
-): 'destructive' | 'default' | 'outline' {
-    if (priority === 'high') return 'destructive';
-    if (priority === 'medium') return 'default';
-    return 'outline';
+): "destructive" | "default" | "outline" {
+    if (priority === "high") return "destructive";
+    if (priority === "medium") return "default";
+    return "outline";
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleDateString('hu-HU') : '—';
+    return value ? new Date(value).toLocaleDateString("hu-HU") : "—";
 }
 </script>
 
@@ -98,6 +107,13 @@ function formatDate(value: string | null): string {
                     <Badge :variant="statusVariant(task.status)">
                         {{ statusLabels[task.status] ?? task.status }}
                     </Badge>
+                    <Badge
+                        :variant="
+                            task.type === 'bug' ? 'destructive' : 'secondary'
+                        "
+                    >
+                        {{ typeLabel(task.type) }}
+                    </Badge>
                     <Badge :variant="priorityVariant(task.priority)">
                         {{ priorityLabels[task.priority] ?? task.priority }}
                     </Badge>
@@ -126,5 +142,18 @@ function formatDate(value: string | null): string {
                 </p>
             </CardContent>
         </Card>
+
+        <section class="flex max-w-3xl flex-col gap-3">
+            <h2 class="text-lg font-semibold">Változások</h2>
+            <TaskChangeList
+                v-if="history.length > 0"
+                :entries="history"
+                :project-name="project.name"
+            />
+            <p v-else class="text-sm text-muted-foreground">
+                Még nem változott a feladat státusza, prioritása, típusa,
+                felelőse vagy határideje.
+            </p>
+        </section>
     </div>
 </template>

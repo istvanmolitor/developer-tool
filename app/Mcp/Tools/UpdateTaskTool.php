@@ -4,9 +4,11 @@ namespace App\Mcp\Tools;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Mcp\Concerns\FormatsTasks;
 use App\Models\Task;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -26,6 +28,7 @@ class UpdateTaskTool extends Tool
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'type' => ['sometimes', 'required', new Enum(TaskType::class)],
             'agent' => ['sometimes', 'nullable', 'string'],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['sometimes', 'required', 'in:todo,in_progress,done'],
@@ -77,6 +80,9 @@ class UpdateTaskTool extends Tool
                 ->required(),
             'title' => $schema->string()
                 ->description('Új cím.'),
+            'type' => $schema->string()
+                ->description('Új típus.')
+                ->enum(array_map(fn (TaskType $type): string => $type->value, TaskType::cases())),
             'agent' => $schema->string()
                 ->description('A hozzárendelt agent neve (vagy azonosítója). Üres szöveggel a hozzárendelés törölhető. A nevekhez használd a list-agents eszközt.'),
             'description' => $schema->string()

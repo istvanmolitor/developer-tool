@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import projects from '@/routes/projects';
-import TaskForm from './TaskForm.vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import projects from "@/routes/projects";
+import TaskForm from "./TaskForm.vue";
 
 type Option = { value: string; label: string };
 type AgentOption = { id: number; name: string };
@@ -17,28 +17,30 @@ const props = defineProps<{
     project: Project;
     statuses: Option[];
     priorities: Option[];
+    types: Option[];
     agents: AgentOption[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
 const form = useForm({
-    title: '',
-    agent_id: '',
-    description: '',
-    status: 'todo',
-    priority: 'medium',
-    due_date: '',
+    title: "",
+    type: "development",
+    agent_id: "",
+    description: "",
+    status: "todo",
+    priority: "medium",
+    due_date: "",
 });
 
 function submit(): void {
     form.transform((data) => ({
         ...data,
-        agent_id: data.agent_id === '' ? null : Number(data.agent_id),
+        agent_id: data.agent_id === "" ? null : Number(data.agent_id),
     })).post(projects.tasks.store(props.project.name).url);
 }
 </script>
@@ -56,6 +58,7 @@ function submit(): void {
             :form="form"
             :statuses="statuses"
             :priorities="priorities"
+            :types="types"
             :agents="agents"
             submit-label="Feladat létrehozása"
             :cancel-href="projects.tasks.index(project.name).url"

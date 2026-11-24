@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import type { InertiaForm } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import type { InertiaForm } from "@inertiajs/vue3";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type Option = { value: string; label: string };
 type AgentOption = { id: number; name: string };
 
 type TaskFormFields = {
     title: string;
+    type: string;
     agent_id: string;
     description: string;
     status: string;
@@ -28,6 +29,7 @@ const props = defineProps<{
     form: InertiaForm<TaskFormFields>;
     statuses: Option[];
     priorities: Option[];
+    types: Option[];
     agents: AgentOption[];
     submitLabel: string;
     cancelHref: string;
@@ -37,18 +39,18 @@ const emit = defineEmits<{ submit: [] }>();
 
 // Sentinel value for the "unassigned" select item — empty string isn't a valid
 // Select item value, so use a distinct token and map it back to '' on submit.
-const UNASSIGNED = 'none';
+const UNASSIGNED = "none";
 
 function labelFor(options: Option[], value: string): string | undefined {
     return options.find((option) => option.value === value)?.label;
 }
 
 function agentLabel(value: string): string {
-    if (value === '' || value === UNASSIGNED) return 'Nincs hozzárendelve';
+    if (value === "" || value === UNASSIGNED) return "Nincs hozzárendelve";
 
     return (
         props.agents.find((agent) => String(agent.id) === value)?.name ??
-        'Nincs hozzárendelve'
+        "Nincs hozzárendelve"
     );
 }
 </script>
@@ -68,6 +70,27 @@ function agentLabel(value: string): string {
                 autocomplete="off"
             />
             <InputError :message="form.errors.title" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <Label for="type">Típus</Label>
+            <Select v-model="form.type">
+                <SelectTrigger id="type" class="w-full sm:max-w-xs">
+                    <SelectValue>
+                        {{ labelFor(props.types, form.type) }}
+                    </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="option in types"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+            <InputError :message="form.errors.type" />
         </div>
 
         <div class="flex flex-col gap-2">

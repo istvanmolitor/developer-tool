@@ -2,6 +2,7 @@
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\Task;
@@ -40,7 +41,24 @@ test('a task can be created with defaults', function () {
     expect($task->project_id)->toBe($this->project->id)
         ->and($task->title)->toBe('Új feladat')
         ->and($task->status)->toBe(TaskStatus::Todo)
-        ->and($task->priority)->toBe(TaskPriority::Medium);
+        ->and($task->priority)->toBe(TaskPriority::Medium)
+        ->and($task->type)->toBe(TaskType::Development);
+});
+
+test('a task can be created with a type', function () {
+    $this->post(route('projects.tasks.store', 'alpha'), [
+        'title' => 'Hibás gomb',
+        'type' => TaskType::Bug->value,
+    ])->assertRedirect(route('projects.tasks.index', 'alpha'));
+
+    expect(Task::sole()->type)->toBe(TaskType::Bug);
+});
+
+test('an invalid type is rejected', function () {
+    $this->post(route('projects.tasks.store', 'alpha'), [
+        'title' => 'X',
+        'type' => 'nope',
+    ])->assertSessionHasErrors('type');
 });
 
 test('a task can be assigned to an agent', function () {

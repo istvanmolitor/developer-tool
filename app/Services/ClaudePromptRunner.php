@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Mcp\Servers\MailServer;
+use App\Mcp\Servers\TaskServer;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
@@ -75,7 +76,7 @@ class ClaudePromptRunner
             $result = Process::path($project->path)
                 ->env($this->environment())
                 ->timeout($this->timeout())
-                ->run($this->command($run->prompt, $run->agent, $run->incomingEmail()->exists() ? $run : null));
+                ->run($this->command($run->prompt, $run->agent, $run));
         } catch (Throwable $exception) {
             return $this->fail($run, $exception->getMessage());
         }
@@ -124,24 +125,27 @@ class ClaudePromptRunner
     /**
      * Build the `claude -p` command line.
      *
-     * When the run handles an incoming e-mail ($emailRun), the agent also gets the
-     * `mail` MCP server, bound to that run, so it can answer the message.
+     * The `tasks` MCP server is bound to the run ($run), so the task changes the agent
+     * makes are logged under its name. When the run handles an incoming e-mail, the
+     * agent also gets the `mail` MCP server, bound to that run, so it can answer the message.
      *
      * @return list<string>
      */
-    public function command(string $prompt, ?Agent $agent = null, ?PromptRun $emailRun = null): array
+    public function command(string $prompt, ?Agent $agent = null, ?PromptRun $run = null): array
     {
         // JSON output carries the run's usage/cost (total_cost_usd) alongside
         // the text result, so the "credits" a run burns can be persisted.
         $command = [config('developer-tool.claude.binary'), '-p', $prompt, '--output-format', 'json'];
 
         if ($agent !== null) {
+            $emailRun = $run !== null && $run->incomingEmail()->exists() ? $run : null;
+
             array_push($command, ...$this->agentOptions($agent, $emailRun !== null));
 
             $mcpServers = [];
 
             if ($this->usesTaskTools($agent)) {
-                $mcpServers['tasks'] = $this->taskMcpServer();
+                $mcpServers['tasks'] = $this->taskMcpServer($run);
             }
 
             if ($emailRun !== null) {
@@ -228,16 +232,24 @@ class ClaudePromptRunner
     /**
      * The `tasks` MCP server definition for `--mcp-config`. Runs happen inside the
      * project's own directory, which has no `.mcp.json` pointing back here, so the
-     * server is started through this application's artisan by absolute path.
+     * server is started through this application's artisan by absolute path. When
+     * bound to a run, the run's id goes into the server's environment so the task
+     * changes it makes are attributed to the run's agent.
      *
-     * @return array{command: string, args: list<string>}
+     * @return array{command: string, args: list<string>, env?: array<string, string>}
      */
-    private function taskMcpServer(): array
+    private function taskMcpServer(?PromptRun $run): array
     {
-        return [
+        $server = [
             'command' => 'php',
             'args' => [base_path('artisan'), 'mcp:start', 'tasks'],
         ];
+
+        if ($run !== null) {
+            $server['env'] = [TaskServer::PROMPT_RUN_ENV => (string) $run->id];
+        }
+
+        return $server;
     }
 
     /**

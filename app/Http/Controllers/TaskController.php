@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\TaskChangeFormatter;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,6 +28,7 @@ class TaskController extends Controller
                 ->get(),
             'statuses' => $this->statusOptions(),
             'priorities' => $this->priorityOptions(),
+            'types' => $this->typeOptions(),
         ]);
     }
 
@@ -35,6 +38,7 @@ class TaskController extends Controller
             'project' => $project,
             'statuses' => $this->statusOptions(),
             'priorities' => $this->priorityOptions(),
+            'types' => $this->typeOptions(),
             'agents' => $this->agentOptions(),
         ]);
     }
@@ -48,11 +52,15 @@ class TaskController extends Controller
             ->with('status', 'Feladat létrehozva.');
     }
 
-    public function show(Project $project, Task $task): Response
+    public function show(Project $project, Task $task, TaskChangeFormatter $formatter): Response
     {
         return Inertia::render('Projects/Tasks/Show', [
             'project' => $project,
             'task' => $task->load('agent:id,name'),
+            'types' => $this->typeOptions(),
+            'history' => $formatter->format(
+                $task->taskChanges()->with(['user:id,name', 'agent:id,name'])->get()
+            ),
         ]);
     }
 
@@ -63,6 +71,7 @@ class TaskController extends Controller
             'task' => $task,
             'statuses' => $this->statusOptions(),
             'priorities' => $this->priorityOptions(),
+            'types' => $this->typeOptions(),
             'agents' => $this->agentOptions(),
         ]);
     }
@@ -108,6 +117,19 @@ class TaskController extends Controller
         return array_map(
             fn (TaskPriority $priority): array => ['value' => $priority->value, 'label' => $priority->label()],
             TaskPriority::cases(),
+        );
+    }
+
+    /**
+     * Type values with Hungarian labels for the frontend selects and badges.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function typeOptions(): array
+    {
+        return array_map(
+            fn (TaskType $type): array => ['value' => $type->value, 'label' => $type->label()],
+            TaskType::cases(),
         );
     }
 

@@ -104,3 +104,43 @@ test('an agent can be deleted', function () {
 
     $this->assertDatabaseMissing('agents', ['id' => $agent->id]);
 });
+
+test('guests cannot sync agents', function () {
+    $this->post(route('agents.sync'))->assertRedirect(route('login'));
+});
+
+test('syncing refreshes agents from the definition files', function () {
+    $agentsPath = sys_get_temp_dir().'/dev-tool-agents-'.uniqid();
+    mkdir($agentsPath, 0755, true);
+    config(['developer-tool.agents_path' => $agentsPath]);
+
+    $existing = Agent::factory()->create(['name' => 'documentarian', 'model' => 'old-model']);
+
+    file_put_contents($agentsPath.'/documentarian.md', "---\nname: documentarian\nmodel: claude-sonnet-5\n---\nNew prompt.");
+    file_put_contents($agentsPath.'/reviewer.md', "---\nname: reviewer\n---\nReview code.");
+
+    try {
+        $this->actingAs(User::factory()->create())
+            ->post(route('agents.sync'))
+            ->assertRedirect(route('agents.index'));
+    } finally {
+        exec('rm -rf '.escapeshellarg($agentsPath));
+    }
+
+    expect(Agent::count())->toBe(2)
+        ->and($existing->refresh())
+        ->model->toBe('claude-sonnet-5')
+        ->system_prompt->toBe('New prompt.')
+        ->and(Agent::where('name', 'reviewer')->exists())->toBeTrue();
+});
+
+test('syncing with a missing agents directory changes nothing', function () {
+    config(['developer-tool.agents_path' => '/no/such/directory']);
+    Agent::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('agents.sync'))
+        ->assertRedirect(route('agents.index'));
+
+    expect(Agent::count())->toBe(1);
+});

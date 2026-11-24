@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\AgentController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\IncomingEmailController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\OutgoingEmailController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
+use App\Http\Controllers\TaskChangeController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +19,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
+    // Refresh the agents from their definition files on disk.
+    Route::post('agents/sync', [AgentController::class, 'sync'])->name('agents.sync');
     Route::resource('agents', AgentController::class);
 
     Route::resource('mailboxes', MailboxController::class);
@@ -55,6 +59,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('projects.documentations.pdf');
     Route::resource('projects.documentations', DocumentationController::class)->scoped();
 
+    // Change log of the project's tasks (status, priority, type, assignee, due date).
+    Route::get('projects/{project}/task-changes', [TaskChangeController::class, 'index'])
+        ->name('projects.task-changes.index');
     Route::resource('projects.tasks', TaskController::class)->scoped();
 });
 

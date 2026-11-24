@@ -1,6 +1,14 @@
-<script setup lang="ts">
+<script setup lang='ts'>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Bot, ChevronRight, Pencil, Plus, Trash2 } from '@lucide/vue';
+import {
+    Bot,
+    ChevronRight,
+    Pencil,
+    Plus,
+    RefreshCw,
+    Trash2,
+} from '@lucide/vue';
+import { ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,9 +18,7 @@ import agentRoutes from '@/routes/agents';
 type Agent = {
     id: number;
     name: string;
-    description: string | null;
     model: string | null;
-    tools: string[] | null;
     source_path: string | null;
 };
 
@@ -25,6 +31,20 @@ defineOptions({
         breadcrumbs: [{ title: 'Agentek', href: agentRoutes.index().url }],
     },
 });
+
+const syncing = ref(false);
+
+function syncAgents(): void {
+    router.post(
+        agentRoutes.sync().url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (syncing.value = true),
+            onFinish: () => (syncing.value = false),
+        },
+    );
+}
 
 function destroy(agent: Agent): void {
     if (
@@ -50,12 +70,26 @@ function destroy(agent: Agent): void {
                 title="Agentek"
                 description="Szerepkörök, amelyeket a Claude futtat — mindegyiknek saját system promptja, modellje és eszközei vannak."
             />
-            <Button as-child>
-                <Link :href="agentRoutes.create().url">
-                    <Plus class="size-4" />
-                    Új agent
-                </Link>
-            </Button>
+            <div class="flex shrink-0 items-center gap-2">
+                <Button
+                    variant="outline"
+                    :disabled="syncing"
+                    title="Agentek frissítése az agent fájlokból"
+                    @click="syncAgents"
+                >
+                    <RefreshCw
+                        class="size-4"
+                        :class="{ 'animate-spin': syncing }"
+                    />
+                    Szinkron
+                </Button>
+                <Button as-child>
+                    <Link :href="agentRoutes.create().url">
+                        <Plus class="size-4" />
+                        Új agent
+                    </Link>
+                </Button>
+            </div>
         </div>
 
         <div
@@ -72,10 +106,7 @@ function destroy(agent: Agent): void {
                     >Új agent</Link
                 >
                 gombbal, vagy töltsd be a definíciókat a
-                <code class="rounded bg-muted px-1 py-0.5"
-                    >php artisan db:seed --class=AgentSeeder</code
-                >
-                paranccsal.
+                <span class="font-medium">Szinkron</span> gombbal.
             </p>
         </div>
 
@@ -103,12 +134,6 @@ function destroy(agent: Agent): void {
                             />
                         </Link>
                     </CardTitle>
-                    <p
-                        v-if="agent.description"
-                        class="line-clamp-2 text-sm text-muted-foreground"
-                    >
-                        {{ agent.description }}
-                    </p>
                 </CardHeader>
                 <CardContent
                     class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
@@ -116,12 +141,6 @@ function destroy(agent: Agent): void {
                     <Badge v-if="agent.model" variant="secondary">{{
                         agent.model
                     }}</Badge>
-                    <Badge
-                        v-for="tool in agent.tools ?? []"
-                        :key="tool"
-                        variant="outline"
-                        >{{ tool }}</Badge
-                    >
                     <div
                         class="flex w-full items-center justify-end gap-1 pt-1"
                     >

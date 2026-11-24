@@ -43,6 +43,7 @@ trait FormatsTasks
             'agent' => $task->agent?->name,
             'agent_id' => $task->agent_id,
             'title' => $task->title,
+            'type' => $task->type->value,
             'description' => $task->description,
             'status' => $task->status->value,
             'priority' => $task->priority->value,
