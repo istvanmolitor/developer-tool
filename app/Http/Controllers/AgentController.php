@@ -7,9 +7,11 @@ use App\Enums\TaskStatus;
 use App\Http\Requests\StoreAgentRequest;
 use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
+use App\Models\AgentMessage;
 use App\Models\Project;
 use App\Services\AgentSyncService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -88,6 +90,88 @@ class AgentController extends Controller
                 fn (TaskPriority $priority): array => ['value' => $priority->value, 'label' => $priority->label()],
             ),
         ]);
+    }
+
+    /**
+     * The agents this agent exchanges messages with, one conversation per partner
+     * agent and project (most recent first), plus the selected conversation's messages.
+     */
+    public function messages(Request $request, Agent $agent): Response
+    {
+        $partnerSql = 'case when sender_agent_id = ? then recipient_agent_id else sender_agent_id end';
+
+        $conversations = AgentMessage::query()
+            ->where(fn ($query) => $query
+                ->where('sender_agent_id', $agent->id)
+                ->orWhere('recipient_agent_id', $agent->id))
+            ->select('project_id')
+            ->selectRaw("{$partnerSql} as partner_id", [$agent->id])
+            ->selectRaw('count(*) as message_count')
+            ->selectRaw('sum(case when recipient_agent_id = ? and is_read = ? then 1 else 0 end) as unread_count', [$agent->id, false])
+            ->selectRaw('max(id) as last_message_id')
+            ->groupBy('project_id', 'partner_id')
+            ->orderByDesc('last_message_id')
+            ->toBase()
+            ->get();
+
+        $partners = Agent::query()->whereKey($conversations->pluck('partner_id')->filter())->get(['id', 'name', 'slug'])->keyBy('id');
+        $projects = Project::query()->whereKey($conversations->pluck('project_id'))->get(['id', 'name'])->keyBy('id');
+        $lastMessages = AgentMessage::query()->whereKey($conversations->pluck('last_message_id'))->get()->keyBy('id');
+
+        $conversations = $conversations->map(fn (object $conversation): array => [
+            'partner' => $partners->get($conversation->partner_id)?->only(['id', 'name', 'slug']),
+            'project' => $projects->get($conversation->project_id)?->only(['id', 'name']),
+            'message_count' => (int) $conversation->message_count,
+            'unread_count' => (int) $conversation->unread_count,
+            'last_message' => $lastMessages->get($conversation->last_message_id)?->only(['body', 'sender_agent_id', 'created_at']),
+        ])->values();
+
+        $selected = $conversations->first(fn (array $conversation): bool => $conversation['project']['id'] === $request->integer('project')
+            && ($conversation['partner']['id'] ?? null) === $request->integer('partner')) ?? $conversations->first();
+
+        return Inertia::render('Agents/Messages', [
+            'agent' => $agent->only(['id', 'name', 'slug']),
+            'conversations' => $conversations,
+            'selected' => $selected === null ? null : [
+                'partner_id' => $selected['partner']['id'] ?? null,
+                'project_id' => $selected['project']['id'],
+            ],
+            'messages' => $selected === null ? [] : $this->conversationMessages($agent, $selected['project']['id'], $selected['partner']['id'] ?? null),
+        ]);
+    }
+
+    /**
+     * The latest messages between the agent and a partner in a project, oldest first.
+     * A null partner stands for agents that have since been deleted.
+     *
+     * @return list<array{id: int, body: string, outgoing: bool, is_read: bool, read_at: string|null, created_at: string|null}>
+     */
+    private function conversationMessages(Agent $agent, int $projectId, ?int $partnerId): array
+    {
+        return AgentMessage::query()
+            ->where('project_id', $projectId)
+            ->where(fn ($query) => $query
+                ->where(fn ($query) => $query->where('sender_agent_id', $agent->id)->where('recipient_agent_id', $partnerId))
+                ->orWhere(fn ($query) => $query->where('recipient_agent_id', $agent->id)
+                    ->when(
+                        $partnerId === null,
+                        fn ($query) => $query->whereNull('sender_agent_id'),
+                        fn ($query) => $query->where('sender_agent_id', $partnerId),
+                    )))
+            ->latest('id')
+            ->limit(200)
+            ->get()
+            ->reverse()
+            ->map(fn (AgentMessage $message): array => [
+                'id' => $message->id,
+                'body' => $message->body,
+                'outgoing' => $message->sender_agent_id === $agent->id,
+                'is_read' => $message->is_read,
+                'read_at' => $message->read_at?->toIso8601String(),
+                'created_at' => $message->created_at?->toIso8601String(),
+            ])
+            ->values()
+            ->all();
     }
 
     public function edit(Agent $agent): Response

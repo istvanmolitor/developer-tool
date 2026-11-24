@@ -26,6 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('agents/sync', [AgentController::class, 'sync'])->name('agents.sync');
     Route::get('agents/{agent}/profile', [AgentController::class, 'profile'])->name('agents.profile');
     Route::get('agents/{agent}/tasks', [AgentController::class, 'tasks'])->name('agents.tasks');
+    Route::get('agents/{agent}/messages', [AgentController::class, 'messages'])->name('agents.messages');
     Route::resource('agents', AgentController::class);
 
     Route::resource('mailboxes', MailboxController::class);

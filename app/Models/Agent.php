@@ -63,6 +63,26 @@ class Agent extends Model
     }
 
     /**
+     * The messages this agent received from other agents.
+     *
+     * @return HasMany<AgentMessage, $this>
+     */
+    public function receivedMessages(): HasMany
+    {
+        return $this->hasMany(AgentMessage::class, 'recipient_agent_id');
+    }
+
+    /**
+     * The messages this agent sent to other agents.
+     *
+     * @return HasMany<AgentMessage, $this>
+     */
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(AgentMessage::class, 'sender_agent_id');
+    }
+
+    /**
      * Normalize a tools value into a clean list of tool names, accepting either
      * a comma-separated string (as used in the agent form and the `.md` front
      * matter) or an already-split array. Returns null when nothing remains.

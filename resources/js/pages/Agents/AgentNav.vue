@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Link, usePage } from "@inertiajs/vue3";
-import { ListTodo, MessageSquare, UserRound } from "@lucide/vue";
+import {
+    ListTodo,
+    MessageSquare,
+    MessagesSquare,
+    UserRound,
+} from "@lucide/vue";
 import { computed } from "vue";
 import agents from "@/routes/agents";
 
@@ -28,6 +33,12 @@ const items = computed(() => [
         icon: ListTodo,
         href: agents.tasks(props.agentId).url,
         component: "Agents/Tasks",
+    },
+    {
+        title: "Üzenetek",
+        icon: MessagesSquare,
+        href: agents.messages(props.agentId).url,
+        component: "Agents/Messages",
     },
 ]);
 </script>

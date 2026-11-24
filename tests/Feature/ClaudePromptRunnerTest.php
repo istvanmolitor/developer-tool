@@ -112,14 +112,21 @@ test('a run handling an e-mail gives the agent the mail mcp server bound to the 
         $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
         $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
 
-        return array_keys($mcpConfig['mcpServers']) === ['tasks', 'mail']
+        return array_keys($mcpConfig['mcpServers']) === ['tasks', 'mail', 'messages']
             && $mcpConfig['mcpServers']['tasks']['env'] === ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id]
             && $mcpConfig['mcpServers']['mail'] === [
                 'command' => 'php',
                 'args' => [base_path('artisan'), 'mcp:start', 'mail'],
                 'env' => ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id],
             ]
-            && reset($agents)['tools'] === ['Read', 'mcp__tasks__create-task', 'mcp__mail__reply-email'];
+            && reset($agents)['tools'] === [
+                'Read',
+                'mcp__tasks__create-task',
+                'mcp__mail__reply-email',
+                'mcp__messages__list-agents',
+                'mcp__messages__send-message',
+                'mcp__messages__list-messages',
+            ];
     });
 });
 
@@ -130,7 +137,33 @@ test('a run without an e-mail gets no mail mcp server', function () {
 
     app(ClaudePromptRunner::class)->run($run);
 
-    Process::assertRan(fn ($process) => ! in_array('--mcp-config', $process->command, true));
+    Process::assertRan(function ($process) {
+        $command = $process->command;
+        $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
+
+        return ! array_key_exists('mail', $mcpConfig['mcpServers']);
+    });
+});
+
+test('an agent run gets the messages mcp server bound to the run', function () {
+    Process::fake();
+    $agent = Agent::factory()->create(['tools' => ['Read']]);
+    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id, 'agent_id' => $agent->id]);
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    Process::assertRan(function ($process) use ($run) {
+        $command = $process->command;
+        $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
+        $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
+
+        return $mcpConfig['mcpServers']['messages'] === [
+            'command' => 'php',
+            'args' => [base_path('artisan'), 'mcp:start', 'messages'],
+            'env' => ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id],
+        ]
+            && in_array('mcp__messages__send-message', reset($agents)['tools'], true);
+    });
 });
 
 test('the command omits agent flags when no agent is given', function () {

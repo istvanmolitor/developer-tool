@@ -3,6 +3,7 @@
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Models\Agent;
+use App\Models\AgentMessage;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\Task;
@@ -241,4 +242,49 @@ test('syncing with a missing agents directory changes nothing', function () {
         ->assertRedirect(route('agents.index'));
 
     expect(Agent::count())->toBe(1);
+});
+
+test('the agent messages list its conversations and the selected thread', function () {
+    $agent = Agent::factory()->create();
+    $tester = Agent::factory()->create(['name' => 'tester']);
+    $reviewer = Agent::factory()->create(['name' => 'reviewer']);
+    $alpha = Project::factory()->create(['name' => 'alpha']);
+    $beta = Project::factory()->create(['name' => 'beta']);
+
+    AgentMessage::factory()->for($alpha)->create(['sender_agent_id' => $agent->id, 'recipient_agent_id' => $tester->id, 'body' => 'Kész az API.']);
+    AgentMessage::factory()->for($alpha)->create(['sender_agent_id' => $tester->id, 'recipient_agent_id' => $agent->id, 'body' => 'Találtam egy hibát.']);
+    AgentMessage::factory()->read()->for($beta)->create(['sender_agent_id' => $reviewer->id, 'recipient_agent_id' => $agent->id, 'body' => 'Átnéztem.']);
+    AgentMessage::factory()->for($alpha)->create(['sender_agent_id' => $tester->id, 'recipient_agent_id' => $reviewer->id]);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('agents.messages', $agent))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Agents/Messages')
+            ->has('conversations', 2)
+            ->where('conversations.0.partner.name', 'reviewer')
+            ->where('conversations.0.project.name', 'beta')
+            ->where('conversations.0.unread_count', 0)
+            ->where('conversations.1.partner.name', 'tester')
+            ->where('conversations.1.project.name', 'alpha')
+            ->where('conversations.1.message_count', 2)
+            ->where('conversations.1.unread_count', 1)
+            ->where('selected.partner_id', $reviewer->id)
+            ->has('messages', 1)
+        );
+
+    $this->actingAs($user)
+        ->get(route('agents.messages', ['agent' => $agent, 'project' => $alpha->id, 'partner' => $tester->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('selected.partner_id', $tester->id)
+            ->has('messages', 2)
+            ->where('messages.0.body', 'Kész az API.')
+            ->where('messages.0.outgoing', true)
+            ->where('messages.1.body', 'Találtam egy hibát.')
+            ->where('messages.1.outgoing', false)
+            ->where('messages.1.is_read', false)
+        );
 });

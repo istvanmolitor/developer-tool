@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Mcp\Servers\MailServer;
+use App\Mcp\Servers\MessageServer;
 use App\Mcp\Servers\TaskServer;
 use App\Models\Agent;
 use App\Models\Project;
@@ -19,6 +20,15 @@ class ClaudePromptRunner
      * The `mail` MCP server's reply tool as Claude Code names it.
      */
     private const REPLY_EMAIL_TOOL = 'mcp__mail__reply-email';
+
+    /**
+     * The `messages` MCP server's tools as Claude Code names them.
+     */
+    private const MESSAGE_TOOLS = [
+        'mcp__messages__list-agents',
+        'mcp__messages__send-message',
+        'mcp__messages__list-messages',
+    ];
 
     /**
      * Create a pending prompt run for the given project and queue it for
@@ -127,6 +137,8 @@ class ClaudePromptRunner
      * The `tasks` MCP server is bound to the run ($run), so the task changes the agent
      * makes are logged under its name. When the run handles an incoming e-mail, the
      * agent also gets the `mail` MCP server, bound to that run, so it can answer the message.
+     * Every agent run gets the `messages` MCP server, bound to the run, so the agent can
+     * message the other agents of the run's project.
      *
      * @return list<string>
      */
@@ -139,7 +151,7 @@ class ClaudePromptRunner
         if ($agent !== null) {
             $emailRun = $run !== null && $run->incomingEmail()->exists() ? $run : null;
 
-            array_push($command, ...$this->agentOptions($agent, $emailRun !== null));
+            array_push($command, ...$this->agentOptions($agent, $emailRun !== null, $run !== null));
 
             $mcpServers = [];
 
@@ -149,6 +161,10 @@ class ClaudePromptRunner
 
             if ($emailRun !== null) {
                 $mcpServers['mail'] = $this->mailMcpServer($emailRun);
+            }
+
+            if ($run !== null) {
+                $mcpServers['messages'] = $this->messageMcpServer($run);
             }
 
             if ($mcpServers !== []) {
@@ -186,17 +202,23 @@ class ClaudePromptRunner
      * agent files happen to live in that project's directory.
      *
      * An agent restricted to a tool list still gets the reply tool when it handles
-     * an e-mail, so every agent with a mailbox can answer its mail.
+     * an e-mail, so every agent with a mailbox can answer its mail, and the message
+     * tools when bound to a run, so every agent can talk to the others of its project.
      *
      * @return list<string>
      */
-    private function agentOptions(Agent $agent, bool $canReplyToEmail = false): array
+    private function agentOptions(Agent $agent, bool $canReplyToEmail = false, bool $canMessageAgents = false): array
     {
         $slug = $agent->slug ?: 'agent-'.$agent->id;
         $tools = Agent::normalizeTools($agent->tools);
 
-        if ($canReplyToEmail && $tools !== null && ! in_array(self::REPLY_EMAIL_TOOL, $tools, true)) {
-            $tools[] = self::REPLY_EMAIL_TOOL;
+        if ($tools !== null) {
+            $extraTools = [
+                ...($canReplyToEmail ? [self::REPLY_EMAIL_TOOL] : []),
+                ...($canMessageAgents ? self::MESSAGE_TOOLS : []),
+            ];
+
+            $tools = array_values(array_unique([...$tools, ...$extraTools]));
         }
 
         $definition = array_filter([
@@ -263,6 +285,21 @@ class ClaudePromptRunner
             'command' => 'php',
             'args' => [base_path('artisan'), 'mcp:start', 'mail'],
             'env' => [MailServer::PROMPT_RUN_ENV => (string) $run->id],
+        ];
+    }
+
+    /**
+     * The `messages` MCP server definition for `--mcp-config`, bound to the run through
+     * its environment so the agent sends and reads messages as itself in the run's project.
+     *
+     * @return array{command: string, args: list<string>, env: array<string, string>}
+     */
+    private function messageMcpServer(PromptRun $run): array
+    {
+        return [
+            'command' => 'php',
+            'args' => [base_path('artisan'), 'mcp:start', 'messages'],
+            'env' => [MessageServer::PROMPT_RUN_ENV => (string) $run->id],
         ];
     }
 
