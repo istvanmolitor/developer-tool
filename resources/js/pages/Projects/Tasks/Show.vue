@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import projects from "@/routes/projects";
 import TaskChangeList from "../TaskChanges/TaskChangeList.vue";
 import type { TaskChangeEntry } from "../TaskChanges/TaskChangeList.vue";
+import TaskComments from "./TaskComments.vue";
+import type { TaskComment } from "./TaskComments.vue";
 
 type Project = { id: number; name: string; path: string };
 
@@ -29,6 +31,7 @@ const props = defineProps<{
     task: Task;
     types: { value: string; label: string }[];
     history: TaskChangeEntry[];
+    comments: TaskComment[];
 }>();
 
 defineOptions({
@@ -144,7 +147,16 @@ function formatDate(value: string | null): string {
         </Card>
 
         <section class="flex max-w-3xl flex-col gap-3">
-            <h2 class="text-lg font-semibold">Változások</h2>
+            <h2 class="text-lg font-semibold">Hozzászólások</h2>
+            <TaskComments
+                :comments="comments"
+                :project-name="project.name"
+                :task-id="task.id"
+            />
+        </section>
+
+        <section class="flex max-w-3xl flex-col gap-3">
+            <h2 class="text-lg font-semibold">Változásnapló</h2>
             <TaskChangeList
                 v-if="history.length > 0"
                 :entries="history"

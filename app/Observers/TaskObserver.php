@@ -3,7 +3,6 @@
 namespace App\Observers;
 
 use App\Mcp\Servers\TaskServer;
-use App\Models\PromptRun;
 use App\Models\Task;
 use App\Models\TaskChange;
 use BackedEnum;
@@ -42,7 +41,7 @@ class TaskObserver
 
         $task->taskChanges()->create([
             'user_id' => $userId,
-            'agent_id' => $userId === null ? $this->mcpAgentId() : null,
+            'agent_id' => $userId === null ? TaskServer::currentAgentId() : null,
             'changes' => $changes,
         ]);
     }
@@ -58,19 +57,5 @@ class TaskObserver
             $value === null, is_int($value) => $value,
             default => (string) $value,
         };
-    }
-
-    /**
-     * The agent of the prompt run the tasks MCP server was started for, if any.
-     */
-    private function mcpAgentId(): ?int
-    {
-        $promptRunId = (int) getenv(TaskServer::PROMPT_RUN_ENV);
-
-        if ($promptRunId <= 0) {
-            return null;
-        }
-
-        return PromptRun::query()->whereKey($promptRunId)->value('agent_id');
     }
 }

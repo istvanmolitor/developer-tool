@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
-import { History } from "@lucide/vue";
+import { ArrowLeft, History } from "@lucide/vue";
 import Heading from "@/components/Heading.vue";
 import { Button } from "@/components/ui/button";
 import projects from "@/routes/projects";
@@ -33,7 +33,15 @@ defineOptions({
     <Head :title="`Változásnapló — ${project.name}`" />
 
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
-        <Heading :title="project.name" :description="project.path" />
+        <div class="flex items-start justify-between gap-4">
+            <Heading :title="project.name" :description="project.path" />
+            <Button variant="outline" size="sm" as-child>
+                <Link :href="projects.tasks.index(project.name).url">
+                    <ArrowLeft class="size-4" />
+                    Feladatok
+                </Link>
+            </Button>
+        </div>
 
         <ProjectNav :name="project.name" />
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookText, History, LayoutDashboard, ListTodo, Terminal } from '@lucide/vue';
+import { BookText, LayoutDashboard, ListTodo, Terminal } from '@lucide/vue';
 import { computed } from 'vue';
 import projects from '@/routes/projects';
 
@@ -36,19 +36,16 @@ const items = computed(() => [
         icon: ListTodo,
         href: projects.tasks.index(props.name).url,
         component: 'Projects/Tasks',
-    },
-    {
-        title: 'Változásnapló',
-        icon: History,
-        href: projects.taskChanges.index(props.name).url,
-        component: 'Projects/TaskChanges',
+        // The project-wide change log is reached from the tasks screen.
+        also: ['Projects/TaskChanges'],
     },
 ]);
 
-function isActive(component: string): boolean {
-    return (
-        page.component === component ||
-        page.component.startsWith(`${component}/`)
+function isActive(item: { component: string; also?: string[] }): boolean {
+    return [item.component, ...(item.also ?? [])].some(
+        (component) =>
+            page.component === component ||
+            page.component.startsWith(`${component}/`),
     );
 }
 </script>
@@ -61,7 +58,7 @@ function isActive(component: string): boolean {
             :href="item.href"
             class="-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors"
             :class="
-                isActive(item.component)
+                isActive(item)
                     ? 'border-primary text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
             "

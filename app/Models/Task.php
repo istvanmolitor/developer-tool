@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Project $project
  * @property-read Agent|null $agent
  * @property-read Collection<int, TaskChange> $taskChanges
+ * @property-read Collection<int, TaskComment> $comments
  */
 #[ObservedBy(TaskObserver::class)]
 class Task extends Model
@@ -90,5 +91,15 @@ class Task extends Model
     public function taskChanges(): HasMany
     {
         return $this->hasMany(TaskChange::class)->latest('id');
+    }
+
+    /**
+     * Comments under the task written by users or agents, oldest first.
+     *
+     * @return HasMany<TaskComment, $this>
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TaskComment::class)->oldest('id');
     }
 }

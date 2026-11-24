@@ -9,6 +9,7 @@ use App\Http\Controllers\OutgoingEmailController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
 use App\Http\Controllers\TaskChangeController;
+use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +64,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('projects/{project}/task-changes', [TaskChangeController::class, 'index'])
         ->name('projects.task-changes.index');
     Route::resource('projects.tasks', TaskController::class)->scoped();
+    Route::post('projects/{project}/tasks/{task}/comments', [TaskCommentController::class, 'store'])
+        ->scopeBindings()
+        ->name('projects.tasks.comments.store');
 });
 
 require __DIR__.'/settings.php';

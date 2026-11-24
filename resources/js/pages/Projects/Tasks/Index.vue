@@ -4,6 +4,7 @@ import {
     Bot,
     CalendarClock,
     ChevronRight,
+    History,
     ListTodo,
     Pencil,
     Plus,
@@ -112,12 +113,20 @@ function formatDate(value: string | null): string {
     <div class="flex h-full flex-1 flex-col gap-6 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading :title="project.name" :description="project.path" />
-            <Button size="sm" as-child>
-                <Link :href="projects.tasks.create(project.name).url">
-                    <Plus class="size-4" />
-                    Új feladat
-                </Link>
-            </Button>
+            <div class="flex shrink-0 items-center gap-1">
+                <Button variant="outline" size="sm" as-child>
+                    <Link :href="projects.taskChanges.index(project.name).url">
+                        <History class="size-4" />
+                        Változásnapló
+                    </Link>
+                </Button>
+                <Button size="sm" as-child>
+                    <Link :href="projects.tasks.create(project.name).url">
+                        <Plus class="size-4" />
+                        Új feladat
+                    </Link>
+                </Button>
+            </div>
         </div>
 
         <ProjectNav :name="project.name" />

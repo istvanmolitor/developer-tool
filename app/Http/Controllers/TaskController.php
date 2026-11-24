@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskComment;
 use App\Services\TaskChangeFormatter;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -61,6 +62,10 @@ class TaskController extends Controller
             'history' => $formatter->format(
                 $task->taskChanges()->with(['user:id,name', 'agent:id,name'])->get()
             ),
+            'comments' => $task->comments()
+                ->with(['user:id,name', 'agent:id,name'])
+                ->get()
+                ->map(fn (TaskComment $comment): array => $comment->toDisplayArray()),
         ]);
     }
 
