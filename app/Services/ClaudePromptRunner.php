@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
+use App\Mcp\Servers\MailServer;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
@@ -14,6 +15,11 @@ use Throwable;
 
 class ClaudePromptRunner
 {
+    /**
+     * The `mail` MCP server's reply tool as Claude Code names it.
+     */
+    private const REPLY_EMAIL_TOOL = 'mcp__mail__reply-email';
+
     /**
      * Create a pending prompt run for the given project and queue it for
      * execution. Returns the freshly created record.
@@ -28,7 +34,9 @@ class ClaudePromptRunner
             'status' => PromptRunStatus::Pending,
         ]);
 
-        RunClaudePrompt::dispatch($run);
+        // A caller may link the run to a record in the same transaction (e.g. an incoming
+        // e-mail), so the job only starts once that link is committed and visible.
+        RunClaudePrompt::dispatch($run)->afterCommit();
 
         return $run;
     }
@@ -67,7 +75,7 @@ class ClaudePromptRunner
             $result = Process::path($project->path)
                 ->env($this->environment())
                 ->timeout($this->timeout())
-                ->run($this->command($run->prompt, $run->agent));
+                ->run($this->command($run->prompt, $run->agent, $run->incomingEmail()->exists() ? $run : null));
         } catch (Throwable $exception) {
             return $this->fail($run, $exception->getMessage());
         }
@@ -114,16 +122,35 @@ class ClaudePromptRunner
     }
 
     /**
+     * Build the `claude -p` command line.
+     *
+     * When the run handles an incoming e-mail ($emailRun), the agent also gets the
+     * `mail` MCP server, bound to that run, so it can answer the message.
+     *
      * @return list<string>
      */
-    public function command(string $prompt, ?Agent $agent = null): array
+    public function command(string $prompt, ?Agent $agent = null, ?PromptRun $emailRun = null): array
     {
         // JSON output carries the run's usage/cost (total_cost_usd) alongside
         // the text result, so the "credits" a run burns can be persisted.
         $command = [config('developer-tool.claude.binary'), '-p', $prompt, '--output-format', 'json'];
 
         if ($agent !== null) {
-            array_push($command, ...$this->agentOptions($agent));
+            array_push($command, ...$this->agentOptions($agent, $emailRun !== null));
+
+            $mcpServers = [];
+
+            if ($this->usesTaskTools($agent)) {
+                $mcpServers['tasks'] = $this->taskMcpServer();
+            }
+
+            if ($emailRun !== null) {
+                $mcpServers['mail'] = $this->mailMcpServer($emailRun);
+            }
+
+            if ($mcpServers !== []) {
+                array_push($command, '--mcp-config', json_encode(['mcpServers' => $mcpServers], JSON_UNESCAPED_SLASHES));
+            }
         }
 
         if (config('developer-tool.claude.skip_permissions')) {
@@ -155,17 +182,25 @@ class ClaudePromptRunner
      * definition inline so it can run against any project regardless of what
      * agent files happen to live in that project's directory.
      *
+     * An agent restricted to a tool list still gets the reply tool when it handles
+     * an e-mail, so every agent with a mailbox can answer its mail.
+     *
      * @return list<string>
      */
-    private function agentOptions(Agent $agent): array
+    private function agentOptions(Agent $agent, bool $canReplyToEmail = false): array
     {
         $slug = Str::slug($agent->name) ?: 'agent-'.$agent->id;
+        $tools = Agent::normalizeTools($agent->tools);
+
+        if ($canReplyToEmail && $tools !== null && ! in_array(self::REPLY_EMAIL_TOOL, $tools, true)) {
+            $tools[] = self::REPLY_EMAIL_TOOL;
+        }
 
         $definition = array_filter([
             'description' => trim((string) $agent->description) ?: $agent->name,
             'prompt' => trim((string) $agent->system_prompt) ?: $agent->name,
             'model' => $agent->model,
-            'tools' => Agent::normalizeTools($agent->tools),
+            'tools' => $tools,
         ], fn ($value): bool => $value !== null && $value !== '' && $value !== []);
 
         $json = json_encode(
@@ -174,6 +209,50 @@ class ClaudePromptRunner
         );
 
         return ['--agents', $json, '--agent', $slug];
+    }
+
+    /**
+     * Whether the agent is allowed any tool of this application's `tasks` MCP server.
+     */
+    private function usesTaskTools(Agent $agent): bool
+    {
+        foreach (Agent::normalizeTools($agent->tools) ?? [] as $tool) {
+            if (str_starts_with($tool, 'mcp__tasks__')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The `tasks` MCP server definition for `--mcp-config`. Runs happen inside the
+     * project's own directory, which has no `.mcp.json` pointing back here, so the
+     * server is started through this application's artisan by absolute path.
+     *
+     * @return array{command: string, args: list<string>}
+     */
+    private function taskMcpServer(): array
+    {
+        return [
+            'command' => 'php',
+            'args' => [base_path('artisan'), 'mcp:start', 'tasks'],
+        ];
+    }
+
+    /**
+     * The `mail` MCP server definition for `--mcp-config`, bound to the run through
+     * its environment so the agent can only answer the message handed to this run.
+     *
+     * @return array{command: string, args: list<string>, env: array<string, string>}
+     */
+    private function mailMcpServer(PromptRun $run): array
+    {
+        return [
+            'command' => 'php',
+            'args' => [base_path('artisan'), 'mcp:start', 'mail'],
+            'env' => [MailServer::PROMPT_RUN_ENV => (string) $run->id],
+        ];
     }
 
     private function fail(PromptRun $run, string $message): PromptRun

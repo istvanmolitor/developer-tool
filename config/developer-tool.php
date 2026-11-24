@@ -55,6 +55,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mailbox Fetch Schedule
+    |--------------------------------------------------------------------------
+    |
+    | Once a day, at this time (HH:MM in the given timezone), the scheduler runs
+    | `mailboxes:fetch` to download the new messages of every active mailbox.
+    |
+    */
+
+    'mailbox_fetch_time' => env('DEVELOPER_TOOL_MAILBOX_FETCH_TIME', '06:00'),
+
+    'mailbox_fetch_timezone' => env('DEVELOPER_TOOL_MAILBOX_FETCH_TIMEZONE', 'Europe/Budapest'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Claude CLI
     |--------------------------------------------------------------------------
     |

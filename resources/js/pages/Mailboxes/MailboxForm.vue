@@ -1,21 +1,24 @@
 <script setup lang="ts">
-import type { InertiaForm } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import type { InertiaForm } from "@inertiajs/vue3";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type Option = { value: string; label: string };
+type NamedOption = { id: number; name: string };
 
 export type MailboxFormFields = {
+    agent_id: string;
+    project_id: string;
     name: string;
     email: string;
     from_name: string;
@@ -29,17 +32,34 @@ export type MailboxFormFields = {
     smtp_port: number;
     smtp_encryption: string;
     is_active: boolean;
+    auto_read: boolean;
+    auto_reply: boolean;
 };
 
 const props = defineProps<{
     form: InertiaForm<MailboxFormFields>;
     encryptions: Option[];
+    agents: NamedOption[];
+    projects: NamedOption[];
     submitLabel: string;
     cancelHref: string;
     passwordOptional?: boolean;
 }>();
 
 const emit = defineEmits<{ submit: [] }>();
+
+// Sentinel value for the "unassigned" select item — empty string isn't a valid
+// Select item value, so use a distinct token and map it back to '' on submit.
+const UNASSIGNED = "none";
+
+function optionLabel(options: NamedOption[], value: string): string {
+    if (value === "" || value === UNASSIGNED) return "Nincs hozzárendelve";
+
+    return (
+        options.find((option) => String(option.id) === value)?.name ??
+        "Nincs hozzárendelve"
+    );
+}
 
 function encryptionLabel(value: string): string | undefined {
     return props.encryptions.find((option) => option.value === value)?.label;
@@ -61,6 +81,122 @@ function encryptionLabel(value: string): string | undefined {
                 autocomplete="off"
             />
             <InputError :message="form.errors.name" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <Label for="agent"
+                >Agent
+                <span class="text-muted-foreground">(opcionális)</span>
+            </Label>
+            <Select
+                :model-value="form.agent_id === '' ? UNASSIGNED : form.agent_id"
+                @update:model-value="
+                    (value) =>
+                        (form.agent_id =
+                            String(value) === UNASSIGNED ? '' : String(value))
+                "
+            >
+                <SelectTrigger id="agent" class="w-full sm:max-w-xs">
+                    <SelectValue>{{
+                        optionLabel(agents, form.agent_id)
+                    }}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem :value="UNASSIGNED">
+                        Nincs hozzárendelve
+                    </SelectItem>
+                    <SelectItem
+                        v-for="agent in agents"
+                        :key="agent.id"
+                        :value="String(agent.id)"
+                    >
+                        {{ agent.name }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+            <p class="text-xs text-muted-foreground">
+                Az agent, amelyik ezen a postafiókon keresztül levelez.
+            </p>
+            <InputError :message="form.errors.agent_id" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <Label for="project"
+                >Projekt
+                <span class="text-muted-foreground">(opcionális)</span>
+            </Label>
+            <Select
+                :model-value="
+                    form.project_id === '' ? UNASSIGNED : form.project_id
+                "
+                @update:model-value="
+                    (value) =>
+                        (form.project_id =
+                            String(value) === UNASSIGNED ? '' : String(value))
+                "
+            >
+                <SelectTrigger id="project" class="w-full sm:max-w-xs">
+                    <SelectValue>{{
+                        optionLabel(projects, form.project_id)
+                    }}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem :value="UNASSIGNED">
+                        Nincs hozzárendelve
+                    </SelectItem>
+                    <SelectItem
+                        v-for="project in projects"
+                        :key="project.id"
+                        :value="String(project.id)"
+                    >
+                        {{ project.name }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+            <p class="text-xs text-muted-foreground">
+                Ezen a projekten dolgozik az agent, amikor elolvas egy levelet.
+            </p>
+            <InputError :message="form.errors.project_id" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+                <Checkbox
+                    id="auto_read"
+                    :model-value="form.auto_read"
+                    @update:model-value="
+                        (value) => (form.auto_read = value === true)
+                    "
+                />
+                <Label for="auto_read"
+                    >Az agent automatikusan elolvassa az új leveleket</Label
+                >
+            </div>
+            <p class="pl-6 text-xs text-muted-foreground">
+                Letöltéskor minden új levelet promptként megkap a projekten.
+                Kikapcsolva levelenként te döntöd el, melyiket olvassa el.
+            </p>
+            <InputError class="pl-6" :message="form.errors.auto_read" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+                <Checkbox
+                    id="auto_reply"
+                    :model-value="form.auto_reply"
+                    @update:model-value="
+                        (value) => (form.auto_reply = value === true)
+                    "
+                />
+                <Label for="auto_reply"
+                    >Az agent válaszai jóváhagyás nélkül kimennek</Label
+                >
+            </div>
+            <p class="pl-6 text-xs text-muted-foreground">
+                Kikapcsolva az agent válasza piszkozatként vár a levél alatt, és
+                csak a „Küldés” gombra megy ki a feladónak.
+            </p>
+            <InputError class="pl-6" :message="form.errors.auto_reply" />
         </div>
 
         <fieldset class="flex flex-col gap-4">

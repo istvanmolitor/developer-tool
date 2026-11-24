@@ -4,6 +4,7 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\IncomingEmailController;
 use App\Http\Controllers\MailboxController;
+use App\Http\Controllers\OutgoingEmailController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
 use App\Http\Controllers\TaskController;
@@ -27,12 +28,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only('destroy')
         ->parameters(['emails' => 'incomingEmail'])
         ->scoped();
-    Route::post('mailboxes/{mailbox}/emails/{incomingEmail}/read', [IncomingEmailController::class, 'markAsRead'])
+    // Hand the message to the mailbox's agent as a prompt on the mailbox's project.
+    Route::post('mailboxes/{mailbox}/emails/{incomingEmail}/read', [IncomingEmailController::class, 'read'])
         ->scopeBindings()
         ->name('mailboxes.emails.read');
     Route::get('mailboxes/{mailbox}/emails/{incomingEmail}/attachments/{attachment}', [IncomingEmailController::class, 'downloadAttachment'])
         ->scopeBindings()
         ->name('mailboxes.emails.attachments.download');
+    // Approve (send) or discard a reply the mailbox's agent wrote.
+    Route::post('mailboxes/{mailbox}/replies/{outgoingEmail}/send', [OutgoingEmailController::class, 'send'])
+        ->scopeBindings()
+        ->name('mailboxes.replies.send');
+    Route::delete('mailboxes/{mailbox}/replies/{outgoingEmail}', [OutgoingEmailController::class, 'destroy'])
+        ->scopeBindings()
+        ->name('mailboxes.replies.destroy');
 
     Route::resource('projects', ProjectController::class);
     Route::get('projects/{project}/prompts', [ProjectController::class, 'prompts'])->name('projects.prompts');

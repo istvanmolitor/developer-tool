@@ -7,6 +7,7 @@ use Database\Factories\PromptRunFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PromptRun extends Model
 {
@@ -75,5 +76,15 @@ class PromptRun extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The incoming message this run was started to handle, if any.
+     *
+     * @return HasOne<IncomingEmail, $this>
+     */
+    public function incomingEmail(): HasOne
+    {
+        return $this->hasOne(IncomingEmail::class);
     }
 }

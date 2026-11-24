@@ -62,7 +62,7 @@ class IncomingEmail extends Model
     }
 
     /**
-     * Whether the message has been opened in the app.
+     * Whether the mailbox's agent has read (received) the message.
      */
     public function isRead(): bool
     {
@@ -70,13 +70,13 @@ class IncomingEmail extends Model
     }
 
     /**
-     * Mark the message as read, keeping the time it was first opened.
+     * The prompt run in which the mailbox's agent read this message.
+     *
+     * @return BelongsTo<PromptRun, $this>
      */
-    public function markAsRead(): void
+    public function promptRun(): BelongsTo
     {
-        if (! $this->isRead()) {
-            $this->forceFill(['read_at' => now()])->save();
-        }
+        return $this->belongsTo(PromptRun::class);
     }
 
     /**
@@ -87,6 +87,16 @@ class IncomingEmail extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(IncomingEmailAttachment::class);
+    }
+
+    /**
+     * The agent's replies to this message.
+     *
+     * @return HasMany<OutgoingEmail, $this>
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(OutgoingEmail::class);
     }
 
     /**

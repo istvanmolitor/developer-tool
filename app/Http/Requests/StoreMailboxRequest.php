@@ -21,4 +21,12 @@ class StoreMailboxRequest extends FormRequest
     {
         return $this->mailboxRules();
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->mailboxMessages();
+    }
 }

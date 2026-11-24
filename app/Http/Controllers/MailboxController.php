@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\MailEncryption;
 use App\Http\Requests\StoreMailboxRequest;
 use App\Http\Requests\UpdateMailboxRequest;
+use App\Models\Agent;
 use App\Models\Mailbox;
+use App\Models\Project;
 use App\Services\MailboxService;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +21,7 @@ class MailboxController extends Controller
     {
         return Inertia::render('Mailboxes/Index', [
             'mailboxes' => Mailbox::query()
+                ->with(['agent:id,name', 'project:id,name'])
                 ->withCount([
                     'incomingEmails',
                     'incomingEmails as unread_emails_count' => fn (Builder $query) => $query->whereNull('read_at'),
@@ -32,6 +35,8 @@ class MailboxController extends Controller
     {
         return Inertia::render('Mailboxes/Create', [
             'encryptions' => $this->encryptionOptions(),
+            'agents' => $this->agentOptions(),
+            'projects' => $this->projectOptions(),
         ]);
     }
 
@@ -47,13 +52,17 @@ class MailboxController extends Controller
     public function show(Mailbox $mailbox): Response
     {
         return Inertia::render('Mailboxes/Show', [
-            'mailbox' => $mailbox,
+            'mailbox' => $mailbox->load(['agent:id,name', 'project:id,name']),
             'incomingEmails' => $mailbox->incomingEmails()
-                ->with('attachments:id,incoming_email_id,filename,mime_type,size')
+                ->with([
+                    'attachments:id,incoming_email_id,filename,mime_type,size',
+                    'promptRun:id,status',
+                    'replies:id,incoming_email_id,to,subject,body_text,status,error,sent_at,created_at',
+                ])
                 ->latest('received_at')
                 ->latest('id')
                 ->limit(50)
-                ->get(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at']),
+                ->get(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id']),
             'incomingEmailsCount' => $mailbox->incomingEmails()->count(),
             'unreadEmailsCount' => $mailbox->incomingEmails()->whereNull('read_at')->count(),
         ]);
@@ -64,6 +73,8 @@ class MailboxController extends Controller
         return Inertia::render('Mailboxes/Edit', [
             'mailbox' => $mailbox,
             'encryptions' => $this->encryptionOptions(),
+            'agents' => $this->agentOptions(),
+            'projects' => $this->projectOptions(),
         ]);
     }
 
@@ -120,5 +131,37 @@ class MailboxController extends Controller
             fn (MailEncryption $encryption): array => ['value' => $encryption->value, 'label' => $encryption->label()],
             MailEncryption::cases(),
         );
+    }
+
+    /**
+     * Agents a mailbox can be assigned to, for the form's owner select.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function agentOptions(): array
+    {
+        $options = [];
+
+        foreach (Agent::query()->orderBy('name')->get(['id', 'name']) as $agent) {
+            $options[] = ['id' => $agent->id, 'name' => $agent->name];
+        }
+
+        return $options;
+    }
+
+    /**
+     * Projects the mailbox's agent can work on, for the form's project select.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function projectOptions(): array
+    {
+        $options = [];
+
+        foreach (Project::query()->orderBy('name')->get(['id', 'name']) as $project) {
+            $options[] = ['id' => $project->id, 'name' => $project->name];
+        }
+
+        return $options;
     }
 }

@@ -1,15 +1,23 @@
 <?php
 
 use App\Enums\MailEncryption;
+use App\Enums\OutgoingEmailStatus;
+use App\Jobs\RunClaudePrompt;
 use App\Mail\MailboxMessage;
+use App\Models\Agent;
 use App\Models\IncomingEmail;
+use App\Models\IncomingEmailAttachment;
 use App\Models\Mailbox;
+use App\Models\OutgoingEmail;
+use App\Models\Project;
+use App\Models\PromptRun;
 use App\Services\Mail\FetchedAttachment;
 use App\Services\Mail\FetchedEmail;
 use App\Services\Mail\ImapMailFetcher;
 use App\Services\MailboxService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 function fetchedEmail(int $uid, array $overrides = []): FetchedEmail
@@ -105,6 +113,62 @@ test('fetching stores the attachments of a new message on the private disk', fun
     expect(Storage::disk('local')->get($attachments[0]->path))->toBe('%PDF-1.4 content');
 });
 
+test('with automatic reading on, the agent reads every newly fetched message', function () {
+    Queue::fake();
+    $agent = Agent::factory()->create();
+    $project = Project::factory()->create();
+    $mailbox = Mailbox::factory()->for($agent)->for($project)->create(['auto_read' => true]);
+    IncomingEmail::factory()->for($mailbox)->create(['uid' => 1]);
+
+    $this->mock(ImapMailFetcher::class)
+        ->shouldReceive('fetch')
+        ->andReturn([fetchedEmail(2), fetchedEmail(3)]);
+
+    app(MailboxService::class)->fetchIncoming($mailbox);
+
+    expect(PromptRun::query()->where('agent_id', $agent->id)->where('project_id', $project->id)->count())->toBe(2)
+        ->and($mailbox->incomingEmails()->whereNull('read_at')->pluck('uid')->all())->toBe([1]);
+
+    Queue::assertPushed(RunClaudePrompt::class, 2);
+});
+
+test('with automatic reading off, fetched messages stay unread', function () {
+    Queue::fake();
+    $mailbox = Mailbox::factory()->for(Agent::factory())->for(Project::factory())->create(['auto_read' => false]);
+
+    $this->mock(ImapMailFetcher::class)
+        ->shouldReceive('fetch')
+        ->andReturn([fetchedEmail(2)]);
+
+    app(MailboxService::class)->fetchIncoming($mailbox);
+
+    expect($mailbox->incomingEmails()->whereNull('read_at')->count())->toBe(1)
+        ->and(PromptRun::count())->toBe(0);
+});
+
+test('the agent prompt lists the attachment files and falls back to the html body', function () {
+    Storage::fake('local');
+    $project = Project::factory()->create(['name' => 'webshop']);
+    $mailbox = Mailbox::factory()->create(['name' => 'Support', 'email' => 'support@example.test', 'project_id' => $project->id]);
+    $email = IncomingEmail::factory()->for($mailbox)->create([
+        'from_name' => 'Kiss Anna',
+        'from_address' => 'anna@example.test',
+        'body_text' => null,
+        'body_html' => '<p>Csak <b>HTML</b> törzs</p>',
+    ]);
+    IncomingEmailAttachment::factory()->for($email)->create(['filename' => 'log.txt', 'mime_type' => 'text/plain', 'path' => 'mail-attachments/x/abc']);
+
+    $prompt = app(MailboxService::class)->agentPrompt($mailbox, $email);
+
+    expect($prompt)->toContain(
+        '„Support” (support@example.test)',
+        '„webshop” projekten',
+        'Feladó: Kiss Anna <anna@example.test>',
+        '- log.txt (text/plain): '.Storage::disk('local')->path('mail-attachments/x/abc'),
+        'Csak HTML törzs',
+    );
+});
+
 test('sending uses a mailer built from the mailbox smtp settings', function () {
     Mail::fake();
 
@@ -158,3 +222,114 @@ test('the imap reference reflects the encryption setting', function (MailEncrypt
     [MailEncryption::Tls, '{mail.example.test:993/imap/tls}INBOX'],
     [MailEncryption::None, '{mail.example.test:993/imap/notls}INBOX'],
 ]);
+
+test('the agent prompt tells the agent how to reply to the message', function () {
+    $mailbox = Mailbox::factory()->create(['email' => 'support@example.test']);
+    $email = IncomingEmail::factory()->for($mailbox)->create();
+
+    expect(app(MailboxService::class)->agentPrompt($mailbox, $email))
+        ->toContain("`reply-email` eszközzel tedd meg (incoming_email_id: {$email->id})")
+        ->toContain('support@example.test címről');
+});
+
+test('without automatic replies a reply is stored as a draft to the sender', function () {
+    Mail::fake();
+    $email = IncomingEmail::factory()->create([
+        'from_address' => 'customer@example.test',
+        'subject' => 'Hibás számla',
+        'message_id' => '<abc@example.test>',
+    ]);
+    $run = PromptRun::factory()->create();
+
+    $reply = app(MailboxService::class)->reply($email, 'Javítottuk.', $run);
+
+    expect($reply->fresh())
+        ->mailbox_id->toBe($email->mailbox_id)
+        ->prompt_run_id->toBe($run->id)
+        ->to->toBe(['customer@example.test'])
+        ->subject->toBe('Re: Hibás számla')
+        ->body_text->toBe('Javítottuk.')
+        ->in_reply_to->toBe('<abc@example.test>')
+        ->status->toBe(OutgoingEmailStatus::Draft);
+
+    Mail::assertNothingSent();
+});
+
+test('a reply subject keeps an existing re prefix and fills in a missing subject', function (?string $subject, string $expected) {
+    $email = IncomingEmail::factory()->create(['subject' => $subject]);
+
+    expect(app(MailboxService::class)->reply($email, 'Body')->subject)->toBe($expected);
+})->with([
+    'existing prefix' => ['RE: Kérdés', 'RE: Kérdés'],
+    'missing subject' => [null, 'Re: (nincs tárgy)'],
+]);
+
+test('with automatic replies the reply is sent right away from the mailbox', function () {
+    Mail::fake();
+    $mailbox = Mailbox::factory()->create(['auto_reply' => true, 'email' => 'support@example.test']);
+    $email = IncomingEmail::factory()->for($mailbox)->create(['from_address' => 'customer@example.test']);
+
+    $reply = app(MailboxService::class)->reply($email, 'Javítottuk.');
+
+    expect($reply->fresh())
+        ->status->toBe(OutgoingEmailStatus::Sent)
+        ->sent_at->not->toBeNull();
+
+    Mail::assertSent(MailboxMessage::class, fn (MailboxMessage $mail) => $mail->hasTo('customer@example.test')
+        && $mail->hasFrom('support@example.test')
+        && $mail->mailer === 'mailbox_'.$mailbox->id);
+});
+
+test('a message can be answered only once', function () {
+    $email = IncomingEmail::factory()->create();
+    app(MailboxService::class)->reply($email, 'Első válasz');
+
+    expect(fn () => app(MailboxService::class)->reply($email, 'Második válasz'))
+        ->toThrow(RuntimeException::class, 'Erre a levélre már született válasz.');
+
+    expect(OutgoingEmail::count())->toBe(1);
+});
+
+test('a message without a sender cannot be answered', function () {
+    $email = IncomingEmail::factory()->create(['from_address' => null]);
+
+    expect(fn () => app(MailboxService::class)->reply($email, 'Válasz'))
+        ->toThrow(RuntimeException::class, 'A levélnek nincs feladója');
+
+    expect(OutgoingEmail::count())->toBe(0);
+});
+
+test('a failed send is recorded on the reply instead of being thrown', function () {
+    Mail::shouldReceive('purge');
+    Mail::shouldReceive('mailer')->andThrow(new RuntimeException('Connection refused'));
+    $reply = OutgoingEmail::factory()->create();
+
+    app(MailboxService::class)->sendOutgoing($reply);
+
+    expect($reply->fresh())
+        ->status->toBe(OutgoingEmailStatus::Failed)
+        ->error->toBe('Connection refused')
+        ->sent_at->toBeNull();
+});
+
+test('a sent reply is not sent again', function () {
+    Mail::fake();
+    $reply = OutgoingEmail::factory()->sent()->create();
+
+    expect(fn () => app(MailboxService::class)->sendOutgoing($reply))
+        ->toThrow(RuntimeException::class, 'Ez a levél már el lett küldve.');
+
+    Mail::assertNothingSent();
+});
+
+test('a reply carries the threading headers of the answered message', function () {
+    $mailbox = Mailbox::factory()->make();
+
+    Mail::mailer('array')->to('customer@example.test')
+        ->send(new MailboxMessage($mailbox, 'Re: Kérdés', 'Válasz', inReplyTo: '<abc@example.test>'));
+
+    $headers = Mail::mailer('array')->getSymfonyTransport()->messages()->sole()->getOriginalMessage()->getHeaders();
+
+    expect($headers->get('In-Reply-To')->getBodyAsString())->toBe('<abc@example.test>')
+        ->and($headers->get('References')->getBodyAsString())->toBe('<abc@example.test>');
+});

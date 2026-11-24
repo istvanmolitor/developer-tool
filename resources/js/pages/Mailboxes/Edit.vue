@@ -1,35 +1,48 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import mailboxes from '@/routes/mailboxes';
-import MailboxForm from './MailboxForm.vue';
-import type { MailboxFormFields } from './MailboxForm.vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import mailboxes from "@/routes/mailboxes";
+import MailboxForm from "./MailboxForm.vue";
+import type { MailboxFormFields } from "./MailboxForm.vue";
 
-type Mailbox = Omit<MailboxFormFields, 'password' | 'from_name'> & {
+type Mailbox = Omit<
+    MailboxFormFields,
+    "password" | "from_name" | "agent_id" | "project_id"
+> & {
     id: number;
+    agent_id: number | null;
+    project_id: number | null;
     from_name: string | null;
 };
 
 const props = defineProps<{
     mailbox: Mailbox;
     encryptions: { value: string; label: string }[];
+    agents: { id: number; name: string }[];
+    projects: { id: number; name: string }[];
 }>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Postafiókok', href: mailboxes.index().url },
-            { title: 'Szerkesztés', href: '' },
+            { title: "Postafiókok", href: mailboxes.index().url },
+            { title: "Szerkesztés", href: "" },
         ],
     },
 });
 
 const form = useForm<MailboxFormFields>({
+    agent_id:
+        props.mailbox.agent_id === null ? "" : String(props.mailbox.agent_id),
+    project_id:
+        props.mailbox.project_id === null
+            ? ""
+            : String(props.mailbox.project_id),
     name: props.mailbox.name,
     email: props.mailbox.email,
-    from_name: props.mailbox.from_name ?? '',
+    from_name: props.mailbox.from_name ?? "",
     username: props.mailbox.username,
-    password: '',
+    password: "",
     imap_host: props.mailbox.imap_host,
     imap_port: props.mailbox.imap_port,
     imap_encryption: props.mailbox.imap_encryption,
@@ -38,6 +51,8 @@ const form = useForm<MailboxFormFields>({
     smtp_port: props.mailbox.smtp_port,
     smtp_encryption: props.mailbox.smtp_encryption,
     is_active: props.mailbox.is_active,
+    auto_read: props.mailbox.auto_read,
+    auto_reply: props.mailbox.auto_reply,
 });
 
 function submit(): void {
@@ -57,6 +72,8 @@ function submit(): void {
         <MailboxForm
             :form="form"
             :encryptions="encryptions"
+            :agents="agents"
+            :projects="projects"
             submit-label="Változtatások mentése"
             :cancel-href="mailboxes.show(mailbox.id).url"
             password-optional

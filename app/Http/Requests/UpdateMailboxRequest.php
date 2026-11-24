@@ -25,4 +25,12 @@ class UpdateMailboxRequest extends FormRequest
 
         return $this->mailboxRules($mailbox);
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->mailboxMessages();
+    }
 }

@@ -1,37 +1,43 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import mailboxes from '@/routes/mailboxes';
-import MailboxForm from './MailboxForm.vue';
-import type { MailboxFormFields } from './MailboxForm.vue';
+import { Head, useForm } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import mailboxes from "@/routes/mailboxes";
+import MailboxForm from "./MailboxForm.vue";
+import type { MailboxFormFields } from "./MailboxForm.vue";
 
 defineProps<{
     encryptions: { value: string; label: string }[];
+    agents: { id: number; name: string }[];
+    projects: { id: number; name: string }[];
 }>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Postafiókok', href: mailboxes.index().url },
-            { title: 'Új', href: mailboxes.create().url },
+            { title: "Postafiókok", href: mailboxes.index().url },
+            { title: "Új", href: mailboxes.create().url },
         ],
     },
 });
 
 const form = useForm<MailboxFormFields>({
-    name: '',
-    email: '',
-    from_name: '',
-    username: '',
-    password: '',
-    imap_host: '',
+    agent_id: "",
+    project_id: "",
+    name: "",
+    email: "",
+    from_name: "",
+    username: "",
+    password: "",
+    imap_host: "",
     imap_port: 993,
-    imap_encryption: 'ssl',
-    imap_folder: 'INBOX',
-    smtp_host: '',
+    imap_encryption: "ssl",
+    imap_folder: "INBOX",
+    smtp_host: "",
     smtp_port: 465,
-    smtp_encryption: 'ssl',
+    smtp_encryption: "ssl",
     is_active: true,
+    auto_read: false,
+    auto_reply: false,
 });
 
 function submit(): void {
@@ -51,6 +57,8 @@ function submit(): void {
         <MailboxForm
             :form="form"
             :encryptions="encryptions"
+            :agents="agents"
+            :projects="projects"
             submit-label="Postafiók létrehozása"
             :cancel-href="mailboxes.index().url"
             @submit="submit"

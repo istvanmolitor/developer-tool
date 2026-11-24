@@ -42,6 +42,16 @@ class Agent extends Model
     }
 
     /**
+     * The mailboxes this agent sends and receives mail through.
+     *
+     * @return HasMany<Mailbox, $this>
+     */
+    public function mailboxes(): HasMany
+    {
+        return $this->hasMany(Mailbox::class);
+    }
+
+    /**
      * Normalize a tools value into a clean list of tool names, accepting either
      * a comma-separated string (as used in the agent form and the `.md` front
      * matter) or an already-split array. Returns null when nothing remains.

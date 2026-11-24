@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ChevronRight, Mail, Pencil, Plus, Trash2 } from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import mailboxRoutes from '@/routes/mailboxes';
+import { Head, Link, router } from "@inertiajs/vue3";
+import { Bot, ChevronRight, Mail, Pencil, Plus, Trash2 } from "@lucide/vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import mailboxRoutes from "@/routes/mailboxes";
 
 type Mailbox = {
     id: number;
@@ -17,6 +17,8 @@ type Mailbox = {
     last_fetched_at: string | null;
     incoming_emails_count: number;
     unread_emails_count: number;
+    agent: { id: number; name: string } | null;
+    project: { id: number; name: string } | null;
 };
 
 defineProps<{
@@ -26,7 +28,7 @@ defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Postafiókok', href: mailboxRoutes.index().url },
+            { title: "Postafiókok", href: mailboxRoutes.index().url },
         ],
     },
 });
@@ -46,7 +48,7 @@ function destroy(mailbox: Mailbox): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString('hu-HU') : 'még soha';
+    return value ? new Date(value).toLocaleString("hu-HU") : "még soha";
 }
 </script>
 
@@ -111,13 +113,26 @@ function formatDate(value: string | null): string {
                     <p class="text-sm break-all text-muted-foreground">
                         {{ mailbox.email }}
                     </p>
+                    <p
+                        v-if="mailbox.agent"
+                        class="flex items-center gap-1.5 text-sm text-muted-foreground"
+                    >
+                        <Bot class="size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="sr-only">Agent:</span>
+                        {{ mailbox.agent.name }}
+                        <template v-if="mailbox.project">
+                            <span aria-hidden="true">·</span>
+                            <span class="sr-only">projekt:</span>
+                            {{ mailbox.project.name }}
+                        </template>
+                    </p>
                 </CardHeader>
                 <CardContent
                     class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
                 >
                     <Badge
                         :variant="mailbox.is_active ? 'secondary' : 'outline'"
-                        >{{ mailbox.is_active ? 'Aktív' : 'Inaktív' }}</Badge
+                        >{{ mailbox.is_active ? "Aktív" : "Inaktív" }}</Badge
                     >
                     <Badge variant="outline"
                         >{{ mailbox.incoming_emails_count }} levél</Badge

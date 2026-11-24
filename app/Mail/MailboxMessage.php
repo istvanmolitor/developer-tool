@@ -7,6 +7,8 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
+use Illuminate\Support\Str;
 
 /**
  * A free-form message sent from one of the stored mailboxes.
@@ -18,6 +20,7 @@ class MailboxMessage extends Mailable
         public string $messageSubject,
         public string $messageBody,
         public bool $isHtml = false,
+        public ?string $inReplyTo = null,
     ) {}
 
     public function envelope(): Envelope
@@ -25,6 +28,21 @@ class MailboxMessage extends Mailable
         return new Envelope(
             from: new Address($this->mailbox->email, $this->mailbox->from_name),
             subject: $this->messageSubject,
+        );
+    }
+
+    /**
+     * A reply carries the answered Message-ID, so mail clients show it in the same thread.
+     */
+    public function headers(): Headers
+    {
+        if ($this->inReplyTo === null || $this->inReplyTo === '') {
+            return new Headers;
+        }
+
+        return new Headers(
+            references: [$this->inReplyTo],
+            text: ['In-Reply-To' => Str::of($this->inReplyTo)->start('<')->finish('>')->value()],
         );
     }
 

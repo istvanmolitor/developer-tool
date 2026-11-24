@@ -5,18 +5,28 @@ namespace App\Http\Controllers;
 use App\Models\IncomingEmail;
 use App\Models\IncomingEmailAttachment;
 use App\Models\Mailbox;
+use App\Services\MailboxService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IncomingEmailController extends Controller
 {
     /**
-     * Mark a downloaded message as read when it is opened.
+     * Have the mailbox's agent read the message: it receives the message as a prompt on the mailbox's project.
      */
-    public function markAsRead(Mailbox $mailbox, IncomingEmail $incomingEmail): RedirectResponse
+    public function read(Request $request, Mailbox $mailbox, IncomingEmail $incomingEmail, MailboxService $mailboxes): RedirectResponse
     {
-        $incomingEmail->markAsRead();
+        try {
+            $mailboxes->sendToAgent($incomingEmail, $request->user());
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Az agent megkapta a levelet.']);
+        } catch (RuntimeException $exception) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $exception->getMessage()]);
+        }
 
         return redirect()->route('mailboxes.show', $mailbox);
     }

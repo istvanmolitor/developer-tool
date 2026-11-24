@@ -16,6 +16,9 @@ trait MailboxValidationRules
     protected function mailboxRules(?Mailbox $ignore = null): array
     {
         return [
+            // Automatic reading hands every new message to the agent on the project, so both are needed.
+            'agent_id' => ['nullable', 'required_if_accepted:auto_read', 'integer', 'exists:agents,id'],
+            'project_id' => ['nullable', 'required_if_accepted:auto_read', 'integer', 'exists:projects,id'],
             'name' => ['required', 'string', 'max:255', Rule::unique('mailboxes', 'name')->ignore($ignore)],
             'email' => ['required', 'email', 'max:255'],
             'from_name' => ['nullable', 'string', 'max:255'],
@@ -30,6 +33,21 @@ trait MailboxValidationRules
             'smtp_port' => ['required', 'integer', 'between:1,65535'],
             'smtp_encryption' => ['required', Rule::enum(MailEncryption::class)],
             'is_active' => ['boolean'],
+            'auto_read' => ['boolean'],
+            'auto_reply' => ['boolean'],
+        ];
+    }
+
+    /**
+     * Validation messages shared by the mailbox create and update requests.
+     *
+     * @return array<string, string>
+     */
+    protected function mailboxMessages(): array
+    {
+        return [
+            'agent_id.required_if_accepted' => 'Az automatikus olvasáshoz válassz agentet.',
+            'project_id.required_if_accepted' => 'Az automatikus olvasáshoz válassz projektet.',
         ];
     }
 }
