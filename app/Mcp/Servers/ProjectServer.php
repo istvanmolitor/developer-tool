@@ -33,8 +33,11 @@ use Laravel\Mcp\Server\Tool;
        repó klónozásához a `mode: git` módot és a `git_url` paramétert (a
        `name` elhagyható, ekkor a repó nevét kapja).
     4. A "new" és "git" projekt mappáját háttérfolyamat készíti elő: a válasz
-       `provision_status` értéke ekkor `pending`. A `list-projects` eszközzel
-       később ellenőrizheted.
+       `provision_status` értéke ekkor `pending`. Az állapotot (`pending`,
+       `provisioning`, `ready`, `failed`) és hiba esetén a `provision_error`
+       okot később a `list-projects` eszköz kimenetében ellenőrizheted.
+    5. A `git_url` csak https://, ssh:// vagy `user@host:útvonal` formátumú
+       lehet.
     TXT)]
 class ProjectServer extends Server
 {

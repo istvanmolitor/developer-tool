@@ -31,17 +31,16 @@ class CreateProjectTool extends Tool
         );
 
         $project = $this->projects->createProject($validated);
-        $isPending = $validated['mode'] !== 'existing';
 
         return Response::json([
-            'message' => $isPending
+            'message' => $project->provision_status->isInProgress()
                 ? 'Projekt létrehozva, a mappa előkészítése a háttérben folyamatban van.'
                 : 'Projekt létrehozva.',
             'project' => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'path' => $project->path,
-                'provision_status' => $project->getRawOriginal('provision_status'),
+                'provision_status' => $project->provision_status->value,
             ],
         ]);
     }

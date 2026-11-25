@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('list-projects')]
 #[Title('Projektek listázása')]
-#[Description('Listázza az összes projektet (név, azonosító, feladatok száma). A projekt nevével hivatkozz rá a többi feladat-eszközben.')]
+#[Description('Listázza az összes projektet (név, azonosító, feladatok száma, a mappa előkészítésének állapota és hibája). A projektre a nevével hivatkozz a többi eszközben.')]
 class ListProjectsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -25,6 +25,8 @@ class ListProjectsTool extends Tool
                 'id' => $project->id,
                 'name' => $project->name,
                 'tasks_count' => $project->tasks_count,
+                'provision_status' => $project->provision_status->value,
+                'provision_error' => $project->provision_error,
             ])
             ->all();
 

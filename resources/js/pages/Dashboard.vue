@@ -2,6 +2,8 @@
 import { Head, Link, usePoll } from "@inertiajs/vue3";
 import { Bot, Clock, ListOrdered, Loader2 } from "@lucide/vue";
 import { onBeforeUnmount, onMounted, ref } from "vue";
+import DashboardChat from "@/components/DashboardChat.vue";
+import type { DashboardChatData } from "@/components/DashboardChat.vue";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboard } from "@/routes";
@@ -22,6 +24,7 @@ defineProps<{
         queued: QueuedRun[];
         queued_count: number;
     };
+    chat: DashboardChatData;
 }>();
 
 defineOptions({
@@ -35,7 +38,7 @@ defineOptions({
     },
 });
 
-usePoll(4000, { only: ["promptQueue"] });
+usePoll(4000, { only: ["promptQueue", "chat"] });
 
 // Ticks every second so the elapsed time of a running prompt counts up live.
 const now = ref(Date.now());
@@ -203,5 +206,7 @@ function formatDate(value: string): string {
                 </CardContent>
             </Card>
         </div>
+
+        <DashboardChat :chat="chat" />
     </div>
 </template>

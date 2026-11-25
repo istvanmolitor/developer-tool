@@ -45,14 +45,11 @@ class ProjectController extends Controller
 
     public function store(StoreProjectRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
-        $needsProvisioning = $validated['mode'] !== 'existing';
-
-        $this->projects->createProject($validated);
+        $project = $this->projects->createProject($request->validated());
 
         return redirect()
             ->route('projects.index')
-            ->with('status', $needsProvisioning
+            ->with('status', $project->provision_status->isInProgress()
                 ? 'Projekt létrehozva, a mappa előkészítése folyamatban.'
                 : 'Projekt létrehozva.');
     }

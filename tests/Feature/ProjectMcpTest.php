@@ -118,7 +118,60 @@ test('create-project rejects invalid input and creates nothing', function (array
     'new mode without a name' => [['mode' => 'new']],
     'missing mode' => [['name' => 'fresh']],
     'unknown mode' => [['mode' => 'bogus', 'name' => 'fresh']],
+    'dot name' => [['mode' => 'new', 'name' => '.']],
+    'dot-dot name' => [['mode' => 'new', 'name' => '..']],
+    'dot-dot name in git mode' => [['mode' => 'git', 'name' => '..', 'git_url' => 'https://github.com/acme/widget.git']],
+    'name with a null byte' => [['mode' => 'new', 'name' => "foo\0bar"]],
+    'name with a control character' => [['mode' => 'new', 'name' => "foo\nbar"]],
+    'git target folder already on disk' => [['mode' => 'git', 'name' => 'on-disk', 'git_url' => 'https://github.com/acme/widget.git']],
+    'git target derived from url already on disk' => [['mode' => 'git', 'git_url' => 'https://github.com/acme/on-disk.git']],
+    'git url as an option' => [['mode' => 'git', 'name' => 'fresh', 'git_url' => '--upload-pack=touch /tmp/pwned']],
+    'git url with file transport' => [['mode' => 'git', 'name' => 'fresh', 'git_url' => 'file:///etc']],
+    'git url with ext transport' => [['mode' => 'git', 'name' => 'fresh', 'git_url' => 'ext::sh -c id']],
+    'git url as a local path' => [['mode' => 'git', 'name' => 'fresh', 'git_url' => '/tmp/some-repo']],
+    'mode as an array' => [['mode' => ['new'], 'name' => 'fresh']],
+    'name as an array' => [['mode' => 'new', 'name' => ['fresh']]],
+    'git url as an array' => [['mode' => 'git', 'name' => 'fresh', 'git_url' => ['https://github.com/acme/widget.git']]],
 ]);
+
+test('create-project accepts ssh and scp-like git urls', function (string $gitUrl) {
+    ProjectServer::tool(CreateProjectTool::class, [
+        'mode' => 'git',
+        'git_url' => $gitUrl,
+    ])->assertOk();
+
+    expect(Project::sole()->git_url)->toBe($gitUrl);
+})->with([
+    'ssh url' => ['ssh://git@github.com:22/acme/widget.git'],
+    'scp-like' => ['git@github.com:acme/widget.git'],
+]);
+
+test('create-project trims the git url and stores an empty description as null', function () {
+    ProjectServer::tool(CreateProjectTool::class, [
+        'mode' => 'git',
+        'git_url' => '  https://github.com/acme/widget.git  ',
+        'description' => '   ',
+    ])->assertOk()->assertSee('"provision_status":"pending"');
+
+    $project = Project::sole();
+    expect($project->name)->toBe('widget')
+        ->and($project->git_url)->toBe('https://github.com/acme/widget.git')
+        ->and($project->description)->toBeNull();
+});
+
+test('list-projects reports the provisioning status and error', function () {
+    Project::factory()->create([
+        'name' => 'broken',
+        'path' => $this->projectsPath.'/broken',
+        'provision_status' => ProjectProvisionStatus::Failed,
+        'provision_error' => 'fatal: repository not found',
+    ]);
+
+    ProjectServer::tool(ListProjectsTool::class)
+        ->assertOk()
+        ->assertSee('"provision_status":"failed"')
+        ->assertSee('fatal: repository not found');
+});
 
 test('create-project cannot set is_system or provision_status', function () {
     ProjectServer::tool(CreateProjectTool::class, [
