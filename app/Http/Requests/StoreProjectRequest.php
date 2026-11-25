@@ -68,10 +68,13 @@ class StoreProjectRequest extends FormRequest
                         && $fail('Ez a mappa már létezik a projektek könyvtárában.')],
                 ),
             ],
-            'directory' => [
-                Rule::requiredIf($this->input('mode') === 'existing'),
-                Rule::in($service->availableDirectories()),
-            ],
+            // Only the "existing" mode picks a directory; the form still sends
+            // an empty value in the other modes, which must not be validated.
+            'directory' => Rule::when(
+                $this->input('mode') === 'existing',
+                ['required', Rule::in($service->availableDirectories())],
+                ['nullable'],
+            ),
             // The git link is always optional: an empty git-mode project simply
             // gets an empty folder (mkdir) instead of a clone.
             'git_url' => ['nullable', 'string', 'max:1024'],

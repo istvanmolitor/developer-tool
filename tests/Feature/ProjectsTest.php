@@ -106,6 +106,23 @@ test('a new folder project is queued for provisioning', function () {
     Queue::assertPushed(ProvisionProject::class, fn ($job) => $job->project->name === 'gamma');
 });
 
+test('a new folder project can be created with the empty fields the form sends', function () {
+    Queue::fake();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.store'), [
+            'mode' => 'new',
+            'directory' => '',
+            'name' => 'teszt2',
+            'git_url' => '',
+            'description' => '',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('projects.index'));
+
+    $this->assertDatabaseHas('projects', ['name' => 'teszt2']);
+});
+
 test('a git project derives its folder name from the url and is queued', function () {
     Queue::fake();
 
