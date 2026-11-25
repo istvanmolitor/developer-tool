@@ -20,7 +20,7 @@ afterEach(function () {
 
 function startMessageServerAs(Agent $agent, Project $project): PromptRun
 {
-    $run = PromptRun::factory()->create(['agent_id' => $agent->id, 'project_id' => $project->id]);
+    $run = PromptRun::factory()->inContext(['agent_id' => $agent->id, 'project_id' => $project->id])->create();
     putenv(MessageServer::PROMPT_RUN_ENV.'='.$run->id);
 
     return $run;

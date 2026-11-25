@@ -3,6 +3,7 @@
 use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Models\Agent;
+use App\Models\AgentContext;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
@@ -31,8 +32,8 @@ test('submitting a prompt queues a claude run', function () {
         ->assertRedirect();
 
     $run = PromptRun::sole();
-    expect($run->project_id)->toBe($this->alpha->id)
-        ->and($run->user_id)->toBe($user->id)
+    expect($run->agentContext->project_id)->toBe($this->alpha->id)
+        ->and($run->agentContext->user_id)->toBe($user->id)
         ->and($run->prompt)->toBe('Add a README file.')
         ->and($run->status)->toBe(PromptRunStatus::Pending);
 
@@ -53,7 +54,7 @@ test('submitting a prompt with an agent queues the run as that agent', function 
         ->assertRedirect();
 
     $run = PromptRun::sole();
-    expect($run->agent_id)->toBe($agent->id)
+    expect($run->agentContext->agent_id)->toBe($agent->id)
         ->and($run->prompt)->toBe('Refactor the service layer.')
         ->and($run->status)->toBe(PromptRunStatus::Pending);
 
@@ -80,7 +81,7 @@ test('a prompt is not required when an agent is selected', function () {
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
-    expect(PromptRun::sole()->agent_id)->toBe($agent->id);
+    expect(PromptRun::sole()->agentContext->agent_id)->toBe($agent->id);
 });
 
 test('the prompt is required', function () {
@@ -97,4 +98,43 @@ test('a prompt cannot be submitted for an unknown project', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('projects.runs.store', 'ghost'), ['prompt' => 'Hello'])
         ->assertNotFound();
+});
+
+test('a chat continues the latest context of the project, agent and user', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $agent = Agent::factory()->create();
+    $context = AgentContext::factory()->create([
+        'project_id' => $this->alpha->id,
+        'agent_id' => $agent->id,
+        'user_id' => $user->id,
+        'session_id' => 'session-abc',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('projects.runs.store', 'alpha'), ['prompt' => 'Folytasd.', 'agent_id' => $agent->id])
+        ->assertRedirect();
+
+    expect(PromptRun::sole()->agent_context_id)->toBe($context->id);
+});
+
+test('a chat of another user or agent starts a context of its own', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $agent = Agent::factory()->create();
+    $otherUsersContext = AgentContext::factory()->create([
+        'project_id' => $this->alpha->id,
+        'agent_id' => $agent->id,
+        'user_id' => User::factory()->create()->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('projects.runs.store', 'alpha'), ['prompt' => 'Szia.', 'agent_id' => $agent->id])
+        ->assertRedirect();
+
+    expect(PromptRun::sole()->agentContext)
+        ->id->not->toBe($otherUsersContext->id)
+        ->user_id->toBe($user->id)
+        ->agent_id->toBe($agent->id)
+        ->project_id->toBe($this->alpha->id);
 });

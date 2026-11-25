@@ -7,10 +7,12 @@ use App\Enums\SearchType;
 use App\Services\Search\IndexedInSearch;
 use App\Services\Search\Searchable;
 use Database\Factories\PromptRunFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Support\Str;
 
 /**
@@ -30,9 +32,7 @@ class PromptRun extends Model implements Searchable
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'project_id',
-        'agent_id',
-        'user_id',
+        'agent_context_id',
         'prompt',
         'status',
         'exit_code',
@@ -58,33 +58,43 @@ class PromptRun extends Model implements Searchable
     }
 
     /**
-     * The project this prompt was run against.
+     * The context (project, agent, user and claude session) this prompt was run in.
      *
-     * @return BelongsTo<Project, $this>
+     * @return BelongsTo<AgentContext, $this>
      */
-    public function project(): BelongsTo
+    public function agentContext(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(AgentContext::class);
     }
 
     /**
-     * The agent this prompt was run as, if any.
+     * The project this prompt was run against, through its context.
      *
-     * @return BelongsTo<Agent, $this>
+     * @return HasOneThrough<Project, AgentContext, $this>
      */
-    public function agent(): BelongsTo
+    public function project(): HasOneThrough
     {
-        return $this->belongsTo(Agent::class);
+        return $this->hasOneThrough(Project::class, AgentContext::class, 'id', 'id', 'agent_context_id', 'project_id');
     }
 
     /**
-     * The user who started this run, if known.
+     * The agent this prompt was run as, if any, through its context.
      *
-     * @return BelongsTo<User, $this>
+     * @return HasOneThrough<Agent, AgentContext, $this>
      */
-    public function user(): BelongsTo
+    public function agent(): HasOneThrough
     {
-        return $this->belongsTo(User::class);
+        return $this->hasOneThrough(Agent::class, AgentContext::class, 'id', 'id', 'agent_context_id', 'agent_id');
+    }
+
+    /**
+     * The user who started this run, if known, through its context.
+     *
+     * @return HasOneThrough<User, AgentContext, $this>
+     */
+    public function user(): HasOneThrough
+    {
+        return $this->hasOneThrough(User::class, AgentContext::class, 'id', 'id', 'agent_context_id', 'user_id');
     }
 
     /**
@@ -95,6 +105,14 @@ class PromptRun extends Model implements Searchable
     public function incomingEmail(): HasOne
     {
         return $this->hasOne(IncomingEmail::class);
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    public static function searchableQuery(): Builder
+    {
+        return static::query()->with('agentContext');
     }
 
     public static function searchType(): SearchType
@@ -112,8 +130,8 @@ class PromptRun extends Model implements Searchable
             'body' => $this->prompt,
             // The output can be huge; its beginning is plenty to find a run by.
             'extra' => Str::limit((string) $this->output, 20000, ''),
-            'project_id' => $this->project_id,
-            'agent_ids' => $this->agent_id === null ? [] : [$this->agent_id],
+            'project_id' => $this->agentContext?->project_id,
+            'agent_ids' => $this->agentContext?->agent_id === null ? [] : [$this->agentContext->agent_id],
             'status' => $this->status->value,
             'created_at' => $this->created_at?->toIso8601String(),
         ];

@@ -8,6 +8,7 @@ use App\Mcp\Servers\MailServer;
 use App\Mcp\Servers\MessageServer;
 use App\Mcp\Servers\TaskServer;
 use App\Models\Agent;
+use App\Models\AgentContext;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
@@ -31,18 +32,43 @@ class ClaudePromptRunner
     ];
 
     /**
-     * Create a pending prompt run for the given project and queue it for
-     * execution. Returns the freshly created record.
+     * Create a pending prompt run for the given project in a new context — a fresh
+     * claude session — and queue it for execution. Returns the freshly created record.
      */
     public function queue(Project $project, string $prompt, ?User $user = null, ?Agent $agent = null): PromptRun
     {
+        return $this->queueInContext(AgentContext::start($project, $agent, $user), $prompt);
+    }
+
+    /**
+     * Run the given agent against a project in a new context, optionally with a task prompt.
+     *
+     * The agent's definition (system prompt, model, tools) is applied to the
+     * claude run through {@see command()}. When no prompt is given, the agent's
+     * description — or a generic kickoff — stands in as the task, so the agent's
+     * own system prompt drives the work.
+     */
+    public function queueAgent(Project $project, Agent $agent, ?string $prompt = null, ?User $user = null): PromptRun
+    {
+        return $this->queueInContext(AgentContext::start($project, $agent, $user), $prompt);
+    }
+
+    /**
+     * Create a pending prompt run in the given context and queue it for execution. The run
+     * continues the context's claude session; an agent context falls back to the agent's
+     * description when no prompt is given (see {@see queueAgent()}).
+     */
+    public function queueInContext(AgentContext $context, ?string $prompt = null): PromptRun
+    {
+        $agent = $context->agent;
+
         $run = PromptRun::create([
-            'project_id' => $project->id,
-            'user_id' => $user?->id,
-            'agent_id' => $agent?->id,
-            'prompt' => $prompt,
+            'agent_context_id' => $context->id,
+            'prompt' => $agent !== null ? $this->agentPrompt($agent, $prompt) : (string) $prompt,
             'status' => PromptRunStatus::Pending,
         ]);
+
+        $run->setRelation('agentContext', $context);
 
         // A caller may link the run to a record in the same transaction (e.g. an incoming
         // e-mail), so the job only starts once that link is committed and visible.
@@ -52,25 +78,14 @@ class ClaudePromptRunner
     }
 
     /**
-     * Run the given agent against a project, optionally with a task prompt.
-     *
-     * The agent's definition (system prompt, model, tools) is applied to the
-     * claude run through {@see command()}. When no prompt is given, the agent's
-     * description — or a generic kickoff — stands in as the task, so the agent's
-     * own system prompt drives the work.
-     */
-    public function queueAgent(Project $project, Agent $agent, ?string $prompt = null, ?User $user = null): PromptRun
-    {
-        return $this->queue($project, $this->agentPrompt($agent, $prompt), $user, $agent);
-    }
-
-    /**
      * Run the prompt of the given PromptRun through `claude -p` inside the
      * project's directory, streaming the result back onto the record.
      */
     public function run(PromptRun $run): PromptRun
     {
-        $project = $run->project;
+        // Read the context fresh: an earlier run of it may have stored the session id since.
+        $context = $run->agentContext()->with(['project', 'agent'])->first();
+        $project = $context?->project;
 
         if ($project === null) {
             return $this->fail($run, 'A futtatáshoz tartozó projekt már nem létezik.');
@@ -85,7 +100,7 @@ class ClaudePromptRunner
             $result = Process::path($project->path)
                 ->env($this->environment())
                 ->timeout($this->timeout())
-                ->run($this->command($run->prompt, $run->agent, $run));
+                ->run($this->command($run->prompt, $context->agent, $run, $context->session_id));
         } catch (Throwable $exception) {
             return $this->fail($run, $exception->getMessage());
         }
@@ -101,15 +116,20 @@ class ClaudePromptRunner
             'finished_at' => now(),
         ])->save();
 
+        if ($parsed['session_id'] !== null && $parsed['session_id'] !== $context->session_id) {
+            $context->forceFill(['session_id' => $parsed['session_id']])->save();
+        }
+
         return $run;
     }
 
     /**
-     * Pull the human-readable text and the USD cost (the "credits" a run burns)
-     * out of claude's `--output-format json` stdout. Falls back to the raw
-     * output and a null cost when the payload isn't the expected result object.
+     * Pull the human-readable text, the USD cost (the "credits" a run burns) and
+     * the session id out of claude's `--output-format json` stdout. Falls back to
+     * the raw output and a null cost and session when the payload isn't the
+     * expected result object.
      *
-     * @return array{output: ?string, cost_usd: ?float}
+     * @return array{output: ?string, cost_usd: ?float, session_id: ?string}
      */
     private function parseResult(string $stdout): array
     {
@@ -119,20 +139,24 @@ class ClaudePromptRunner
             return [
                 'output' => $stdout === '' ? null : $stdout,
                 'cost_usd' => null,
+                'session_id' => null,
             ];
         }
 
         $text = $decoded['result'] ?? null;
         $cost = $decoded['total_cost_usd'] ?? null;
+        $sessionId = $decoded['session_id'] ?? null;
 
         return [
             'output' => is_string($text) ? $text : $stdout,
             'cost_usd' => is_numeric($cost) ? (float) $cost : null,
+            'session_id' => is_string($sessionId) && $sessionId !== '' ? $sessionId : null,
         ];
     }
 
     /**
-     * Build the `claude -p` command line.
+     * Build the `claude -p` command line. With a session id the run resumes that
+     * claude session, so it continues the conversation of its context.
      *
      * The `tasks` MCP server is bound to the run ($run), so the task changes the agent
      * makes are logged under its name. When the run handles an incoming e-mail, the
@@ -142,11 +166,15 @@ class ClaudePromptRunner
      *
      * @return list<string>
      */
-    public function command(string $prompt, ?Agent $agent = null, ?PromptRun $run = null): array
+    public function command(string $prompt, ?Agent $agent = null, ?PromptRun $run = null, ?string $sessionId = null): array
     {
-        // JSON output carries the run's usage/cost (total_cost_usd) alongside
-        // the text result, so the "credits" a run burns can be persisted.
+        // JSON output carries the run's usage/cost (total_cost_usd) and session id
+        // alongside the text result, so both can be persisted.
         $command = [config('developer-tool.claude.binary'), '-p', $prompt, '--output-format', 'json'];
+
+        if ($sessionId !== null && $sessionId !== '') {
+            array_push($command, '--resume', $sessionId);
+        }
 
         if ($agent !== null) {
             $emailRun = $run !== null && $run->incomingEmail()->exists() ? $run : null;

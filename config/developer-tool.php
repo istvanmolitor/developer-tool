@@ -42,16 +42,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Mailbox Credentials File
+    | Mailbox Passwords
     |--------------------------------------------------------------------------
     |
-    | Markdown file listing the mailbox accounts (e-mail address line followed
-    | by its password line) and the IMAP / SMTP server settings. The
-    | MailboxSeeder reads it and upserts one mailbox per account.
+    | The agent mailboxes the MailboxSeeder creates, keyed by e-mail address,
+    | with their passwords from the environment. A mailbox without a password
+    | is skipped by the seeder.
     |
     */
 
-    'mailboxes_file' => env('DEVELOPER_TOOL_MAILBOXES_FILE', base_path('mail.md')),
+    'mailbox_passwords' => [
+        'molitor.istvan.aiagent1@dh.hu' => env('MAILBOX_AIAGENT1_PASSWORD'),
+        'molitor.istvan.aiagent2@dh.hu' => env('MAILBOX_AIAGENT2_PASSWORD'),
+        'molitor.istvan.aiagent3@dh.hu' => env('MAILBOX_AIAGENT3_PASSWORD'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

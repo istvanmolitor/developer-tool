@@ -29,7 +29,7 @@ test('guests are redirected from the projects index', function () {
 });
 
 test('the projects index lists every registered project', function () {
-    PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
 
     $this->actingAs(User::factory()->create())
         ->get(route('projects.index'))
@@ -42,8 +42,8 @@ test('the projects index lists every registered project', function () {
 });
 
 test('a project can be viewed with its run history', function () {
-    PromptRun::factory()->count(3)->create(['project_id' => $this->alpha->id]);
-    PromptRun::factory()->create(['project_id' => $this->beta->id]);
+    PromptRun::factory()->count(3)->inContext(['project_id' => $this->alpha->id])->create();
+    PromptRun::factory()->inContext(['project_id' => $this->beta->id])->create();
 
     $this->actingAs(User::factory()->create())
         ->get(route('projects.show', $this->alpha))
@@ -222,7 +222,7 @@ test('a project can be updated', function () {
 });
 
 test('renaming a project keeps its run history attached', function () {
-    PromptRun::factory()->count(2)->create(['project_id' => $this->alpha->id]);
+    PromptRun::factory()->count(2)->inContext(['project_id' => $this->alpha->id])->create();
 
     $this->actingAs(User::factory()->create())
         ->put(route('projects.update', $this->alpha), [

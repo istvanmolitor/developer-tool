@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePromptRunRequest;
 use App\Models\Agent;
+use App\Models\AgentContext;
 use App\Models\Project;
 use App\Services\ClaudePromptRunner;
 use Illuminate\Http\RedirectResponse;
@@ -15,13 +16,12 @@ class PromptRunController extends Controller
     public function store(StorePromptRunRequest $request, Project $project): RedirectResponse
     {
         $agentId = $request->validated('agent_id');
-        $prompt = $request->validated('prompt');
+        $agent = $agentId !== null ? Agent::findOrFail((int) $agentId) : null;
 
-        if ($agentId !== null) {
-            $this->runner->queueAgent($project, Agent::findOrFail((int) $agentId), $prompt, $request->user());
-        } else {
-            $this->runner->queue($project, $prompt, $request->user());
-        }
+        // A chat continues the latest context of its project, agent and user.
+        $context = AgentContext::current($project, $agent, $request->user());
+
+        $this->runner->queueInContext($context, $request->validated('prompt'));
 
         return back()->with('status', 'Prompt sorba állítva.');
     }

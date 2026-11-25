@@ -117,8 +117,8 @@ test('the mailbox mails can be filtered to the unread ones', function () {
 });
 
 test('the prompt runs can be filtered by status', function () {
-    PromptRun::factory()->for($this->project)->create(['status' => PromptRunStatus::Failed]);
-    PromptRun::factory()->for($this->project)->create(['status' => PromptRunStatus::Completed]);
+    PromptRun::factory()->inContext(['project_id' => $this->project->id])->create(['status' => PromptRunStatus::Failed]);
+    PromptRun::factory()->inContext(['project_id' => $this->project->id])->create(['status' => PromptRunStatus::Completed]);
 
     $this->actingAs(User::factory()->create())
         ->get(route('projects.prompts', ['project' => 'alpha', 'status' => 'failed']))

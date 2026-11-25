@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgentContextController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentationController;
@@ -59,6 +60,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('projects', ProjectController::class);
     Route::get('projects/{project}/prompts', [ProjectController::class, 'prompts'])->name('projects.prompts');
     Route::post('projects/{project}/runs', [PromptRunController::class, 'store'])->name('projects.runs.store');
+    // Start a new chat context (fresh claude session) from an existing one.
+    Route::post('agent-contexts/{agentContext}/new', [AgentContextController::class, 'store'])->name('agent-contexts.store');
 
     // Reload the project's docs/documentations folder into the database.
     Route::post('projects/{project}/documentations/sync', [DocumentationController::class, 'sync'])

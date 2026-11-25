@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePoll } from "@inertiajs/vue3";
+import { Head, Link, router, useForm, usePoll } from "@inertiajs/vue3";
 import {
     Bot,
     CheckCircle2,
@@ -7,6 +7,7 @@ import {
     FolderGit2,
     Loader2,
     MessageSquare,
+    MessageSquarePlus,
     Send,
     XCircle,
 } from "@lucide/vue";
@@ -22,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import agentContexts from "@/routes/agent-contexts";
 import agents from "@/routes/agents";
 import projectRoutes from "@/routes/projects";
 import AgentNav from "./AgentNav.vue";
@@ -39,8 +41,16 @@ type Project = {
 
 type PromptRunStatus = "pending" | "running" | "completed" | "failed";
 
+type AgentContext = {
+    id: number;
+    project_id: number;
+    session_id: string | null;
+    created_at: string;
+};
+
 type PromptRun = {
     id: number;
+    agent_context_id: number | null;
     prompt: string;
     status: PromptRunStatus;
     exit_code: number | null;
@@ -54,6 +64,7 @@ const props = defineProps<{
     agent: Agent;
     projects: Project[];
     runs: PromptRun[];
+    contexts: AgentContext[];
 }>();
 
 defineOptions({
@@ -65,11 +76,51 @@ defineOptions({
 /** The runs arrive newest first; a chat reads oldest to newest. */
 const messages = computed(() => [...props.runs].reverse());
 
+/** Whether a run opens a new conversation (context) compared to the run before it. */
+function startsNewContext(index: number): boolean {
+    return (
+        index > 0 &&
+        messages.value[index].agent_context_id !==
+            messages.value[index - 1].agent_context_id
+    );
+}
+
 const selectedProject = ref<string>(
     props.projects.length === 1 ? props.projects[0].name : "",
 );
 
 const form = useForm({ prompt: "", agent_id: props.agent.id });
+
+/** The context the chat continues in the selected project, if it has one yet. */
+const currentContext = computed(() => {
+    const project = props.projects.find(
+        (project) => project.name === selectedProject.value,
+    );
+
+    return (
+        props.contexts.find((context) => context.project_id === project?.id) ??
+        null
+    );
+});
+
+const startingContext = ref(false);
+
+/** Start a new conversation (fresh claude session) from the current context. */
+function startNewContext(): void {
+    if (currentContext.value === null || startingContext.value) {
+        return;
+    }
+
+    router.post(
+        agentContexts.store(currentContext.value.id).url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (startingContext.value = true),
+            onFinish: () => (startingContext.value = false),
+        },
+    );
+}
 
 const projectError = ref<string | null>(null);
 
@@ -106,7 +157,11 @@ const hasActiveRun = computed(() =>
     ),
 );
 
-const { start, stop } = usePoll(4000, { only: ["runs"] }, { autoStart: false });
+const { start, stop } = usePoll(
+    4000,
+    { only: ["runs", "contexts"] },
+    { autoStart: false },
+);
 
 watch(hasActiveRun, (active) => (active ? start() : stop()), {
     immediate: true,
@@ -178,7 +233,15 @@ function formatDate(value: string): string {
                     </p>
                 </div>
 
-                <template v-for="run in messages" :key="run.id">
+                <template v-for="(run, index) in messages" :key="run.id">
+                    <div
+                        v-if="startsNewContext(index)"
+                        class="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                        <div class="h-px flex-1 bg-border" />
+                        Új beszélgetés
+                        <div class="h-px flex-1 bg-border" />
+                    </div>
                     <div class="flex flex-col items-end gap-1">
                         <div
                             class="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm break-words whitespace-pre-wrap text-primary-foreground"
@@ -342,6 +405,30 @@ function formatDate(value: string): string {
                             />
                             <Send v-else class="size-4" />
                             Küldés
+                        </Button>
+                    </div>
+                    <div
+                        v-if="currentContext"
+                        class="flex items-center justify-between gap-2 text-xs text-muted-foreground"
+                    >
+                        <span>
+                            {{
+                                currentContext.session_id
+                                    ? "Az üzenetek a korábbi beszélgetést folytatják."
+                                    : "Új beszélgetés — az első üzenet indítja."
+                            }}
+                        </span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            :disabled="
+                                startingContext || !currentContext.session_id
+                            "
+                            @click="startNewContext"
+                        >
+                            <MessageSquarePlus class="size-4" />
+                            Új beszélgetés
                         </Button>
                     </div>
                     <InputError :message="projectError ?? undefined" />

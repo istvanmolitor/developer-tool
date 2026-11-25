@@ -82,7 +82,7 @@ class ProjectController extends Controller
         return Inertia::render('Projects/Show', [
             'project' => $project,
             'runs_count' => $project->promptRuns()->count(),
-            'last_run_at' => $project->promptRuns()->max('created_at'),
+            'last_run_at' => $project->promptRuns()->max('prompt_runs.created_at'),
         ]);
     }
 

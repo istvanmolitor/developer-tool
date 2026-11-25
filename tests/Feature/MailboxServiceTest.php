@@ -126,7 +126,7 @@ test('with automatic reading on, the agent reads every newly fetched message', f
 
     app(MailboxService::class)->fetchIncoming($mailbox);
 
-    expect(PromptRun::query()->where('agent_id', $agent->id)->where('project_id', $project->id)->count())->toBe(2)
+    expect($agent->promptRuns()->where('agent_contexts.project_id', $project->id)->count())->toBe(2)
         ->and($mailbox->incomingEmails()->whereNull('read_at')->pluck('uid')->all())->toBe([1]);
 
     Queue::assertPushed(RunClaudePrompt::class, 2);

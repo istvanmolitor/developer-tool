@@ -8,6 +8,7 @@ use App\Enums\TaskStatus;
 use App\Http\Requests\StoreAgentRequest;
 use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
+use App\Models\AgentContext;
 use App\Models\AgentMessage;
 use App\Models\Project;
 use App\Models\Task;
@@ -43,7 +44,11 @@ class AgentController extends Controller
             ->with('status', 'Agent létrehozva.');
     }
 
-    public function show(Agent $agent): Response
+    /**
+     * The chat with the agent: its latest runs and, per project, the context the
+     * current user's chat continues.
+     */
+    public function show(Request $request, Agent $agent): Response
     {
         return Inertia::render('Agents/Show', [
             'agent' => $agent,
@@ -53,9 +58,16 @@ class AgentController extends Controller
                 ->map->only(['id', 'name']),
             'runs' => $agent->promptRuns()
                 ->with('project:id,name,path')
-                ->latest()
+                ->latest('prompt_runs.created_at')
                 ->limit(20)
                 ->get(),
+            'contexts' => AgentContext::query()
+                ->whereIn('id', $agent->agentContexts()
+                    ->selectRaw('max(id)')
+                    ->where('user_id', $request->user()->id)
+                    ->whereNotNull('project_id')
+                    ->groupBy('project_id'))
+                ->get(['id', 'project_id', 'session_id', 'created_at']),
         ]);
     }
 

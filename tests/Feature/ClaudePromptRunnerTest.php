@@ -102,7 +102,7 @@ test('an agent without task tools gets no mcp config', function () {
 test('a run handling an e-mail gives the agent the mail mcp server bound to the run', function () {
     Process::fake();
     $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__tasks__create-task']]);
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id, 'agent_id' => $agent->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
     IncomingEmail::factory()->create(['prompt_run_id' => $run->id]);
 
     app(ClaudePromptRunner::class)->run($run);
@@ -133,7 +133,7 @@ test('a run handling an e-mail gives the agent the mail mcp server bound to the 
 test('a run without an e-mail gets no mail mcp server', function () {
     Process::fake();
     $agent = Agent::factory()->create(['tools' => ['Read']]);
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id, 'agent_id' => $agent->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -148,7 +148,7 @@ test('a run without an e-mail gets no mail mcp server', function () {
 test('an agent run gets the messages mcp server bound to the run', function () {
     Process::fake();
     $agent = Agent::factory()->create(['tools' => ['Read']]);
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id, 'agent_id' => $agent->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -181,8 +181,8 @@ test('queueAgent creates a pending run bound to the agent and dispatches it', fu
     $run = app(ClaudePromptRunner::class)->queueAgent($this->alpha, $agent, 'Építsd meg');
 
     expect($run->status)->toBe(PromptRunStatus::Pending);
-    expect($run->agent_id)->toBe($agent->id);
-    expect($run->project_id)->toBe($this->alpha->id);
+    expect($run->agentContext->agent_id)->toBe($agent->id);
+    expect($run->agentContext->project_id)->toBe($this->alpha->id);
     expect($run->prompt)->toBe('Építsd meg');
 
     Queue::assertPushed(RunClaudePrompt::class);
@@ -203,7 +203,7 @@ test('a successful process marks the run completed with output', function () {
         '*' => Process::result(output: 'Done!', exitCode: 0),
     ]);
 
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -227,7 +227,7 @@ test('a json result is parsed into its text and persisted cost', function () {
         ),
     ]);
 
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -242,7 +242,7 @@ test('a non-json result keeps the raw output and leaves the cost null', function
         '*' => Process::result(output: 'Plain text result', exitCode: 0),
     ]);
 
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -256,7 +256,7 @@ test('a failing process marks the run failed with its error output', function ()
         '*' => Process::result(output: '', errorOutput: 'boom', exitCode: 1),
     ]);
 
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -271,7 +271,7 @@ test('a run for a missing project is marked failed without running a process', f
 
     // Deleting the project nulls the run's project_id (null-on-delete), which
     // is how a run can end up orphaned from the project it was queued against.
-    $run = PromptRun::factory()->create(['project_id' => $this->alpha->id]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
     $this->alpha->delete();
     $run->refresh();
 
@@ -279,4 +279,44 @@ test('a run for a missing project is marked failed without running a process', f
 
     expect($run->fresh()->status)->toBe(PromptRunStatus::Failed);
     Process::assertNothingRan();
+});
+
+test('a run stores the claude session id on its context', function () {
+    Process::fake([
+        '*' => Process::result(output: json_encode(['result' => 'Kész.', 'session_id' => 'session-abc']), exitCode: 0),
+    ]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    expect($run->agentContext->fresh()->session_id)->toBe('session-abc');
+});
+
+test('a run in a context with a session resumes that session', function () {
+    Process::fake();
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'session_id' => 'session-abc'])->create();
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    Process::assertRan(fn ($process) => array_slice($process->command, 5, 2) === ['--resume', 'session-abc']);
+});
+
+test('a run in a new context starts a new session', function () {
+    Process::fake();
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    Process::assertRan(fn ($process) => ! in_array('--resume', $process->command, true));
+});
+
+test('queueAgent runs each prompt in a context of its own', function () {
+    Queue::fake();
+    $agent = Agent::factory()->create();
+    $runner = app(ClaudePromptRunner::class);
+
+    $first = $runner->queueAgent($this->alpha, $agent, 'Első feladat');
+    $second = $runner->queueAgent($this->alpha, $agent, 'Második feladat');
+
+    expect($first->agent_context_id)->not->toBe($second->agent_context_id);
 });

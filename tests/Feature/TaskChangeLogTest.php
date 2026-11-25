@@ -56,7 +56,7 @@ test('title and description changes are not logged', function () {
 
 test('a change made through the mcp by an agent run is logged with the agent', function () {
     $agent = Agent::factory()->create(['name' => 'backend']);
-    $run = PromptRun::factory()->create(['agent_id' => $agent->id]);
+    $run = PromptRun::factory()->inContext(['agent_id' => $agent->id])->create();
     putenv(TaskServer::PROMPT_RUN_ENV.'='.$run->id);
 
     TaskServer::tool(UpdateTaskTool::class, [

@@ -34,6 +34,7 @@ class GetPromptRunTool extends Tool
 
         return Response::json([
             'run_id' => $run->id,
+            'context_id' => $run->agent_context_id,
             'agent' => $run->agent?->name,
             'project' => $run->project?->name,
             'prompt' => $run->prompt,

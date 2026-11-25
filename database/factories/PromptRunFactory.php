@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\PromptRunStatus;
-use App\Models\Project;
+use App\Models\AgentContext;
 use App\Models\PromptRun;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,9 +20,7 @@ class PromptRunFactory extends Factory
     public function definition(): array
     {
         return [
-            'project_id' => Project::factory(),
-            'agent_id' => null,
-            'user_id' => null,
+            'agent_context_id' => AgentContext::factory(),
             'prompt' => $this->faker->sentence(),
             'status' => PromptRunStatus::Pending,
             'exit_code' => null,
@@ -31,6 +29,16 @@ class PromptRunFactory extends Factory
             'started_at' => null,
             'finished_at' => null,
         ];
+    }
+
+    /**
+     * Run the prompt in a new context with the given attributes (project_id, agent_id, user_id, session_id).
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function inContext(array $attributes): static
+    {
+        return $this->for(AgentContext::factory()->state($attributes));
     }
 
     public function completed(): static

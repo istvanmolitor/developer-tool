@@ -6,6 +6,7 @@ use Database\Factories\AgentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Agent extends Model
 {
@@ -33,13 +34,23 @@ class Agent extends Model
     }
 
     /**
-     * The prompt runs executed as this agent.
+     * The agent contexts (claude conversations) run as this agent.
      *
-     * @return HasMany<PromptRun, $this>
+     * @return HasMany<AgentContext, $this>
      */
-    public function promptRuns(): HasMany
+    public function agentContexts(): HasMany
     {
-        return $this->hasMany(PromptRun::class);
+        return $this->hasMany(AgentContext::class);
+    }
+
+    /**
+     * The prompt runs executed as this agent, through their contexts.
+     *
+     * @return HasManyThrough<PromptRun, AgentContext, $this>
+     */
+    public function promptRuns(): HasManyThrough
+    {
+        return $this->hasManyThrough(PromptRun::class, AgentContext::class);
     }
 
     /**

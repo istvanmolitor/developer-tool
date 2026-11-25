@@ -41,8 +41,8 @@ test('an agent can be viewed', function () {
 test('the agent page offers the projects and lists only its own runs', function () {
     $agent = Agent::factory()->create();
     $project = Project::factory()->create(['name' => 'alpha']);
-    PromptRun::factory()->for($project)->create(['agent_id' => $agent->id, 'prompt' => 'Own run']);
-    PromptRun::factory()->for($project)->create(['agent_id' => Agent::factory()->create()->id]);
+    PromptRun::factory()->inContext(['project_id' => $project->id, 'agent_id' => $agent->id])->create(['prompt' => 'Own run']);
+    PromptRun::factory()->inContext(['project_id' => $project->id, 'agent_id' => Agent::factory()->create()->id])->create();
 
     $this->actingAs(User::factory()->create())
         ->get(route('agents.show', $agent))

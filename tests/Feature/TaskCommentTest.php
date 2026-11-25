@@ -79,7 +79,7 @@ test('the task page shows the comments oldest first with their authors', functio
 
 test('an agent can comment on a task through the mcp', function () {
     $agent = Agent::factory()->create(['name' => 'backend']);
-    $run = PromptRun::factory()->create(['agent_id' => $agent->id]);
+    $run = PromptRun::factory()->inContext(['agent_id' => $agent->id])->create();
     putenv(TaskServer::PROMPT_RUN_ENV.'='.$run->id);
 
     TaskServer::tool(AddTaskCommentTool::class, [

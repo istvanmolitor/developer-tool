@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -46,12 +47,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * The prompt runs this user has started.
+     * The agent contexts (claude conversations) started by this user.
      *
-     * @return HasMany<PromptRun, $this>
+     * @return HasMany<AgentContext, $this>
      */
-    public function promptRuns(): HasMany
+    public function agentContexts(): HasMany
     {
-        return $this->hasMany(PromptRun::class);
+        return $this->hasMany(AgentContext::class);
+    }
+
+    /**
+     * The prompt runs started by this user, through their contexts.
+     *
+     * @return HasManyThrough<PromptRun, AgentContext, $this>
+     */
+    public function promptRuns(): HasManyThrough
+    {
+        return $this->hasManyThrough(PromptRun::class, AgentContext::class);
     }
 }

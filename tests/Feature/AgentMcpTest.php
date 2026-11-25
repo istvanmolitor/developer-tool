@@ -25,8 +25,8 @@ test('run-agent queues the prompt as the agent on the project', function () {
     ])->assertOk()->assertSee('Prompt sorba állítva.');
 
     $run = PromptRun::sole();
-    expect($run->agent_id)->toBe($this->agent->id)
-        ->and($run->project_id)->toBe($this->project->id)
+    expect($run->agentContext->agent_id)->toBe($this->agent->id)
+        ->and($run->agentContext->project_id)->toBe($this->project->id)
         ->and($run->prompt)->toBe('Document the mailbox feature.')
         ->and($run->status)->toBe(PromptRunStatus::Pending);
 
@@ -52,8 +52,7 @@ test('run-agent errors on an unknown agent or project', function (array $argumen
 ]);
 
 test('get-prompt-run returns the run status and output', function () {
-    $run = PromptRun::factory()->completed()->for($this->project)->create([
-        'agent_id' => $this->agent->id,
+    $run = PromptRun::factory()->completed()->inContext(['project_id' => $this->project->id, 'agent_id' => $this->agent->id])->create([
         'output' => 'Docs written.',
     ]);
 

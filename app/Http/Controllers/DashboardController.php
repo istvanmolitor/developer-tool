@@ -45,6 +45,6 @@ class DashboardController extends Controller
         return PromptRun::query()
             ->where('status', $status)
             ->with(['project:id,name', 'agent:id,name'])
-            ->select(['id', 'project_id', 'agent_id', 'prompt', 'status', 'started_at', 'created_at']);
+            ->select(['id', 'agent_context_id', 'prompt', 'status', 'started_at', 'created_at']);
     }
 }

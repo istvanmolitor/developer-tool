@@ -75,6 +75,6 @@ class TaskServer extends Server
             return null;
         }
 
-        return PromptRun::query()->whereKey($promptRunId)->value('agent_id');
+        return PromptRun::query()->with('agentContext')->find($promptRunId)?->agentContext?->agent_id;
     }
 }

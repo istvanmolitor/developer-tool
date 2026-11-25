@@ -229,10 +229,11 @@ test('telling the agent to read an email queues a prompt run on the mailbox proj
 
     $run = PromptRun::sole();
 
-    expect($run)
+    expect($run->agentContext)
         ->agent_id->toBe($agent->id)
         ->project_id->toBe($project->id)
         ->user_id->toBe($user->id)
+        ->and($run)
         ->prompt->toContain('Tárgy: Hibajelentés', 'A belépés nem működik.')
         ->and($email->fresh())
         ->read_at->not->toBeNull()
