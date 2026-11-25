@@ -85,7 +85,10 @@ fi
 
 # Claude Code CLI beégetve az image-be (a Node a fenti rétegben már települt).
 # Verzió rögzítéshez buildkor: --build-arg CLAUDE_CODE_VERSION=<x.y.z>
-ARG CLAUDE_CODE_VERSION=2.1.331
+# Az automatikus frissítés ki van kapcsolva: a projekt .npmrc-je (ignore-scripts=true)
+# miatt a /var/www/html-ből futó frissítés kihagyja a postinstall-t, és elrontja a binárist.
+ARG CLAUDE_CODE_VERSION=2.1.332
+ENV DISABLE_AUTOUPDATER=1
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     && node "$(npm root -g)/@anthropic-ai/claude-code/install.cjs"
 

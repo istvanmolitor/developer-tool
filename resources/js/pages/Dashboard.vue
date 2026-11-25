@@ -4,6 +4,7 @@ import { Bot, Clock, ListOrdered, Loader2 } from "@lucide/vue";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import DashboardChat from "@/components/DashboardChat.vue";
 import type { DashboardChatData } from "@/components/DashboardChat.vue";
+import DashboardChatContexts from "@/components/DashboardChatContexts.vue";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboard } from "@/routes";
@@ -72,8 +73,19 @@ function formatDate(value: string): string {
 <template>
     <Head title="Vezérlőpult" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
-        <div class="grid gap-4 md:grid-cols-2">
+    <div
+        class="grid h-full flex-1 items-start gap-4 overflow-x-auto p-4 lg:grid-cols-[16rem_minmax(0,1fr)] xl:h-[calc(100svh-5rem)] xl:flex-none xl:grid-cols-[16rem_minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch xl:group-has-data-[collapsible=icon]/sidebar-wrapper:h-[calc(100svh-4rem)]"
+    >
+        <DashboardChatContexts
+            :contexts="chat.recent_contexts"
+            :active-context-id="chat.context?.id ?? null"
+        />
+
+        <DashboardChat :chat="chat" />
+
+        <div
+            class="flex min-w-0 flex-col gap-4 lg:col-span-2 xl:col-span-1 xl:min-h-0 xl:overflow-y-auto"
+        >
             <Card>
                 <CardHeader>
                     <CardTitle class="flex items-center gap-2 text-base">
@@ -206,7 +218,5 @@ function formatDate(value: string): string {
                 </CardContent>
             </Card>
         </div>
-
-        <DashboardChat :chat="chat" />
     </div>
 </template>

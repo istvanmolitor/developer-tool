@@ -99,6 +99,42 @@ test('an agent without task tools gets no mcp config', function () {
     expect(app(ClaudePromptRunner::class)->command('Nézd át', $agent))->not->toContain('--mcp-config');
 });
 
+test('an agent allowed agent tools gets the agents mcp server', function () {
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__agents__run-agent']]);
+
+    $command = app(ClaudePromptRunner::class)->command('Delegálj', $agent);
+
+    $configIndex = array_search('--mcp-config', $command, true);
+    expect($configIndex)->not->toBeFalse();
+    expect(json_decode($command[$configIndex + 1], true)['mcpServers']['agents'])->toBe([
+        'command' => 'php',
+        'args' => [base_path('artisan'), 'mcp:start', 'agents'],
+    ]);
+});
+
+test('an agent allowed docs tools gets the docs mcp server', function () {
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__docs__sync-documentation']]);
+
+    $command = app(ClaudePromptRunner::class)->command('Töltsd be', $agent);
+
+    $configIndex = array_search('--mcp-config', $command, true);
+    expect($configIndex)->not->toBeFalse();
+    expect(json_decode($command[$configIndex + 1], true)['mcpServers']['docs'])->toBe([
+        'command' => 'php',
+        'args' => [base_path('artisan'), 'mcp:start', 'docs'],
+    ]);
+});
+
+test('an agent without agent or docs tools gets neither server', function () {
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__tasks__create-task']]);
+
+    $command = app(ClaudePromptRunner::class)->command('Dolgozz', $agent);
+
+    $servers = json_decode($command[array_search('--mcp-config', $command, true) + 1], true)['mcpServers'];
+    expect($servers)->not->toHaveKey('agents');
+    expect($servers)->not->toHaveKey('docs');
+});
+
 test('a run handling an e-mail gives the agent the mail mcp server bound to the run', function () {
     Process::fake();
     $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__tasks__create-task']]);

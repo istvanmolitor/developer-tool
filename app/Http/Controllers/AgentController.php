@@ -35,9 +35,11 @@ class AgentController extends Controller
         return Inertia::render('Agents/Create');
     }
 
-    public function store(StoreAgentRequest $request): RedirectResponse
+    public function store(StoreAgentRequest $request, AgentSyncService $agentSync): RedirectResponse
     {
-        Agent::create($request->validated());
+        $agent = Agent::create($request->validated());
+
+        $this->writeDefinition($agentSync, $agent);
 
         return redirect()
             ->route('agents.index')
@@ -219,22 +221,50 @@ class AgentController extends Controller
         ]);
     }
 
-    public function update(UpdateAgentRequest $request, Agent $agent): RedirectResponse
+    public function update(UpdateAgentRequest $request, Agent $agent, AgentSyncService $agentSync): RedirectResponse
     {
+        $previousSlug = $agent->slug;
+
         $agent->update($request->validated());
+
+        $this->writeDefinition($agentSync, $agent, $previousSlug);
 
         return redirect()
             ->route('agents.profile', $agent)
             ->with('status', 'Agent frissítve.');
     }
 
-    public function destroy(Agent $agent): RedirectResponse
+    public function destroy(Agent $agent, AgentSyncService $agentSync): RedirectResponse
     {
         $agent->delete();
+
+        try {
+            $agentSync->deleteFile($agent);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'Az agent törölve, de a definíciós fájl eltávolítása nem sikerült.']);
+        }
 
         return redirect()
             ->route('agents.index')
             ->with('status', 'Agent eltávolítva.');
+    }
+
+    /**
+     * Write the agent back out to its definition file, so admin edits land in the
+     * `*.md` files too. A write failure is reported and surfaced as a toast, but
+     * does not undo the database change the user already made.
+     */
+    private function writeDefinition(AgentSyncService $agentSync, Agent $agent, ?string $previousSlug = null): void
+    {
+        try {
+            $agentSync->writeFile($agent, $previousSlug);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'Az agent mentve, de a definíciós fájl írása nem sikerült.']);
+        }
     }
 
     /**

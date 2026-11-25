@@ -15,11 +15,22 @@ class PromptRunController extends Controller
 
     public function store(StorePromptRunRequest $request, Project $project): RedirectResponse
     {
-        $agentId = $request->validated('agent_id');
-        $agent = $agentId !== null ? Agent::findOrFail((int) $agentId) : null;
+        $contextId = $request->validated('agent_context_id');
 
-        // A chat continues the latest context of its project, agent and user.
-        $context = AgentContext::current($project, $agent, $request->user());
+        if ($contextId !== null) {
+            // A chosen conversation goes on in its own context; only the user's
+            // own conversations of this project can be continued.
+            $context = AgentContext::query()
+                ->where('user_id', $request->user()->id)
+                ->where('project_id', $project->id)
+                ->findOrFail((int) $contextId);
+        } else {
+            $agentId = $request->validated('agent_id');
+            $agent = $agentId !== null ? Agent::findOrFail((int) $agentId) : null;
+
+            // A chat continues the latest context of its project, agent and user.
+            $context = AgentContext::current($project, $agent, $request->user());
+        }
 
         $this->runner->queueInContext($context, $request->validated('prompt'));
 

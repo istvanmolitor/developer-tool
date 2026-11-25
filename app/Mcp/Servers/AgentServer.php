@@ -15,8 +15,10 @@ use Laravel\Mcp\Server\Tool;
 /**
  * Lets a Claude Code session hand prompts to the application's agents.
  *
- * Deliberately not given to the prompt runs themselves, so an agent cannot
- * keep starting further agent runs.
+ * Given to a prompt run only when the agent's tools opt into it (an
+ * `mcp__agents__*` entry), so the orchestrator (project-manager) can hand work
+ * to the specialist agents, while ordinary agents — whose tools carry no such
+ * entry — cannot keep starting further agent runs.
  */
 #[Name('Developer Tool – Agentek')]
 #[Version('1.0.0')]

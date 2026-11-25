@@ -42,7 +42,7 @@ function formatDate(value: string): string {
     <div class="flex flex-col gap-4">
         <div class="flex flex-col items-end gap-1">
             <div
-                class="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm break-words whitespace-pre-wrap text-primary-foreground"
+                class="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm wrap-anywhere whitespace-pre-wrap text-primary-foreground"
             >
                 <template v-if="run.prompt">{{ run.prompt }}</template>
                 <span v-else class="italic opacity-80"
@@ -65,7 +65,7 @@ function formatDate(value: string): string {
             </div>
             <div class="flex max-w-[85%] min-w-0 flex-col gap-1">
                 <div
-                    class="flex flex-col gap-2 rounded-2xl rounded-tl-sm bg-muted px-4 py-2 text-sm"
+                    class="flex min-w-0 flex-col gap-2 rounded-2xl rounded-tl-sm bg-muted px-4 py-2 text-sm"
                 >
                     <p
                         v-if="
@@ -82,11 +82,11 @@ function formatDate(value: string): string {
                     </p>
                     <pre
                         v-if="run.output"
-                        class="font-sans break-words whitespace-pre-wrap"
+                        class="font-sans wrap-anywhere whitespace-pre-wrap"
                         >{{ run.output }}</pre>
                     <pre
                         v-if="run.error_output"
-                        class="max-h-60 overflow-auto rounded-md bg-destructive/10 p-2 text-xs break-words whitespace-pre-wrap text-destructive"
+                        class="max-h-60 overflow-auto rounded-md bg-destructive/10 p-2 text-xs wrap-anywhere whitespace-pre-wrap text-destructive"
                         >{{ run.error_output }}</pre>
                     <p
                         v-if="

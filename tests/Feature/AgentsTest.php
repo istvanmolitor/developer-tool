@@ -8,7 +8,20 @@ use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\AgentSyncService;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    // Saving an agent now writes its definition file; point the agents directory
+    // at a throwaway folder so tests never touch the real `.claude/agents` files.
+    $this->agentsPath = sys_get_temp_dir().'/dev-tool-agents-'.uniqid();
+    mkdir($this->agentsPath, 0755, true);
+    config(['developer-tool.agents_path' => $this->agentsPath]);
+});
+
+afterEach(function () {
+    exec('rm -rf '.escapeshellarg($this->agentsPath));
+});
 
 test('guests are redirected from the agents index', function () {
     $this->get(route('agents.index'))->assertRedirect(route('login'));
@@ -201,6 +214,83 @@ test('an agent can be deleted', function () {
         ->assertRedirect(route('agents.index'));
 
     $this->assertDatabaseMissing('agents', ['id' => $agent->id]);
+});
+
+test('creating an agent writes its definition file', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('agents.store'), [
+            'name' => 'Dokumentáció-író',
+            'slug' => 'documentarian',
+            'description' => 'Writes docs.',
+            'model' => 'claude-sonnet-5',
+            'tools' => 'Read, Grep, Edit',
+            'system_prompt' => 'You write documentation.',
+        ])
+        ->assertRedirect(route('agents.index'));
+
+    $path = $this->agentsPath.'/documentarian.md';
+    expect(file_exists($path))->toBeTrue();
+
+    // The written file round-trips through the sync back into the same values.
+    config(['developer-tool.agents_path' => $this->agentsPath]);
+    Agent::query()->delete();
+    app(AgentSyncService::class)->sync();
+
+    expect(Agent::where('slug', 'documentarian')->firstOrFail())
+        ->name->toBe('Dokumentáció-író')
+        ->description->toBe('Writes docs.')
+        ->model->toBe('claude-sonnet-5')
+        ->tools->toBe(['Read', 'Grep', 'Edit'])
+        ->system_prompt->toBe('You write documentation.');
+});
+
+test('updating an agent rewrites its definition file', function () {
+    $agent = Agent::factory()->create(['slug' => 'documentarian', 'name' => 'documentarian']);
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('agents.update', $agent), [
+            'name' => 'Dokumentáció-író',
+            'slug' => 'documentarian',
+            'description' => 'Updated.',
+            'model' => 'claude-opus-4-8',
+            'tools' => 'Read, Write',
+            'system_prompt' => 'Updated prompt.',
+        ])
+        ->assertRedirect(route('agents.profile', $agent));
+
+    $contents = file_get_contents($this->agentsPath.'/documentarian.md');
+    expect($contents)->toContain('title: ')
+        ->toContain('Updated prompt.')
+        ->toContain('Read, Write');
+});
+
+test('renaming an agent slug removes the old definition file', function () {
+    $agent = Agent::factory()->create(['slug' => 'old-slug', 'name' => 'Régi']);
+    app(AgentSyncService::class)->writeFile($agent);
+    expect(file_exists($this->agentsPath.'/old-slug.md'))->toBeTrue();
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('agents.update', $agent), [
+            'name' => 'Régi',
+            'slug' => 'new-slug',
+            'system_prompt' => 'x',
+        ])
+        ->assertRedirect();
+
+    expect(file_exists($this->agentsPath.'/old-slug.md'))->toBeFalse()
+        ->and(file_exists($this->agentsPath.'/new-slug.md'))->toBeTrue();
+});
+
+test('deleting an agent removes its definition file', function () {
+    $agent = Agent::factory()->create(['slug' => 'documentarian']);
+    app(AgentSyncService::class)->writeFile($agent);
+    expect(file_exists($this->agentsPath.'/documentarian.md'))->toBeTrue();
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('agents.destroy', $agent))
+        ->assertRedirect(route('agents.index'));
+
+    expect(file_exists($this->agentsPath.'/documentarian.md'))->toBeFalse();
 });
 
 test('guests cannot sync agents', function () {

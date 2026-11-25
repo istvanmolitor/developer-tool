@@ -25,13 +25,23 @@ import { dashboard } from "@/routes";
 import agentContexts from "@/routes/agent-contexts";
 import projectRoutes from "@/routes/projects";
 
+export type RecentContext = {
+    id: number;
+    project: string;
+    agent: string | null;
+    title: string | null;
+    last_activity_at: string | null;
+};
+
 export type DashboardChatData = {
     projects: { id: number; name: string }[];
     agents: { id: number; name: string }[];
     project: string | null;
     agent_id: number | null;
     context: { id: number; session_id: string | null } | null;
+    context_chosen: boolean;
     runs: ChatPromptRun[];
+    recent_contexts: RecentContext[];
 };
 
 const props = defineProps<{
@@ -46,6 +56,15 @@ const selectedAgent = ref<string>(
     props.chat.agent_id === null ? NO_AGENT : String(props.chat.agent_id),
 );
 
+/** A conversation chosen from the list decides the project and agent: follow it. */
+watch(
+    () => [props.chat.project, props.chat.agent_id] as const,
+    ([project, agentId]) => {
+        selectedProject.value = project ?? "";
+        selectedAgent.value = agentId === null ? NO_AGENT : String(agentId);
+    },
+);
+
 const selectedAgentName = computed(
     () =>
         props.chat.agents.find(
@@ -53,13 +72,16 @@ const selectedAgentName = computed(
         )?.name ?? null,
 );
 
-/** Switch the chat to another project / agent conversation, keeping it in the URL. */
-watch([selectedProject, selectedAgent], ([project, agent]) => {
+/** Switch the chat to the latest conversation of the selected project / agent, keeping it in the URL. */
+function showSelectedConversation(): void {
     router.get(
         dashboard().url,
         {
-            project: project || undefined,
-            agent: agent === NO_AGENT ? undefined : agent,
+            project: selectedProject.value || undefined,
+            agent:
+                selectedAgent.value === NO_AGENT
+                    ? undefined
+                    : selectedAgent.value,
         },
         {
             only: ["chat"],
@@ -68,9 +90,23 @@ watch([selectedProject, selectedAgent], ([project, agent]) => {
             replace: true,
         },
     );
-});
+}
 
-const form = useForm({ prompt: "", agent_id: null as number | null });
+function onProjectChange(project: unknown): void {
+    selectedProject.value = String(project ?? "");
+    showSelectedConversation();
+}
+
+function onAgentChange(agent: unknown): void {
+    selectedAgent.value = String(agent ?? NO_AGENT);
+    showSelectedConversation();
+}
+
+const form = useForm({
+    prompt: "",
+    agent_id: null as number | null,
+    agent_context_id: null as number | null,
+});
 
 function submit(): void {
     if (form.processing || !selectedProject.value) {
@@ -79,6 +115,10 @@ function submit(): void {
 
     form.agent_id =
         selectedAgent.value === NO_AGENT ? null : Number(selectedAgent.value);
+    // A conversation chosen from the list goes on, not the latest one.
+    form.agent_context_id = props.chat.context_chosen
+        ? (props.chat.context?.id ?? null)
+        : null;
 
     form.post(projectRoutes.runs.store(selectedProject.value).url, {
         preserveScroll: true,
@@ -109,6 +149,12 @@ function startNewContext(): void {
             preserveScroll: true,
             onStart: () => (startingContext.value = true),
             onFinish: () => (startingContext.value = false),
+            // The new conversation is the latest one: leave the chosen one.
+            onSuccess: () => {
+                if (props.chat.context_chosen) {
+                    showSelectedConversation();
+                }
+            },
         },
     );
 }
@@ -130,7 +176,7 @@ watch(
 </script>
 
 <template>
-    <Card class="gap-0 overflow-hidden py-0">
+    <Card class="gap-0 overflow-hidden py-0 xl:min-h-0">
         <CardHeader class="border-b py-4">
             <CardTitle class="flex items-center gap-2 text-base">
                 <MessageSquare class="size-4" />
@@ -145,10 +191,10 @@ watch(
             </CardTitle>
         </CardHeader>
 
-        <CardContent class="flex flex-col p-0">
+        <CardContent class="flex flex-col p-0 xl:min-h-0 xl:flex-1">
             <div
                 ref="messageList"
-                class="flex h-[28rem] flex-col gap-4 overflow-y-auto p-4"
+                class="flex h-[28rem] flex-col gap-4 overflow-y-auto p-4 xl:h-auto xl:min-h-0 xl:flex-1"
             >
                 <div
                     v-if="chat.runs.length === 0"
@@ -186,7 +232,10 @@ watch(
                     @submit.prevent="submit"
                 >
                     <div class="flex flex-col gap-2 sm:flex-row">
-                        <Select v-model="selectedProject">
+                        <Select
+                            :model-value="selectedProject"
+                            @update:model-value="onProjectChange"
+                        >
                             <SelectTrigger
                                 class="w-full sm:w-56"
                                 aria-label="Projekt"
@@ -208,7 +257,10 @@ watch(
                                 </SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select v-model="selectedAgent">
+                        <Select
+                            :model-value="selectedAgent"
+                            @update:model-value="onAgentChange"
+                        >
                             <SelectTrigger
                                 class="w-full sm:w-56"
                                 aria-label="Agent"

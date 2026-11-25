@@ -159,10 +159,13 @@ class ClaudePromptRunner
      * claude session, so it continues the conversation of its context.
      *
      * The `tasks` MCP server is bound to the run ($run), so the task changes the agent
-     * makes are logged under its name. When the run handles an incoming e-mail, the
-     * agent also gets the `mail` MCP server, bound to that run, so it can answer the message.
-     * Every agent run gets the `messages` MCP server, bound to the run, so the agent can
-     * message the other agents of the run's project.
+     * makes are logged under its name. The `agents` and `docs` servers are given only to
+     * an agent whose tools opt into them (an `mcp__agents__*` / `mcp__docs__*` entry), so
+     * the orchestrator can hand out further runs and persist the docs it produced while
+     * ordinary agents cannot. When the run handles an incoming e-mail, the agent also gets
+     * the `mail` MCP server, bound to that run, so it can answer the message. Every agent
+     * run gets the `messages` MCP server, bound to the run, so the agent can message the
+     * other agents of the run's project.
      *
      * @return list<string>
      */
@@ -185,6 +188,14 @@ class ClaudePromptRunner
 
             if ($this->usesTaskTools($agent)) {
                 $mcpServers['tasks'] = $this->taskMcpServer($run);
+            }
+
+            if ($this->usesServer($agent, 'agents')) {
+                $mcpServers['agents'] = $this->localMcpServer('agents');
+            }
+
+            if ($this->usesServer($agent, 'docs')) {
+                $mcpServers['docs'] = $this->localMcpServer('docs');
             }
 
             if ($emailRun !== null) {
@@ -269,8 +280,19 @@ class ClaudePromptRunner
      */
     private function usesTaskTools(Agent $agent): bool
     {
+        return $this->usesServer($agent, 'tasks');
+    }
+
+    /**
+     * Whether the agent is allowed any tool of the named local MCP server, i.e.
+     * its tools list carries an `mcp__<server>__*` entry.
+     */
+    private function usesServer(Agent $agent, string $server): bool
+    {
+        $prefix = "mcp__{$server}__";
+
         foreach (Agent::normalizeTools($agent->tools) ?? [] as $tool) {
-            if (str_starts_with($tool, 'mcp__tasks__')) {
+            if (str_starts_with($tool, $prefix)) {
                 return true;
             }
         }
@@ -299,6 +321,23 @@ class ClaudePromptRunner
         }
 
         return $server;
+    }
+
+    /**
+     * A stateless local MCP server definition for `--mcp-config`. Runs happen
+     * inside the project's own directory, which has no `.mcp.json` pointing back
+     * here, so the server is started through this application's artisan by
+     * absolute path. Used for servers that need no per-run binding (`agents`,
+     * `docs`).
+     *
+     * @return array{command: string, args: list<string>}
+     */
+    private function localMcpServer(string $server): array
+    {
+        return [
+            'command' => 'php',
+            'args' => [base_path('artisan'), 'mcp:start', $server],
+        ];
     }
 
     /**

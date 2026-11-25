@@ -138,3 +138,34 @@ test('a chat of another user or agent starts a context of its own', function () 
         ->agent_id->toBe($agent->id)
         ->project_id->toBe($this->alpha->id);
 });
+
+test('a chat can continue a chosen earlier context of the user', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $earlier = AgentContext::factory()->create(['project_id' => $this->alpha->id, 'user_id' => $user->id]);
+    AgentContext::factory()->create(['project_id' => $this->alpha->id, 'user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('projects.runs.store', 'alpha'), ['prompt' => 'Folytasd.', 'agent_context_id' => $earlier->id])
+        ->assertRedirect();
+
+    expect(PromptRun::sole()->agent_context_id)->toBe($earlier->id);
+});
+
+test('a chat cannot continue another user\'s or another project\'s context', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $otherUsersContext = AgentContext::factory()->create([
+        'project_id' => $this->alpha->id,
+        'user_id' => User::factory()->create()->id,
+    ]);
+    $otherProjectsContext = AgentContext::factory()->create(['user_id' => $user->id]);
+
+    foreach ([$otherUsersContext, $otherProjectsContext] as $context) {
+        $this->actingAs($user)
+            ->post(route('projects.runs.store', 'alpha'), ['prompt' => 'Szia.', 'agent_context_id' => $context->id])
+            ->assertNotFound();
+    }
+
+    expect(PromptRun::count())->toBe(0);
+});
