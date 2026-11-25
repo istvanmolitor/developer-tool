@@ -9,6 +9,7 @@ use App\Mcp\Tools\ListTasksTool;
 use App\Mcp\Tools\NextTaskTool;
 use App\Mcp\Tools\UpdateTaskTool;
 use App\Models\Agent;
+use App\Models\Attachment;
 use App\Models\Project;
 use App\Models\Task;
 
@@ -45,6 +46,48 @@ test('create-task creates a task under a project', function () {
         ->and($task->priority->value)->toBe('high')
         ->and($task->type->value)->toBe('design')
         ->and($task->project_id)->toBe($this->project->id);
+});
+
+test('create-task links the given attachments to the new task', function () {
+    $one = Attachment::factory()->for($this->project)->create(['filename' => 'terv.txt']);
+    $two = Attachment::factory()->for($this->project)->create(['filename' => 'kep.png']);
+
+    TaskServer::tool(CreateTaskTool::class, [
+        'project' => 'alpha',
+        'title' => 'Feladat melléklettel',
+        'attachment_ids' => [$one->id, $two->id],
+    ])
+        ->assertOk()
+        ->assertSee('2 csatolmánnyal')
+        ->assertSee('terv.txt')
+        ->assertSee('kep.png');
+
+    $task = Task::sole();
+    expect($task->attachments()->pluck('attachments.id')->all())
+        ->toEqualCanonicalizing([$one->id, $two->id]);
+});
+
+test('create-task errors on an unknown attachment id', function () {
+    TaskServer::tool(CreateTaskTool::class, [
+        'project' => 'alpha',
+        'title' => 'Feladat',
+        'attachment_ids' => [999999],
+    ])->assertHasErrors();
+
+    // The task is not created when an attachment is invalid.
+    expect(Task::count())->toBe(0);
+});
+
+test('create-task rejects an attachment belonging to another project', function () {
+    $foreign = Attachment::factory()->create(); // another project
+
+    TaskServer::tool(CreateTaskTool::class, [
+        'project' => 'alpha',
+        'title' => 'Feladat',
+        'attachment_ids' => [$foreign->id],
+    ])->assertHasErrors();
+
+    expect(Task::count())->toBe(0);
 });
 
 test('list-agents returns the agents', function () {

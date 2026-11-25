@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -109,6 +110,16 @@ class Task extends Model implements Searchable
     public function comments(): HasMany
     {
         return $this->hasMany(TaskComment::class)->oldest('id');
+    }
+
+    /**
+     * Files attached to this task, so an agent can reference them.
+     *
+     * @return BelongsToMany<Attachment, $this>
+     */
+    public function attachments(): BelongsToMany
+    {
+        return $this->belongsToMany(Attachment::class)->withTimestamps();
     }
 
     public static function searchType(): SearchType

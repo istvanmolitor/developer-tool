@@ -5,7 +5,9 @@ namespace App\Mcp\Tools;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Mcp\Concerns\FormatsTasks;
+use App\Mcp\Concerns\FormatsAttachments;
+use App\Models\Attachment;
+use App\Services\AttachmentService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
@@ -17,12 +19,12 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('create-task')]
 #[Title('Feladat létrehozása')]
-#[Description('Új feladat létrehozása egy projekthez. Csak a cím kötelező; a státusz alapból "todo", a prioritás "medium", a típus "development".')]
+#[Description('Új feladat létrehozása egy projekthez. Csak a cím kötelező; a státusz alapból "todo", a prioritás "medium", a típus "development". Ha a feladathoz csatolmányok tartoznak (pl. a levél mellékletei, amiből a feladat született), add meg az azonosítóikat az attachment_ids mezőben, és rögtön a feladathoz kötődnek.')]
 class CreateTaskTool extends Tool
 {
-    use FormatsTasks;
+    use FormatsAttachments;
 
-    public function handle(Request $request): Response
+    public function handle(Request $request, AttachmentService $attachments): Response
     {
         $validated = $request->validate([
             'project' => ['required', 'string'],
@@ -34,6 +36,8 @@ class CreateTaskTool extends Tool
             'auto_run' => ['nullable', 'boolean'],
             'priority' => ['nullable', 'in:low,medium,high'],
             'due_date' => ['nullable', 'date'],
+            'attachment_ids' => ['nullable', 'array'],
+            'attachment_ids.*' => ['integer'],
         ]);
 
         $project = $this->resolveProject($validated['project']);
@@ -54,6 +58,25 @@ class CreateTaskTool extends Tool
             $agentId = $agent->id;
         }
 
+        // Resolve the related attachments before creating anything, so an invalid
+        // id fails fast instead of leaving a task with no files behind.
+        $attachmentIds = array_values(array_unique($validated['attachment_ids'] ?? []));
+        $related = Attachment::query()->whereKey($attachmentIds)->get();
+
+        if (count($related) !== count($attachmentIds)) {
+            $missing = array_diff($attachmentIds, $related->pluck('id')->all());
+
+            return Response::error('Nincs ilyen azonosítójú csatolmány: '.implode(', ', $missing).'. Használd a list-attachments eszközt a létező csatolmányokhoz.');
+        }
+
+        $foreign = $related->filter(
+            fn (Attachment $attachment): bool => $attachment->project_id !== null && $attachment->project_id !== $project->id,
+        );
+
+        if ($foreign->isNotEmpty()) {
+            return Response::error('A(z) '.$foreign->pluck('id')->join(', ')." csatolmány másik projekthez tartozik, nem köthető a(z) „{$project->name}” projekt feladatához.");
+        }
+
         $task = $project->tasks()->create([
             'agent_id' => $agentId,
             'title' => $validated['title'],
@@ -65,9 +88,20 @@ class CreateTaskTool extends Tool
             'due_date' => $validated['due_date'] ?? null,
         ]);
 
+        foreach ($related as $attachment) {
+            $attachments->attachToTask($attachment, $task);
+        }
+
+        $task->load('attachments');
+
         return Response::json([
-            'message' => 'Feladat létrehozva.',
-            'task' => $this->taskToArray($task->refresh()),
+            'message' => $related->isEmpty()
+                ? 'Feladat létrehozva.'
+                : "Feladat létrehozva, {$related->count()} csatolmánnyal.",
+            'task' => $this->taskToArray($task),
+            'attachments' => $task->attachments
+                ->map(fn (Attachment $attachment): array => $this->attachmentToArray($attachment))
+                ->all(),
         ]);
     }
 
@@ -101,6 +135,9 @@ class CreateTaskTool extends Tool
             'due_date' => $schema->string()
                 ->description('Opcionális határidő ÉÉÉÉ-HH-NN formátumban.')
                 ->format('date'),
+            'attachment_ids' => $schema->array()
+                ->description('Opcionális: a feladathoz kötendő, már létező csatolmányok azonosítói (pl. a levél mellékletei, amiből a feladat született). Az azonosítókat a list-attachments vagy a create-attachment adja. Minden csatolmánynak a feladat projektjéhez (vagy egyik projekthez sem) kell tartoznia.')
+                ->items($schema->integer()),
         ];
     }
 }

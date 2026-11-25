@@ -86,7 +86,7 @@ test('a project can be created from an existing folder', function () {
     Queue::assertNothingPushed();
 });
 
-test('a new folder project is queued for provisioning', function () {
+test('a new folder project creates its directory synchronously', function () {
     Queue::fake();
 
     $this->actingAs(User::factory()->create())
@@ -100,10 +100,12 @@ test('a new folder project is queued for provisioning', function () {
         'name' => 'gamma',
         'path' => $this->projectsPath.'/gamma',
         'git_url' => null,
-        'provision_status' => ProjectProvisionStatus::Pending->value,
+        'provision_status' => ProjectProvisionStatus::Ready->value,
     ]);
 
-    Queue::assertPushed(ProvisionProject::class, fn ($job) => $job->project->name === 'gamma');
+    // The empty folder exists the moment the request returns, no queue worker.
+    expect(is_dir($this->projectsPath.'/gamma'))->toBeTrue();
+    Queue::assertNotPushed(ProvisionProject::class);
 });
 
 test('a new folder project can be created with the empty fields the form sends', function () {
@@ -177,10 +179,12 @@ test('a git project without a url falls back to creating an empty folder', funct
     $this->assertDatabaseHas('projects', [
         'name' => 'gamma',
         'git_url' => null,
-        'provision_status' => ProjectProvisionStatus::Pending->value,
+        'provision_status' => ProjectProvisionStatus::Ready->value,
     ]);
 
-    Queue::assertPushed(ProvisionProject::class);
+    // No clone to run, so the empty folder is created synchronously.
+    expect(is_dir($this->projectsPath.'/gamma'))->toBeTrue();
+    Queue::assertNotPushed(ProvisionProject::class);
 });
 
 test('a git project with neither url nor name is rejected', function () {

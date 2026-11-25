@@ -83,7 +83,7 @@ class MailboxController extends Controller
                 IncomingEmail::query()
                     ->select(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id'])
                     ->with([
-                        'attachments:id,incoming_email_id,filename,mime_type,size',
+                        'attachments:id,filename,mime_type,size',
                         'promptRun:id,status',
                         'replies:id,incoming_email_id,to,subject,body_text,status,error,sent_at,created_at',
                     ]),

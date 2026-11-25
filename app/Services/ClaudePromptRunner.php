@@ -32,6 +32,17 @@ class ClaudePromptRunner
     ];
 
     /**
+     * The `tasks` MCP server tools every agent run gets, whatever its own tools
+     * list: it can pick up its next task, move a task along and comment on it.
+     * Richer task tools (list/create/delete) stay opt-in through the tools list.
+     */
+    private const TASK_TOOLS = [
+        'mcp__tasks__next-task',
+        'mcp__tasks__update-task',
+        'mcp__tasks__add-task-comment',
+    ];
+
+    /**
      * Create a pending prompt run for the given project in a new context — a fresh
      * claude session — and queue it for execution. Returns the freshly created record.
      */
@@ -159,11 +170,14 @@ class ClaudePromptRunner
      * claude session, so it continues the conversation of its context.
      *
      * The `tasks` MCP server is bound to the run ($run), so the task changes the agent
-     * makes are logged under its name. The `agents` and `docs` servers are given only to
-     * an agent whose tools opt into them (an `mcp__agents__*` / `mcp__docs__*` entry), so
-     * the orchestrator can hand out further runs and persist the docs it produced while
-     * ordinary agents cannot. When the run handles an incoming e-mail, the agent also gets
-     * the `mail` MCP server, bound to that run, so it can answer the message. Every agent
+     * makes are logged under its name. Every agent run gets it — along with the next-task,
+     * update-task and add-task-comment tools (see {@see TASK_TOOLS}) — so any agent can pick
+     * up its next task, move a task along and comment on it; richer task tools (list/create/
+     * delete) stay opt-in through the agent's own tools list. The `agents` and `docs` servers
+     * are given only to an agent whose tools opt into them (an `mcp__agents__*` / `mcp__docs__*`
+     * entry), so the orchestrator can hand out further runs and persist the docs it produced
+     * while ordinary agents cannot. When the run handles an incoming e-mail, the agent also
+     * gets the `mail` MCP server, bound to that run, so it can answer the message. Every agent
      * run gets the `messages` MCP server, bound to the run, so the agent can message the
      * other agents of the run's project.
      *
@@ -182,11 +196,13 @@ class ClaudePromptRunner
         if ($agent !== null) {
             $emailRun = $run !== null && $run->incomingEmail()->exists() ? $run : null;
 
-            array_push($command, ...$this->agentOptions($agent, $emailRun !== null, $run !== null));
+            array_push($command, ...$this->agentOptions($agent, $emailRun !== null, $run !== null, $run !== null));
 
             $mcpServers = [];
 
-            if ($this->usesTaskTools($agent)) {
+            // Every agent run gets the tasks server (bound to the run); an agent whose
+            // tools opt into further task tools gets it even outside a run.
+            if ($run !== null || $this->usesTaskTools($agent)) {
                 $mcpServers['tasks'] = $this->taskMcpServer($run);
             }
 
@@ -196,6 +212,10 @@ class ClaudePromptRunner
 
             if ($this->usesServer($agent, 'docs')) {
                 $mcpServers['docs'] = $this->localMcpServer('docs');
+            }
+
+            if ($this->usesServer($agent, 'attachments')) {
+                $mcpServers['attachments'] = $this->localMcpServer('attachments');
             }
 
             if ($emailRun !== null) {
@@ -241,18 +261,21 @@ class ClaudePromptRunner
      * agent files happen to live in that project's directory.
      *
      * An agent restricted to a tool list still gets the reply tool when it handles
-     * an e-mail, so every agent with a mailbox can answer its mail, and the message
-     * tools when bound to a run, so every agent can talk to the others of its project.
+     * an e-mail, so every agent with a mailbox can answer its mail, the message
+     * tools when bound to a run, so every agent can talk to the others of its project,
+     * and the shared task tools when bound to a run, so every agent can pick up and
+     * progress its tasks.
      *
      * @return list<string>
      */
-    private function agentOptions(Agent $agent, bool $canReplyToEmail = false, bool $canMessageAgents = false): array
+    private function agentOptions(Agent $agent, bool $canReplyToEmail = false, bool $canMessageAgents = false, bool $canUseTaskTools = false): array
     {
         $slug = $agent->slug ?: 'agent-'.$agent->id;
         $tools = Agent::normalizeTools($agent->tools);
 
         if ($tools !== null) {
             $extraTools = [
+                ...($canUseTaskTools ? self::TASK_TOOLS : []),
                 ...($canReplyToEmail ? [self::REPLY_EMAIL_TOOL] : []),
                 ...($canMessageAgents ? self::MESSAGE_TOOLS : []),
             ];

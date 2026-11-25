@@ -7,10 +7,12 @@ use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\IncomingEmailController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\OutgoingEmailController;
+use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TaskAttachmentController;
 use App\Http\Controllers\TaskChangeController;
 use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskController;
@@ -76,6 +78,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('projects.documentations.pdf');
     Route::resource('projects.documentations', DocumentationController::class)->scoped();
 
+    // Files stored for the project, and reloading its docs/attachments folder.
+    Route::get('projects/{project}/attachments', [ProjectAttachmentController::class, 'index'])
+        ->name('projects.attachments.index');
+    Route::post('projects/{project}/attachments', [ProjectAttachmentController::class, 'store'])
+        ->name('projects.attachments.store');
+    Route::post('projects/{project}/attachments/sync', [ProjectAttachmentController::class, 'sync'])
+        ->name('projects.attachments.sync');
+    Route::get('projects/{project}/attachments/{attachment}/download', [ProjectAttachmentController::class, 'download'])
+        ->scopeBindings()
+        ->name('projects.attachments.download');
+    Route::delete('projects/{project}/attachments/{attachment}', [ProjectAttachmentController::class, 'destroy'])
+        ->scopeBindings()
+        ->name('projects.attachments.destroy');
+
     // Change log of the project's tasks (status, priority, type, assignee, due date).
     Route::get('projects/{project}/task-changes', [TaskChangeController::class, 'index'])
         ->name('projects.task-changes.index');
@@ -87,6 +103,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('projects/{project}/tasks/{task}/comments', [TaskCommentController::class, 'store'])
         ->scopeBindings()
         ->name('projects.tasks.comments.store');
+
+    // Files attached to a task, so an agent can reference them.
+    Route::post('projects/{project}/tasks/{task}/attachments', [TaskAttachmentController::class, 'store'])
+        ->scopeBindings()
+        ->name('projects.tasks.attachments.store');
+    Route::get('projects/{project}/tasks/{task}/attachments/{attachment}/download', [TaskAttachmentController::class, 'download'])
+        ->scopeBindings()
+        ->name('projects.tasks.attachments.download');
+    Route::delete('projects/{project}/tasks/{task}/attachments/{attachment}', [TaskAttachmentController::class, 'destroy'])
+        ->scopeBindings()
+        ->name('projects.tasks.attachments.destroy');
 });
 
 require __DIR__.'/settings.php';

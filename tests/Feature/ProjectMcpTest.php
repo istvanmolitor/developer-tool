@@ -33,7 +33,7 @@ test('the server registers all project tools', function () {
     ProjectServer::tool(CreateProjectTool::class);
 })->throwsNoExceptions();
 
-test('create-project in new mode creates a pending project and queues provisioning', function () {
+test('create-project in new mode creates a ready project with its directory, no job', function () {
     ProjectServer::tool(CreateProjectTool::class, [
         'mode' => 'new',
         'name' => 'fresh',
@@ -44,9 +44,10 @@ test('create-project in new mode creates a pending project and queues provisioni
     expect($project->name)->toBe('fresh')
         ->and($project->path)->toBe(app(ProjectService::class)->pathFor('fresh'))
         ->and($project->description)->toBe('Friss projekt')
-        ->and($project->provision_status)->toBe(ProjectProvisionStatus::Pending);
+        ->and($project->provision_status)->toBe(ProjectProvisionStatus::Ready)
+        ->and(is_dir($project->path))->toBeTrue();
 
-    Bus::assertDispatched(ProvisionProject::class, fn (ProvisionProject $job) => $job->project->is($project));
+    Bus::assertNotDispatched(ProvisionProject::class);
 });
 
 test('create-project in git mode derives the name from the git url', function () {
@@ -174,9 +175,12 @@ test('list-projects reports the provisioning status and error', function () {
 });
 
 test('create-project cannot set is_system or provision_status', function () {
+    // A clone keeps the status `pending`; the injected `provision_status`
+    // below must be ignored, so asserting `pending` proves it was not honoured.
     ProjectServer::tool(CreateProjectTool::class, [
-        'mode' => 'new',
+        'mode' => 'git',
         'name' => 'sneaky',
+        'git_url' => 'https://github.com/acme/sneaky.git',
         'is_system' => true,
         'provision_status' => 'ready',
     ]);

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\MailEncryption;
 use App\Enums\OutgoingEmailStatus;
 use App\Mail\MailboxMessage;
+use App\Models\Attachment;
 use App\Models\IncomingEmail;
 use App\Models\Mailbox;
 use App\Models\OutgoingEmail;
@@ -16,7 +17,6 @@ use App\Services\Mail\ImapMailFetcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -35,6 +35,7 @@ class MailboxService
     public function __construct(
         private ImapMailFetcher $fetcher,
         private ClaudePromptRunner $runner,
+        private AttachmentService $attachments,
     ) {}
 
     /**
@@ -128,14 +129,14 @@ class MailboxService
         $lines[] = "Ha a feladónak válaszolni kell, a `reply-email` eszközzel tedd meg (incoming_email_id: {$incomingEmail->id}). "
             ."A válasz a(z) {$mailbox->email} címről megy ki. Levelenként csak egyszer válaszolhatsz, ezért előbb végezd el a teendőket.";
 
-        $attachments = $incomingEmail->attachments()->orderBy('id')->get();
+        $attachments = $incomingEmail->attachments()->orderBy('attachments.id')->get();
 
         if ($attachments->isNotEmpty()) {
             $lines[] = '';
             $lines[] = 'Csatolmányok (a fájlok ezeken az útvonalakon olvashatók):';
 
             foreach ($attachments as $attachment) {
-                $lines[] = "- {$attachment->filename} ({$attachment->mime_type}): ".Storage::disk('local')->path($attachment->path);
+                $lines[] = "- {$attachment->filename} ({$attachment->mime_type}): ".$attachment->absolutePath();
             }
         }
 
@@ -160,10 +161,12 @@ class MailboxService
      */
     private function storeIncoming(Mailbox $mailbox, FetchedEmail $email): ?IncomingEmail
     {
-        $directory = null;
+        // Paths of files written this round, so a rollback can drop the orphans
+        // (Storage writes are not part of the database transaction).
+        $storedPaths = [];
 
         try {
-            return DB::transaction(function () use ($mailbox, $email, &$directory): ?IncomingEmail {
+            return DB::transaction(function () use ($mailbox, $email, &$storedPaths): ?IncomingEmail {
                 $incoming = $mailbox->incomingEmails()->firstOrCreate(
                     ['uid' => $email->uid],
                     [
@@ -183,39 +186,34 @@ class MailboxService
                     return null;
                 }
 
-                $directory = $incoming->attachmentsDirectory();
+                // The attachment's project comes from the mailbox; set the relation
+                // so storeForEmail need not reload it.
+                $incoming->setRelation('mailbox', $mailbox);
 
                 foreach ($email->attachments as $attachment) {
-                    $this->storeAttachment($incoming, $attachment);
+                    $storedPaths[] = $this->storeAttachment($incoming, $attachment)->path;
                 }
 
                 return $incoming;
             });
         } catch (Throwable $exception) {
             // The message row was rolled back, so drop any files already written for it.
-            if ($directory !== null) {
-                Storage::disk('local')->deleteDirectory($directory);
+            foreach ($storedPaths as $path) {
+                Storage::disk('local')->delete($path);
             }
 
             throw $exception;
         }
     }
 
-    private function storeAttachment(IncomingEmail $incoming, FetchedAttachment $attachment): void
+    private function storeAttachment(IncomingEmail $incoming, FetchedAttachment $attachment): Attachment
     {
-        // Files are stored under a random name; the sender's file name is only kept in the database.
-        $path = $incoming->attachmentsDirectory().'/'.Str::uuid();
-
-        if (! Storage::disk('local')->put($path, $attachment->content)) {
-            throw new RuntimeException("Nem sikerült menteni a(z) „{$attachment->filename}” csatolmányt.");
-        }
-
-        $incoming->attachments()->create([
-            'filename' => $attachment->filename,
-            'mime_type' => $attachment->mimeType,
-            'size' => strlen($attachment->content),
-            'path' => $path,
-        ]);
+        return $this->attachments->storeForEmail(
+            $incoming,
+            $attachment->filename,
+            $attachment->content,
+            $attachment->mimeType,
+        );
     }
 
     /**

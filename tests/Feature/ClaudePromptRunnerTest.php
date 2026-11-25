@@ -158,6 +158,9 @@ test('a run handling an e-mail gives the agent the mail mcp server bound to the 
             && reset($agents)['tools'] === [
                 'Read',
                 'mcp__tasks__create-task',
+                'mcp__tasks__next-task',
+                'mcp__tasks__update-task',
+                'mcp__tasks__add-task-comment',
                 'mcp__mail__reply-email',
                 'mcp__messages__list-agents',
                 'mcp__messages__send-message',
@@ -199,6 +202,31 @@ test('an agent run gets the messages mcp server bound to the run', function () {
             'env' => ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id],
         ]
             && in_array('mcp__messages__send-message', reset($agents)['tools'], true);
+    });
+});
+
+test('every agent run gets the shared task tools and the tasks server bound to the run', function () {
+    Process::fake();
+    // An agent whose tools list opts into no task tools at all.
+    $agent = Agent::factory()->create(['tools' => ['Read', 'Grep']]);
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
+
+    app(ClaudePromptRunner::class)->run($run);
+
+    Process::assertRan(function ($process) use ($run) {
+        $command = $process->command;
+        $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
+        $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
+        $tools = reset($agents)['tools'];
+
+        return $mcpConfig['mcpServers']['tasks'] === [
+            'command' => 'php',
+            'args' => [base_path('artisan'), 'mcp:start', 'tasks'],
+            'env' => ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id],
+        ]
+            && in_array('mcp__tasks__next-task', $tools, true)
+            && in_array('mcp__tasks__update-task', $tools, true)
+            && in_array('mcp__tasks__add-task-comment', $tools, true);
     });
 });
 

@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property CarbonImmutable|null $received_at
@@ -57,12 +57,14 @@ class IncomingEmail extends Model implements Searchable
     }
 
     /**
-     * Remove the stored attachment files along with the message.
+     * Remove the message's attachments (row and file) along with the message.
+     * Each attachment's own deleting hook unlinks its file; the pivot rows
+     * cascade in the database.
      */
     protected static function booted(): void
     {
         static::deleting(function (IncomingEmail $incomingEmail): void {
-            Storage::disk('local')->deleteDirectory($incomingEmail->attachmentsDirectory());
+            $incomingEmail->attachments->each->delete();
         });
     }
 
@@ -93,13 +95,13 @@ class IncomingEmail extends Model implements Searchable
     }
 
     /**
-     * The files attached to this message.
+     * The files attached to this message, stored on the central Attachment model.
      *
-     * @return HasMany<IncomingEmailAttachment, $this>
+     * @return BelongsToMany<Attachment, $this>
      */
-    public function attachments(): HasMany
+    public function attachments(): BelongsToMany
     {
-        return $this->hasMany(IncomingEmailAttachment::class);
+        return $this->belongsToMany(Attachment::class)->withTimestamps();
     }
 
     /**
@@ -110,14 +112,6 @@ class IncomingEmail extends Model implements Searchable
     public function replies(): HasMany
     {
         return $this->hasMany(OutgoingEmail::class);
-    }
-
-    /**
-     * Directory on the private `local` disk that holds this message's attachment files.
-     */
-    public function attachmentsDirectory(): string
-    {
-        return 'mail-attachments/'.$this->getKey();
     }
 
     public static function searchType(): SearchType

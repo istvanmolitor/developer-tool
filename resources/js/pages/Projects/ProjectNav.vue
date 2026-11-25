@@ -5,6 +5,7 @@ import {
     LayoutDashboard,
     ListTodo,
     MessageSquare,
+    Paperclip,
 } from "@lucide/vue";
 import { computed } from "vue";
 import projects from "@/routes/projects";
@@ -43,6 +44,12 @@ const items = computed(() => [
         // The documentation section spans several pages (index, form, show),
         // so match on the folder prefix to keep the tab active throughout.
         component: "Projects/Documentations",
+    },
+    {
+        title: "Csatolmányok",
+        icon: Paperclip,
+        href: projects.attachments.index(props.name).url,
+        component: "Projects/Attachments",
     },
 ]);
 

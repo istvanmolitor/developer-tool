@@ -1,6 +1,7 @@
 <?php
 
 use App\Mcp\Servers\AgentServer;
+use App\Mcp\Servers\AttachmentServer;
 use App\Mcp\Servers\DocumentationServer;
 use App\Mcp\Servers\MailServer;
 use App\Mcp\Servers\MessageServer;
@@ -41,3 +42,10 @@ Mcp::local('projects', ProjectServer::class);
 // agent's tools opt into it (an `mcp__docs__*` entry), so the orchestrator can
 // persist the docs it produced while ordinary agents cannot.
 Mcp::local('docs', DocumentationServer::class);
+
+// Local (stdio) MCP server for storing attached files and binding them to tasks,
+// so agents can reference the files. Start with:
+//   php artisan mcp:start attachments
+// Registered for Claude Code in .mcp.json; given to a prompt run only when the
+// agent's tools opt into it (an `mcp__attachments__*` entry).
+Mcp::local('attachments', AttachmentServer::class);

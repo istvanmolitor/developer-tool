@@ -207,32 +207,61 @@ class ProjectService
     }
 
     /**
-     * Persist a validated project and, for `new`/`git` modes, queue the
-     * background job that creates (mkdir) or clones the directory. `existing`
-     * points at a directory already on disk, so it is ready straight away.
+     * Persist a validated project and make its directory available.
+     *
+     * Only a `git clone` can be slow (or fail), so that alone is deferred to
+     * the background {@see ProvisionProject} job (status `pending`). An empty
+     * folder (`new` mode, or `git` mode without a URL) is created with a plain
+     * `mkdir` right here, so the directory exists the moment the request
+     * returns instead of a queue worker round-trip later. `existing` points at
+     * a directory already on disk, so it is ready with no filesystem work.
      *
      * @param  array<string, mixed>  $validated
      */
     public function createProject(array $validated): Project
     {
         $mode = $validated['mode'];
+        $gitUrl = $mode === 'git' ? $this->nullableTrimmed($validated['git_url'] ?? null) : null;
+
+        // A clone is the only slow/failure-prone step; everything else is an
+        // instant mkdir (or nothing, for `existing`).
+        $needsClone = $gitUrl !== null;
 
         $project = new Project;
         $project->forceFill([
             'name' => $validated['name'],
             'path' => $validated['path'],
-            'git_url' => $mode === 'git' ? $this->nullableTrimmed($validated['git_url'] ?? null) : null,
+            'git_url' => $gitUrl,
             'description' => $this->nullableTrimmed($validated['description'] ?? null),
-            'provision_status' => $mode === 'existing'
-                ? ProjectProvisionStatus::Ready
-                : ProjectProvisionStatus::Pending,
+            'provision_status' => $needsClone
+                ? ProjectProvisionStatus::Pending
+                : ProjectProvisionStatus::Ready,
         ])->save();
 
-        if ($project->provision_status === ProjectProvisionStatus::Pending) {
+        if ($needsClone) {
             ProvisionProject::dispatch($project);
+        } elseif ($mode !== 'existing') {
+            $this->provisionDirectory($project);
         }
 
         return $project;
+    }
+
+    /**
+     * Create the empty project directory synchronously, recording a failure on
+     * the project (instead of throwing) so a filesystem error cannot 500 the
+     * request that created the project row.
+     */
+    private function provisionDirectory(Project $project): void
+    {
+        try {
+            $this->createDirectory($project->path);
+        } catch (\Throwable $e) {
+            $project->forceFill([
+                'provision_status' => ProjectProvisionStatus::Failed,
+                'provision_error' => $e->getMessage(),
+            ])->save();
+        }
     }
 
     /**

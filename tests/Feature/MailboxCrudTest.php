@@ -3,8 +3,8 @@
 use App\Enums\MailEncryption;
 use App\Jobs\RunClaudePrompt;
 use App\Models\Agent;
+use App\Models\Attachment;
 use App\Models\IncomingEmail;
-use App\Models\IncomingEmailAttachment;
 use App\Models\Mailbox;
 use App\Models\OutgoingEmail;
 use App\Models\Project;
@@ -333,17 +333,22 @@ test('the mailbox pages report the unread email counts', function () {
 /**
  * Create an attachment for the email with its file written to the (faked) private disk.
  */
-function storedAttachment(IncomingEmail $email, string $content = 'file content'): IncomingEmailAttachment
+function storedAttachment(IncomingEmail $email, string $content = 'file content'): Attachment
 {
-    $path = $email->attachmentsDirectory().'/stored-file';
+    $path = 'attachments/test/stored-file';
     Storage::disk('local')->put($path, $content);
 
-    return IncomingEmailAttachment::factory()->for($email)->create([
+    $attachment = Attachment::factory()->create([
         'filename' => 'jelentés.pdf',
         'mime_type' => 'application/pdf',
         'size' => strlen($content),
+        'disk' => 'local',
         'path' => $path,
     ]);
+
+    $email->attachments()->attach($attachment->id);
+
+    return $attachment;
 }
 
 test('an attachment can be downloaded with its original file name', function () {
@@ -407,7 +412,7 @@ test('deleting a mailbox removes the attachment files of its emails', function (
 
 test('the mailbox page lists the attachments of each email', function () {
     $email = IncomingEmail::factory()->create();
-    IncomingEmailAttachment::factory()->for($email)->create(['filename' => 'terv.docx']);
+    $email->attachments()->attach(Attachment::factory()->create(['filename' => 'terv.docx'])->id);
 
     $this->actingAs(User::factory()->create())
         ->get(route('mailboxes.show', $email->mailbox))

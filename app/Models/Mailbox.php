@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property MailEncryption $imap_encryption
@@ -70,13 +69,14 @@ class Mailbox extends Model
     }
 
     /**
-     * The messages are removed by a database cascade, so their attachment files are cleaned up here.
+     * The messages are removed by a database cascade (no model events), so their
+     * attachments — rows and files — are cleaned up here before they orphan.
      */
     protected static function booted(): void
     {
         static::deleting(function (Mailbox $mailbox): void {
-            $mailbox->incomingEmails()->each(
-                fn (IncomingEmail $incomingEmail) => Storage::disk('local')->deleteDirectory($incomingEmail->attachmentsDirectory()),
+            $mailbox->incomingEmails()->with('attachments')->each(
+                fn (IncomingEmail $incomingEmail) => $incomingEmail->attachments->each->delete(),
             );
         });
 

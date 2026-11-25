@@ -9,6 +9,7 @@ use App\Enums\TaskType;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Agent;
+use App\Models\Attachment;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskComment;
@@ -94,6 +95,17 @@ class TaskController extends Controller
                 ->with(['user:id,name', 'agent:id,name'])
                 ->get()
                 ->map(fn (TaskComment $comment): array => $comment->toDisplayArray()),
+            'attachments' => $task->attachments()
+                ->orderBy('attachments.id')
+                ->get()
+                ->map(fn (Attachment $attachment): array => [
+                    'id' => $attachment->id,
+                    'filename' => $attachment->filename,
+                    'mime_type' => $attachment->mime_type,
+                    'size' => $attachment->size,
+                    'source' => $attachment->source,
+                    'created_at' => $attachment->created_at?->toIso8601String(),
+                ]),
         ]);
     }
 

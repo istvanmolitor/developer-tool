@@ -57,6 +57,10 @@ class Project extends Model
             if ($project->is_system) {
                 throw new \RuntimeException('A rendszer saját projektje nem törölhető.');
             }
+
+            // The project's attachment files are removed here before its rows are
+            // cascaded away, so no stored bytes are left orphaned on disk.
+            $project->attachments()->each(fn (Attachment $attachment) => $attachment->delete());
         });
 
         // The database cascades the project's rows away without model events,
@@ -121,6 +125,17 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    /**
+     * Files stored for this project (uploaded, synced from docs/attachments, or
+     * saved from a message).
+     *
+     * @return HasMany<Attachment, $this>
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
     }
 
     /**

@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attachment;
 use App\Models\IncomingEmail;
-use App\Models\IncomingEmailAttachment;
 use App\Models\Mailbox;
 use App\Services\MailboxService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -47,15 +46,11 @@ class IncomingEmailController extends Controller
      * Download an attachment of a message. It is always sent as a download, never rendered
      * inline, so a sender-supplied HTML or SVG file cannot run in the app's origin.
      */
-    public function downloadAttachment(Mailbox $mailbox, IncomingEmail $incomingEmail, IncomingEmailAttachment $attachment): StreamedResponse
+    public function downloadAttachment(Mailbox $mailbox, IncomingEmail $incomingEmail, Attachment $attachment): StreamedResponse
     {
-        $disk = Storage::disk('local');
+        // The attachment must belong to this message.
+        abort_unless($incomingEmail->attachments()->whereKey($attachment->getKey())->exists(), 404);
 
-        abort_unless($disk->exists($attachment->path), 404);
-
-        return $disk->download($attachment->path, $attachment->filename, [
-            'Content-Type' => $attachment->mime_type,
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return $attachment->toDownloadResponse();
     }
 }

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import projects from "@/routes/projects";
 import TaskChangeList from "../TaskChanges/TaskChangeList.vue";
 import type { TaskChangeEntry } from "../TaskChanges/TaskChangeList.vue";
+import TaskAttachments from "./TaskAttachments.vue";
+import type { TaskAttachment } from "./TaskAttachments.vue";
 import TaskComments from "./TaskComments.vue";
 import type { TaskComment } from "./TaskComments.vue";
 
@@ -33,6 +35,7 @@ const props = defineProps<{
     types: { value: string; label: string }[];
     history: TaskChangeEntry[];
     comments: TaskComment[];
+    attachments: TaskAttachment[];
 }>();
 
 defineOptions({
@@ -180,6 +183,15 @@ function run(): void {
                 </p>
             </CardContent>
         </Card>
+
+        <section class="flex max-w-3xl flex-col gap-3">
+            <h2 class="text-lg font-semibold">Csatolmányok</h2>
+            <TaskAttachments
+                :attachments="attachments"
+                :project-name="project.name"
+                :task-id="task.id"
+            />
+        </section>
 
         <section class="flex max-w-3xl flex-col gap-3">
             <h2 class="text-lg font-semibold">Hozzászólások</h2>

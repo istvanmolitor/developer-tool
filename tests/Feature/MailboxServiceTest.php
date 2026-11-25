@@ -5,8 +5,8 @@ use App\Enums\OutgoingEmailStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Mail\MailboxMessage;
 use App\Models\Agent;
+use App\Models\Attachment;
 use App\Models\IncomingEmail;
-use App\Models\IncomingEmailAttachment;
 use App\Models\Mailbox;
 use App\Models\OutgoingEmail;
 use App\Models\Project;
@@ -101,7 +101,7 @@ test('fetching stores the attachments of a new message on the private disk', fun
 
     app(MailboxService::class)->fetchIncoming($mailbox);
 
-    $attachments = $mailbox->incomingEmails()->sole()->attachments()->orderBy('id')->get();
+    $attachments = $mailbox->incomingEmails()->sole()->attachments()->orderBy('attachments.id')->get();
 
     expect($attachments)->toHaveCount(2)
         ->and($attachments[0])
@@ -156,7 +156,13 @@ test('the agent prompt lists the attachment files and falls back to the html bod
         'body_text' => null,
         'body_html' => '<p>Csak <b>HTML</b> törzs</p>',
     ]);
-    IncomingEmailAttachment::factory()->for($email)->create(['filename' => 'log.txt', 'mime_type' => 'text/plain', 'path' => 'mail-attachments/x/abc']);
+    $attachment = Attachment::factory()->create([
+        'filename' => 'log.txt',
+        'mime_type' => 'text/plain',
+        'disk' => 'local',
+        'path' => 'attachments/x/abc',
+    ]);
+    $email->attachments()->attach($attachment->id);
 
     $prompt = app(MailboxService::class)->agentPrompt($mailbox, $email);
 
@@ -164,7 +170,7 @@ test('the agent prompt lists the attachment files and falls back to the html bod
         '„Support” (support@example.test)',
         '„webshop” projekten',
         'Feladó: Kiss Anna <anna@example.test>',
-        '- log.txt (text/plain): '.Storage::disk('local')->path('mail-attachments/x/abc'),
+        '- log.txt (text/plain): '.Storage::disk('local')->path('attachments/x/abc'),
         'Csak HTML törzs',
     );
 });
