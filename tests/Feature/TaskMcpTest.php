@@ -6,6 +6,7 @@ use App\Mcp\Tools\DeleteTaskTool;
 use App\Mcp\Tools\ListAgentsTool;
 use App\Mcp\Tools\ListProjectsTool;
 use App\Mcp\Tools\ListTasksTool;
+use App\Mcp\Tools\NextTaskTool;
 use App\Mcp\Tools\UpdateTaskTool;
 use App\Models\Agent;
 use App\Models\Project;
@@ -133,6 +134,108 @@ test('delete-task removes the task', function () {
 test('delete-task errors on a missing task', function () {
     TaskServer::tool(DeleteTaskTool::class, ['task_id' => 999999])
         ->assertHasErrors();
+});
+
+test('next-task returns the agents highest-priority open task', function () {
+    $agent = Agent::factory()->create(['name' => 'backend-developer']);
+
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'title' => 'Alacsony prioritású',
+        'status' => 'todo',
+        'priority' => 'low',
+    ]);
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'title' => 'Magas prioritású',
+        'status' => 'todo',
+        'priority' => 'high',
+    ]);
+
+    TaskServer::tool(NextTaskTool::class, ['agent' => 'backend-developer'])
+        ->assertOk()
+        ->assertSee('Magas prioritású')
+        ->assertSee('"remaining":2');
+});
+
+test('next-task prefers an in-progress task over a todo one', function () {
+    $agent = Agent::factory()->create(['name' => 'backend-developer']);
+
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'title' => 'Teendő magas',
+        'status' => 'todo',
+        'priority' => 'high',
+    ]);
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'title' => 'Már elkezdett',
+        'status' => 'in_progress',
+        'priority' => 'low',
+    ]);
+
+    TaskServer::tool(NextTaskTool::class, ['agent' => 'backend-developer'])
+        ->assertOk()
+        ->assertSee('Már elkezdett');
+});
+
+test('next-task ignores done tasks and other agents tasks', function () {
+    $agent = Agent::factory()->create(['name' => 'backend-developer']);
+    $other = Agent::factory()->create(['name' => 'frontend-developer']);
+
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'status' => 'done',
+        'title' => 'Kész feladat',
+    ]);
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $other->id,
+        'status' => 'todo',
+        'title' => 'Másik agent feladata',
+    ]);
+
+    TaskServer::tool(NextTaskTool::class, ['agent' => 'backend-developer'])
+        ->assertOk()
+        ->assertSee('"next_task":null')
+        ->assertDontSee('Kész feladat')
+        ->assertDontSee('Másik agent feladata');
+});
+
+test('next-task can scope to a single project', function () {
+    $agent = Agent::factory()->create(['name' => 'backend-developer']);
+    $beta = Project::factory()->create(['name' => 'beta']);
+
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'status' => 'todo',
+        'title' => 'Alpha feladat',
+    ]);
+    Task::factory()->create([
+        'project_id' => $beta->id,
+        'agent_id' => $agent->id,
+        'status' => 'todo',
+        'title' => 'Beta feladat',
+    ]);
+
+    TaskServer::tool(NextTaskTool::class, ['agent' => 'backend-developer', 'project' => 'beta'])
+        ->assertOk()
+        ->assertSee('Beta feladat')
+        ->assertDontSee('Alpha feladat');
+});
+
+test('next-task errors without an agent outside an agent run', function () {
+    TaskServer::tool(NextTaskTool::class, [])->assertHasErrors();
+});
+
+test('next-task errors on an unknown agent', function () {
+    TaskServer::tool(NextTaskTool::class, ['agent' => 'nincs-ilyen'])->assertHasErrors();
 });
 
 test('list-tasks can filter by type', function () {

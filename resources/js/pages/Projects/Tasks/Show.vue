@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link } from "@inertiajs/vue3";
-import { ArrowLeft, Bot, Pencil } from "@lucide/vue";
+import { Head, Link, router } from "@inertiajs/vue3";
+import { ArrowLeft, Bot, Pencil, Play } from "@lucide/vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,17 @@ function priorityVariant(
 function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleDateString("hu-HU") : "—";
 }
+
+function run(): void {
+    if (!props.task.agent) return;
+
+    router.post(
+        projects.tasks.run({ project: props.project.name, task: props.task.id })
+            .url,
+        {},
+        { preserveScroll: true },
+    );
+}
 </script>
 
 <template>
@@ -87,6 +98,20 @@ function formatDate(value: string | null): string {
                         <ArrowLeft class="size-4" />
                         Vissza
                     </Link>
+                </Button>
+                <Button
+                    v-if="task.status !== 'done'"
+                    size="sm"
+                    :disabled="!task.agent"
+                    :title="
+                        task.agent
+                            ? `Elindítás: ${task.agent.name} megkapja a feladatot`
+                            : 'Rendelj hozzá egy agentet az elindításhoz'
+                    "
+                    @click="run"
+                >
+                    <Play class="size-4" />
+                    Elindítás
                 </Button>
                 <Button size="sm" as-child>
                     <Link

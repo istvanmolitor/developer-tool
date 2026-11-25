@@ -7,6 +7,7 @@ import {
     History,
     ListTodo,
     Pencil,
+    Play,
     Plus,
     Trash2,
 } from '@lucide/vue';
@@ -112,6 +113,16 @@ function changeStatus(task: Task, status: string): void {
         projects.tasks.update({ project: props.project.name, task: task.id })
             .url,
         { status },
+        { preserveScroll: true },
+    );
+}
+
+function run(task: Task): void {
+    if (!task.agent) return;
+
+    router.post(
+        projects.tasks.run({ project: props.project.name, task: task.id }).url,
+        {},
         { preserveScroll: true },
     );
 }
@@ -282,6 +293,21 @@ function formatDate(value: string | null): string {
                         </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-1">
+                        <Button
+                            v-if="task.status !== 'done'"
+                            variant="ghost"
+                            size="sm"
+                            class="text-primary hover:text-primary"
+                            :disabled="!task.agent"
+                            :title="
+                                task.agent
+                                    ? `Elindítás: ${task.agent.name} megkapja a feladatot`
+                                    : 'Rendelj hozzá egy agentet az elindításhoz'
+                            "
+                            @click="run(task)"
+                        >
+                            <Play class="size-3.5" />
+                        </Button>
                         <Select
                             :model-value="task.status"
                             @update:model-value="

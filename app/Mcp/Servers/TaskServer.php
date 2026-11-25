@@ -9,7 +9,9 @@ use App\Mcp\Tools\ListAgentsTool;
 use App\Mcp\Tools\ListProjectsTool;
 use App\Mcp\Tools\ListTaskCommentsTool;
 use App\Mcp\Tools\ListTasksTool;
+use App\Mcp\Tools\NextTaskTool;
 use App\Mcp\Tools\UpdateTaskTool;
+use App\Models\AgentContext;
 use App\Models\PromptRun;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -26,7 +28,8 @@ use Laravel\Mcp\Server\Tool;
     Tipikus munkafolyamat:
     1. Hívd a `list-projects` eszközt a projektek nevének megismeréséhez.
     2. Hívd a `list-tasks` eszközt egy projekt feladatainak listázásához
-       (opcionálisan szűrj státuszra: todo, in_progress, done).
+       (opcionálisan szűrj státuszra: todo, in_progress, done). A hozzád
+       rendelt következő feladatot a `next-task` eszközzel kérdezheted le.
     3. Új feladatot a `create-task`, módosítást a `update-task`, törlést a
        `delete-task` eszközzel végezhetsz.
     4. Egy feladat hozzászólásait a `list-task-comments` eszközzel olvashatod,
@@ -57,6 +60,7 @@ class TaskServer extends Server
         ListProjectsTool::class,
         ListAgentsTool::class,
         ListTasksTool::class,
+        NextTaskTool::class,
         CreateTaskTool::class,
         UpdateTaskTool::class,
         DeleteTaskTool::class,
@@ -69,12 +73,28 @@ class TaskServer extends Server
      */
     public static function currentAgentId(): ?int
     {
+        return self::currentContext()?->agent_id;
+    }
+
+    /**
+     * The project of the prompt run the server was started for, if any.
+     */
+    public static function currentProjectId(): ?int
+    {
+        return self::currentContext()?->project_id;
+    }
+
+    /**
+     * The agent context of the prompt run the server was started for, if any.
+     */
+    private static function currentContext(): ?AgentContext
+    {
         $promptRunId = (int) getenv(self::PROMPT_RUN_ENV);
 
         if ($promptRunId <= 0) {
             return null;
         }
 
-        return PromptRun::query()->with('agentContext')->find($promptRunId)?->agentContext?->agent_id;
+        return PromptRun::query()->with('agentContext')->find($promptRunId)?->agentContext;
     }
 }

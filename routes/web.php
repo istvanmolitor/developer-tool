@@ -75,6 +75,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('projects/{project}/task-changes', [TaskChangeController::class, 'index'])
         ->name('projects.task-changes.index');
     Route::resource('projects.tasks', TaskController::class)->scoped();
+    // Hand the task to its assigned agent as a prompt run on the task's project.
+    Route::post('projects/{project}/tasks/{task}/run', [TaskController::class, 'run'])
+        ->scopeBindings()
+        ->name('projects.tasks.run');
     Route::post('projects/{project}/tasks/{task}/comments', [TaskCommentController::class, 'store'])
         ->scopeBindings()
         ->name('projects.tasks.comments.store');
