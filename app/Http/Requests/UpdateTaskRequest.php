@@ -26,6 +26,7 @@ class UpdateTaskRequest extends FormRequest
             'agent_id' => ['nullable', 'integer', 'exists:agents,id'],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['sometimes', 'required', new Enum(TaskStatus::class)],
+            'auto_run' => ['sometimes', 'boolean'],
             'priority' => ['sometimes', 'required', new Enum(TaskPriority::class)],
             'due_date' => ['nullable', 'date'],
             'position' => ['nullable', 'integer', 'min:0'],

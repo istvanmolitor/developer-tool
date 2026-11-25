@@ -27,6 +27,7 @@ class TaskFactory extends Factory
             'type' => $this->faker->randomElement(TaskType::cases()),
             'description' => $this->faker->optional()->paragraph(),
             'status' => $this->faker->randomElement(TaskStatus::cases()),
+            'auto_run' => $this->faker->boolean(20),
             'priority' => $this->faker->randomElement(TaskPriority::cases()),
             'due_date' => $this->faker->optional()->dateTimeBetween('now', '+1 month'),
             'position' => 0,

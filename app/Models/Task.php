@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property TaskType $type
  * @property string|null $description
  * @property TaskStatus $status
+ * @property bool $auto_run
  * @property TaskPriority $priority
  * @property CarbonImmutable|null $due_date
  * @property int $position
@@ -50,6 +51,7 @@ class Task extends Model implements Searchable
         'type',
         'description',
         'status',
+        'auto_run',
         'priority',
         'due_date',
         'position',
@@ -62,6 +64,7 @@ class Task extends Model implements Searchable
     {
         return [
             'status' => TaskStatus::class,
+            'auto_run' => 'boolean',
             'priority' => TaskPriority::class,
             'type' => TaskType::class,
             'due_date' => 'date',

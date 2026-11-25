@@ -33,6 +33,7 @@ const form = useForm({
     agent_id: "",
     description: "",
     status: "todo",
+    auto_run: false,
     priority: "medium",
     due_date: "",
 });

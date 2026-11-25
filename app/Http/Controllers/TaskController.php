@@ -16,6 +16,7 @@ use App\Services\ClaudePromptRunner;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
 use App\Services\TaskChangeFormatter;
+use App\Services\TaskPromptBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -101,7 +102,7 @@ class TaskController extends Controller
      * Hand the task to its assigned agent as a prompt run on the task's project,
      * so the agent can carry the work out. The task's details become the prompt.
      */
-    public function run(Project $project, Task $task, ClaudePromptRunner $runner): RedirectResponse
+    public function run(Project $project, Task $task, ClaudePromptRunner $runner, TaskPromptBuilder $prompts): RedirectResponse
     {
         $task->loadMissing('agent');
 
@@ -109,7 +110,7 @@ class TaskController extends Controller
             return back()->with('status', 'A feladathoz nincs agent rendelve, így nem indítható el.');
         }
 
-        $runner->queueAgent($project, $task->agent, $this->taskPrompt($project, $task), request()->user());
+        $runner->queueAgent($project, $task->agent, $prompts->build($project, $task), request()->user());
 
         return back()->with(
             'status',
@@ -145,36 +146,6 @@ class TaskController extends Controller
         return redirect()
             ->route('projects.tasks.index', $project)
             ->with('status', 'Feladat törölve.');
-    }
-
-    /**
-     * Build the prompt that hands the task to its agent: the task's id, title,
-     * type and priority, its description, and how to report progress through the
-     * tasks MCP tools.
-     */
-    private function taskPrompt(Project $project, Task $task): string
-    {
-        $lines = [
-            "Dolgozz a(z) #{$task->id} azonosítójú feladaton a(z) „{$project->name}” projektben.",
-            '',
-            "Cím: {$task->title}",
-            "Típus: {$task->type->label()}",
-            "Prioritás: {$task->priority->label()}",
-        ];
-
-        if (filled($task->description)) {
-            $lines[] = '';
-            $lines[] = 'Leírás:';
-            $lines[] = $task->description;
-        }
-
-        $lines[] = '';
-        $lines[] = 'Amikor nekikezdesz, állítsd a feladat státuszát „folyamatban”-ra, '
-            .'amikor pedig elkészültél, „kész”-re (update-task). A haladásodat és az '
-            .'eredményt írd a feladathoz hozzászólásként (add-task-comment). A soron '
-            .'következő feladatodat a next-task eszközzel kérdezheted le.';
-
-        return implode("\n", $lines);
     }
 
     /**

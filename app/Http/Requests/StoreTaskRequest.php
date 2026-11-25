@@ -26,6 +26,7 @@ class StoreTaskRequest extends FormRequest
             'agent_id' => ['nullable', 'integer', 'exists:agents,id'],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['nullable', new Enum(TaskStatus::class)],
+            'auto_run' => ['boolean'],
             'priority' => ['nullable', new Enum(TaskPriority::class)],
             'due_date' => ['nullable', 'date'],
             'position' => ['nullable', 'integer', 'min:0'],

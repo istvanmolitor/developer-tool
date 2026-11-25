@@ -30,7 +30,8 @@ class CreateTaskTool extends Tool
             'type' => ['nullable', new Enum(TaskType::class)],
             'agent' => ['nullable', 'string'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'status' => ['nullable', 'in:todo,in_progress,done'],
+            'status' => ['nullable', 'in:draft,todo,in_progress,done'],
+            'auto_run' => ['nullable', 'boolean'],
             'priority' => ['nullable', 'in:low,medium,high'],
             'due_date' => ['nullable', 'date'],
         ]);
@@ -59,6 +60,7 @@ class CreateTaskTool extends Tool
             'type' => $validated['type'] ?? TaskType::Development->value,
             'description' => $validated['description'] ?? null,
             'status' => $validated['status'] ?? TaskStatus::Todo->value,
+            'auto_run' => $validated['auto_run'] ?? false,
             'priority' => $validated['priority'] ?? TaskPriority::Medium->value,
             'due_date' => $validated['due_date'] ?? null,
         ]);
@@ -91,6 +93,8 @@ class CreateTaskTool extends Tool
             'status' => $schema->string()
                 ->description('Kezdő státusz. Alapértelmezett: todo.')
                 ->enum(array_map(fn (TaskStatus $status): string => $status->value, TaskStatus::cases())),
+            'auto_run' => $schema->boolean()
+                ->description('Automatikus végrehajtás: ha igaz, a feladat automatikus futtatásra van jelölve. Alapértelmezett: false.'),
             'priority' => $schema->string()
                 ->description('Prioritás. Alapértelmezett: medium.')
                 ->enum(array_map(fn (TaskPriority $priority): string => $priority->value, TaskPriority::cases())),

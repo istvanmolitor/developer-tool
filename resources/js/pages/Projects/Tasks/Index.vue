@@ -10,6 +10,7 @@ import {
     Play,
     Plus,
     Trash2,
+    Zap,
 } from '@lucide/vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import Heading from '@/components/Heading.vue';
@@ -39,6 +40,7 @@ type Task = {
     type: string;
     description: string | null;
     status: string;
+    auto_run: boolean;
     priority: string;
     due_date: string | null;
     agent: { id: number; name: string } | null;
@@ -273,6 +275,15 @@ function formatDate(value: string | null): string {
                             </Badge>
                             <Badge :variant="priorityVariant(task.priority)">
                                 {{ priorityLabel(task.priority) }}
+                            </Badge>
+                            <Badge
+                                v-if="task.auto_run"
+                                variant="outline"
+                                class="gap-1"
+                                title="Automatikus végrehajtás"
+                            >
+                                <Zap class="size-3" />
+                                Automatikus
                             </Badge>
                             <Badge
                                 v-if="task.agent"

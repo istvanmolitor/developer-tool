@@ -2,6 +2,7 @@
 import type { InertiaForm } from "@inertiajs/vue3";
 import InputError from "@/components/InputError.vue";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -21,6 +22,7 @@ type TaskFormFields = {
     agent_id: string;
     description: string;
     status: string;
+    auto_run: boolean;
     priority: string;
     due_date: string;
 };
@@ -176,6 +178,23 @@ function agentLabel(value: string): string {
                 <Input id="due_date" v-model="form.due_date" type="date" />
                 <InputError :message="form.errors.due_date" />
             </div>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+                <Checkbox
+                    id="auto_run"
+                    :model-value="form.auto_run"
+                    @update:model-value="
+                        (value) => (form.auto_run = value === true)
+                    "
+                />
+                <Label for="auto_run">Automatikus végrehajtás</Label>
+            </div>
+            <p class="pl-6 text-xs text-muted-foreground">
+                Bejelölve a feladat automatikus futtatásra van jelölve.
+            </p>
+            <InputError class="pl-6" :message="form.errors.auto_run" />
         </div>
 
         <div class="flex flex-col gap-2">

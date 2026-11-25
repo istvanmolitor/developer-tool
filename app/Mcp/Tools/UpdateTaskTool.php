@@ -31,7 +31,8 @@ class UpdateTaskTool extends Tool
             'type' => ['sometimes', 'required', new Enum(TaskType::class)],
             'agent' => ['sometimes', 'nullable', 'string'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'status' => ['sometimes', 'required', 'in:todo,in_progress,done'],
+            'status' => ['sometimes', 'required', 'in:draft,todo,in_progress,done'],
+            'auto_run' => ['sometimes', 'boolean'],
             'priority' => ['sometimes', 'required', 'in:low,medium,high'],
             'due_date' => ['nullable', 'date'],
         ]);
@@ -90,6 +91,8 @@ class UpdateTaskTool extends Tool
             'status' => $schema->string()
                 ->description('Új státusz.')
                 ->enum(array_map(fn (TaskStatus $status): string => $status->value, TaskStatus::cases())),
+            'auto_run' => $schema->boolean()
+                ->description('Automatikus végrehajtás be-/kikapcsolása.'),
             'priority' => $schema->string()
                 ->description('Új prioritás.')
                 ->enum(array_map(fn (TaskPriority $priority): string => $priority->value, TaskPriority::cases())),

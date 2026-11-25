@@ -47,6 +47,7 @@ trait FormatsTasks
             'type' => $task->type->value,
             'description' => $task->description,
             'status' => $task->status->value,
+            'auto_run' => $task->auto_run,
             'priority' => $task->priority->value,
             'due_date' => $task->due_date?->toDateString(),
             'position' => $task->position,

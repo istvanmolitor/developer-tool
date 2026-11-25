@@ -13,3 +13,8 @@ Schedule::command('mailboxes:fetch')
     ->dailyAt(config('developer-tool.mailbox_fetch_time'))
     ->timezone(config('developer-tool.mailbox_fetch_timezone'))
     ->withoutOverlapping();
+
+// Start the auto-run tasks (agent assigned, still todo) every minute.
+Schedule::command('tasks:run-auto')
+    ->everyMinute()
+    ->withoutOverlapping();

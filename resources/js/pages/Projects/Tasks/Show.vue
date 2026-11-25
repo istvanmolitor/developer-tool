@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from "@inertiajs/vue3";
-import { ArrowLeft, Bot, Pencil, Play } from "@lucide/vue";
+import { ArrowLeft, Bot, Pencil, Play, Zap } from "@lucide/vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ type Task = {
     type: string;
     description: string | null;
     status: string;
+    auto_run: boolean;
     priority: string;
     due_date: string | null;
     created_at: string | null;
@@ -41,6 +42,7 @@ defineOptions({
 });
 
 const statusLabels: Record<string, string> = {
+    draft: "Piszkozat",
     todo: "Teendő",
     in_progress: "Folyamatban",
     done: "Kész",
@@ -144,6 +146,14 @@ function run(): void {
                     </Badge>
                     <Badge :variant="priorityVariant(task.priority)">
                         {{ priorityLabels[task.priority] ?? task.priority }}
+                    </Badge>
+                    <Badge
+                        v-if="task.auto_run"
+                        variant="outline"
+                        class="gap-1"
+                    >
+                        <Zap class="size-3" />
+                        Automatikus végrehajtás
                     </Badge>
                     <Badge v-if="task.agent" variant="secondary" class="gap-1">
                         <Bot class="size-3" />

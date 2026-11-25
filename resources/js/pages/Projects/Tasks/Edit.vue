@@ -20,6 +20,7 @@ type Task = {
     agent_id: number | null;
     description: string | null;
     status: string;
+    auto_run: boolean;
     priority: string;
     due_date: string | null;
 };
@@ -45,6 +46,7 @@ const form = useForm({
     agent_id: props.task.agent_id === null ? "" : String(props.task.agent_id),
     description: props.task.description ?? "",
     status: props.task.status,
+    auto_run: props.task.auto_run,
     priority: props.task.priority,
     due_date: props.task.due_date ?? "",
 });

@@ -4,6 +4,9 @@ namespace App\Enums;
 
 enum TaskStatus: string
 {
+    /** Not ready yet — being drafted. */
+    case Draft = 'draft';
+
     /** Not started yet. */
     case Todo = 'todo';
 
@@ -21,6 +24,7 @@ enum TaskStatus: string
     public function label(): string
     {
         return match ($this) {
+            self::Draft => 'Piszkozat',
             self::Todo => 'Teendő',
             self::InProgress => 'Folyamatban',
             self::Done => 'Kész',
