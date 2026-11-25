@@ -183,12 +183,13 @@ function destroy(agent: Agent): void {
                         <CardTitle class="min-w-0">
                             <Link
                                 :href="agentRoutes.show(agent.id).url"
-                                class="flex items-center gap-2 break-all outline-none hover:underline focus-visible:underline"
+                                :title="agent.name"
+                                class="flex min-w-0 items-center gap-2 outline-none hover:underline focus-visible:underline"
                             >
                                 <Bot
                                     class="size-4 shrink-0 text-muted-foreground"
                                 />
-                                {{ agent.name }}
+                                <span class="truncate">{{ agent.name }}</span>
                                 <ChevronRight
                                     class="size-4 shrink-0 text-muted-foreground"
                                 />

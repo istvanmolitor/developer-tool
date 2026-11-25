@@ -3,10 +3,10 @@ import { Link } from '@inertiajs/vue3';
 import {
     BookOpen,
     Bot,
-    FolderGit2,
     FolderKanban,
     LayoutGrid,
     Mail,
+    Settings,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -22,9 +22,11 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import agents from '@/routes/agents';
+import { edit as appSettings } from '@/routes/app-settings';
 import { dashboard } from '@/routes';
 import mailboxes from '@/routes/mailboxes';
 import projects from '@/routes/projects';
+import documentations from '@/routes/projects/documentations';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -52,13 +54,13 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Tároló',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
+        title: 'Beállítások',
+        href: appSettings(),
+        icon: Settings,
     },
     {
         title: 'Dokumentáció',
-        href: 'https://laravel.com/docs/starter-kits#vue',
+        href: documentations.index('developer-tool'),
         icon: BookOpen,
     },
 ];

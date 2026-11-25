@@ -10,6 +10,7 @@ use App\Http\Controllers\OutgoingEmailController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PromptRunController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TaskChangeController;
 use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskController;
@@ -27,6 +28,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Global Elasticsearch search over tasks, docs, prompts, messages, mails and comments.
     Route::get('search', [SearchController::class, 'index'])->name('search.index');
     Route::get('search/suggest', [SearchController::class, 'suggest'])->name('search.suggest');
+
+    // Application-wide settings (key-value store).
+    Route::get('app-settings', [SettingController::class, 'edit'])->name('app-settings.edit');
+    Route::patch('app-settings', [SettingController::class, 'update'])->name('app-settings.update');
 
     // Refresh the agents from their definition files on disk.
     Route::post('agents/sync', [AgentController::class, 'sync'])->name('agents.sync');
