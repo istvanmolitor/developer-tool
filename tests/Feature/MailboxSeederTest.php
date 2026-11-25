@@ -5,6 +5,7 @@ use App\Models\Mailbox;
 use Database\Seeders\MailboxSeeder;
 
 beforeEach(function () {
+    config(['developer-tool.mailbox_server_host' => 'mail.example.test']);
     config(['developer-tool.mailbox_passwords' => [
         'agent1@example.test' => 'first-Secret',
         'agent2@example.test' => 'second-Secret',
@@ -20,10 +21,10 @@ test('it creates a mailbox for every configured account with the imap and smtp s
         ->name->toBe('agent2')
         ->username->toBe('agent2@example.test')
         ->password->toBe('second-Secret')
-        ->imap_host->toBe('mail.dunahousemail.hu')
+        ->imap_host->toBe('mail.example.test')
         ->imap_port->toBe(993)
         ->imap_encryption->toBe(MailEncryption::Ssl)
-        ->smtp_host->toBe('mail.dunahousemail.hu')
+        ->smtp_host->toBe('mail.example.test')
         ->smtp_port->toBe(465)
         ->smtp_encryption->toBe(MailEncryption::Ssl);
 });
@@ -50,4 +51,12 @@ test('it skips an account without a password', function () {
     $this->seed(MailboxSeeder::class);
 
     expect(Mailbox::pluck('email')->all())->toBe(['agent1@example.test']);
+});
+
+test('it seeds no mailboxes without a configured server host', function () {
+    config(['developer-tool.mailbox_server_host' => null]);
+
+    $this->seed(MailboxSeeder::class);
+
+    expect(Mailbox::count())->toBe(0);
 });

@@ -3,6 +3,7 @@
 use App\Mcp\Servers\AgentServer;
 use App\Mcp\Servers\MailServer;
 use App\Mcp\Servers\MessageServer;
+use App\Mcp\Servers\ProjectServer;
 use App\Mcp\Servers\TaskServer;
 use Laravel\Mcp\Facades\Mcp;
 
@@ -25,3 +26,9 @@ Mcp::local('agents', AgentServer::class);
 // per prompt run by ClaudePromptRunner with the run's id in its environment; also
 // registered in .mcp.json, where the acting agent and project are named per call.
 Mcp::local('messages', MessageServer::class);
+
+// Local (stdio) MCP server for creating projects. Start with:
+//   php artisan mcp:start projects
+// Registered for Claude Code in .mcp.json; not given to prompt runs, so an
+// agent cannot keep registering further projects.
+Mcp::local('projects', ProjectServer::class);

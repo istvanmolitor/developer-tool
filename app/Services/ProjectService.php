@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\ProjectProvisionStatus;
+use App\Jobs\ProvisionProject;
 use App\Models\Project;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class ProjectService
@@ -107,6 +110,116 @@ class ProjectService
         $segment = (string) preg_replace('#^.*[/:]#', '', $trimmed);
 
         return $segment;
+    }
+
+    /**
+     * Resolve the project name and absolute path from the raw creation input
+     * (the web form and the `create-project` MCP tool share this).
+     *
+     * `existing` takes the name from the directory, `git` from the explicit
+     * name or else the repository URL, `new` only from the explicit name.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{name: string, path: string}
+     */
+    public function resolveNameAndPath(array $input): array
+    {
+        $explicitName = trim((string) ($input['name'] ?? ''));
+        $explicitName = $explicitName !== '' ? $explicitName : null;
+
+        $name = match ($input['mode'] ?? null) {
+            'existing' => (string) ($input['directory'] ?? ''),
+            'git' => $explicitName ?? $this->deriveNameFromGitUrl((string) ($input['git_url'] ?? '')),
+            default => $explicitName ?? '',
+        };
+
+        $name = trim($name);
+
+        return [
+            'name' => $name,
+            'path' => $name !== '' ? $this->pathFor($name) : '',
+        ];
+    }
+
+    /**
+     * Validation rules for creating a project, applied to the input merged with
+     * {@see resolveNameAndPath()}.
+     *
+     * @return array<string, mixed>
+     */
+    public function creationRules(?string $mode): array
+    {
+        return [
+            'mode' => ['required', Rule::in(['existing', 'new', 'git'])],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[^\/\\\\]+$/',
+                Rule::unique('projects', 'name'),
+                // A brand new folder must not already exist on disk.
+                Rule::when(
+                    $mode === 'new',
+                    [fn ($attribute, $value, $fail) => $this->directoryExists((string) $value)
+                        && $fail('Ez a mappa már létezik a projektek könyvtárában.')],
+                ),
+            ],
+            // Only the "existing" mode picks a directory; the form still sends
+            // an empty value in the other modes, which must not be validated.
+            'directory' => Rule::when(
+                $mode === 'existing',
+                ['required', Rule::in($this->availableDirectories())],
+                ['nullable'],
+            ),
+            // The git link is always optional: an empty git-mode project simply
+            // gets an empty folder (mkdir) instead of a clone.
+            'git_url' => ['nullable', 'string', 'max:1024'],
+            'path' => ['required', 'string', 'max:1024'],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function creationMessages(): array
+    {
+        return [
+            'name.regex' => 'A név nem tartalmazhat perjelet.',
+            'name.required' => 'Adj meg egy mappanevet (git link esetén a név a repóból is származhat).',
+            'directory.required' => 'Válassz egy meglévő mappát.',
+            'directory.in' => 'A kiválasztott mappa nem érhető el.',
+        ];
+    }
+
+    /**
+     * Persist a validated project and, for `new`/`git` modes, queue the
+     * background job that creates (mkdir) or clones the directory. `existing`
+     * points at a directory already on disk, so it is ready straight away.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    public function createProject(array $validated): Project
+    {
+        $mode = $validated['mode'];
+        $needsProvisioning = $mode !== 'existing';
+
+        $project = new Project;
+        $project->forceFill([
+            'name' => $validated['name'],
+            'path' => $validated['path'],
+            'git_url' => $mode === 'git' ? ($validated['git_url'] ?? null) : null,
+            'description' => $validated['description'] ?? null,
+            'provision_status' => $needsProvisioning
+                ? ProjectProvisionStatus::Pending
+                : ProjectProvisionStatus::Ready,
+        ])->save();
+
+        if ($needsProvisioning) {
+            ProvisionProject::dispatch($project);
+        }
+
+        return $project;
     }
 
     /**

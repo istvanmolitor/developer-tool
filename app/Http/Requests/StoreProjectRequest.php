@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Services\ProjectService;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreProjectRequest extends FormRequest
 {
@@ -30,20 +29,7 @@ class StoreProjectRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $service = app(ProjectService::class);
-
-        $name = match ($this->input('mode')) {
-            'existing' => (string) $this->input('directory', ''),
-            'git' => $this->filledName() ?? $service->deriveNameFromGitUrl((string) $this->input('git_url', '')),
-            default => $this->filledName() ?? '',
-        };
-
-        $name = trim($name);
-
-        $this->merge([
-            'name' => $name,
-            'path' => $name !== '' ? $service->pathFor($name) : '',
-        ]);
+        $this->merge(app(ProjectService::class)->resolveNameAndPath($this->all()));
     }
 
     /**
@@ -51,36 +37,7 @@ class StoreProjectRequest extends FormRequest
      */
     public function rules(): array
     {
-        $service = app(ProjectService::class);
-
-        return [
-            'mode' => ['required', Rule::in(['existing', 'new', 'git'])],
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                'regex:/^[^\/\\\\]+$/',
-                Rule::unique('projects', 'name'),
-                // A brand new folder must not already exist on disk.
-                Rule::when(
-                    $this->input('mode') === 'new',
-                    [fn ($attribute, $value, $fail) => $service->directoryExists((string) $value)
-                        && $fail('Ez a mappa már létezik a projektek könyvtárában.')],
-                ),
-            ],
-            // Only the "existing" mode picks a directory; the form still sends
-            // an empty value in the other modes, which must not be validated.
-            'directory' => Rule::when(
-                $this->input('mode') === 'existing',
-                ['required', Rule::in($service->availableDirectories())],
-                ['nullable'],
-            ),
-            // The git link is always optional: an empty git-mode project simply
-            // gets an empty folder (mkdir) instead of a clone.
-            'git_url' => ['nullable', 'string', 'max:1024'],
-            'path' => ['required', 'string', 'max:1024'],
-            'description' => ['nullable', 'string', 'max:2000'],
-        ];
+        return app(ProjectService::class)->creationRules($this->input('mode'));
     }
 
     /**
@@ -88,21 +45,6 @@ class StoreProjectRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'name.regex' => 'A név nem tartalmazhat perjelet.',
-            'name.required' => 'Adj meg egy mappanevet (git link esetén a név a repóból is származhat).',
-            'directory.required' => 'Válassz egy meglévő mappát.',
-            'directory.in' => 'A kiválasztott mappa nem érhető el.',
-        ];
-    }
-
-    /**
-     * The `name` field as a trimmed non-empty string, or null when absent.
-     */
-    private function filledName(): ?string
-    {
-        $name = trim((string) $this->input('name', ''));
-
-        return $name !== '' ? $name : null;
+        return app(ProjectService::class)->creationMessages();
     }
 }

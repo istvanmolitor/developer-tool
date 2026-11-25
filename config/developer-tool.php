@@ -59,6 +59,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mailbox Server Host
+    |--------------------------------------------------------------------------
+    |
+    | The IMAP and SMTP host the MailboxSeeder assigns to every agent mailbox.
+    | Without it the seeder creates no mailboxes.
+    |
+    */
+
+    'mailbox_server_host' => env('MAILBOX_SERVER_HOST'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mailbox Fetch Schedule
     |--------------------------------------------------------------------------
     |

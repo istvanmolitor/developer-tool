@@ -40,9 +40,7 @@ const filteredAgents = computed<Agent[]>(() => {
     }
 
     return props.agents.filter((agent) =>
-        [agent.name, agent.slug, agent.description, agent.model].some((value) =>
-            value?.toLocaleLowerCase("hu").includes(term),
-        ),
+        agent.name.toLocaleLowerCase("hu").includes(term),
     );
 });
 
@@ -138,7 +136,7 @@ function destroy(agent: Agent): void {
                 <Input
                     v-model="search"
                     type="search"
-                    placeholder="Keresés név, slug, leírás vagy modell alapján…"
+                    placeholder="Keresés név alapján…"
                     aria-label="Agentek keresése"
                     class="pl-8"
                 />
