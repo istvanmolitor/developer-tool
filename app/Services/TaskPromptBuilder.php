@@ -31,8 +31,7 @@ class TaskPromptBuilder
         $lines[] = '';
         $lines[] = 'Amikor nekikezdesz, állítsd a feladat státuszát „folyamatban”-ra, '
             .'amikor pedig elkészültél, „kész”-re (update-task). A haladásodat és az '
-            .'eredményt írd a feladathoz hozzászólásként (add-task-comment). A soron '
-            .'következő feladatodat a next-task eszközzel kérdezheted le.';
+            .'eredményt írd a feladathoz hozzászólásként (add-task-comment)';
 
         return implode("\n", $lines);
     }
