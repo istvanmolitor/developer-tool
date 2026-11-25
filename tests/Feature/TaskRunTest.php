@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PromptRunStatus;
+use App\Enums\TaskStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Models\Agent;
 use App\Models\Project;
@@ -29,6 +30,7 @@ test('running a task queues a run as its assigned agent with the task as prompt'
     $task = Task::factory()->create([
         'project_id' => $this->alpha->id,
         'agent_id' => $agent->id,
+        'status' => TaskStatus::Todo,
         'title' => 'Készíts REST végpontot',
         'description' => 'A projektek listázásához.',
     ]);
@@ -37,6 +39,8 @@ test('running a task queues a run as its assigned agent with the task as prompt'
         ->post(route('projects.tasks.run', ['project' => 'alpha', 'task' => $task->id]))
         ->assertRedirect()
         ->assertSessionHasNoErrors();
+
+    expect($task->refresh()->status)->toBe(TaskStatus::InProgress);
 
     $run = PromptRun::sole();
     expect($run->agentContext->agent_id)->toBe($agent->id)

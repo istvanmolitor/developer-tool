@@ -12,11 +12,10 @@ use App\Models\Agent;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskComment;
-use App\Services\ClaudePromptRunner;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
 use App\Services\TaskChangeFormatter;
-use App\Services\TaskPromptBuilder;
+use App\Services\TaskService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -102,7 +101,7 @@ class TaskController extends Controller
      * Hand the task to its assigned agent as a prompt run on the task's project,
      * so the agent can carry the work out. The task's details become the prompt.
      */
-    public function run(Project $project, Task $task, ClaudePromptRunner $runner, TaskPromptBuilder $prompts): RedirectResponse
+    public function run(Project $project, Task $task, TaskService $tasks): RedirectResponse
     {
         $task->loadMissing('agent');
 
@@ -110,7 +109,9 @@ class TaskController extends Controller
             return back()->with('status', 'A feladathoz nincs agent rendelve, így nem indítható el.');
         }
 
-        $runner->queueAgent($project, $task->agent, $prompts->build($project, $task), request()->user());
+        $task->setRelation('project', $project);
+
+        $tasks->run($task, request()->user());
 
         return back()->with(
             'status',

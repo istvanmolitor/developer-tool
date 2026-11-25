@@ -4,8 +4,7 @@ namespace App\Console\Commands;
 
 use App\Enums\TaskStatus;
 use App\Models\Task;
-use App\Services\ClaudePromptRunner;
-use App\Services\TaskPromptBuilder;
+use App\Services\TaskService;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -15,12 +14,12 @@ class RunAutoTasks extends Command
 
     protected $description = 'Az automatikus végrehajtásra jelölt, agenthez rendelt teendő feladatok elindítása.';
 
-    public function handle(ClaudePromptRunner $runner, TaskPromptBuilder $prompts): int
+    public function handle(TaskService $tasks): int
     {
         // Only tasks explicitly marked for auto-run, that have an agent to hand the
         // work to, and that are still waiting (todo). Setting each to in_progress
-        // below keeps the next tick from picking the same task up again.
-        $tasks = Task::query()
+        // in TaskService::run keeps the next tick from picking the same task up again.
+        $pending = Task::query()
             ->where('auto_run', true)
             ->whereNotNull('agent_id')
             ->where('status', TaskStatus::Todo->value)
@@ -28,7 +27,7 @@ class RunAutoTasks extends Command
             ->orderBy('position')
             ->get();
 
-        if ($tasks->isEmpty()) {
+        if ($pending->isEmpty()) {
             $this->info('Nincs elindítható automatikus feladat.');
 
             return self::SUCCESS;
@@ -36,16 +35,14 @@ class RunAutoTasks extends Command
 
         $failed = false;
 
-        foreach ($tasks as $task) {
+        foreach ($pending as $task) {
             // The project or agent may have been removed between the query and now.
             if ($task->project === null || $task->agent === null) {
                 continue;
             }
 
             try {
-                $runner->queueAgent($task->project, $task->agent, $prompts->build($task->project, $task));
-
-                $task->update(['status' => TaskStatus::InProgress]);
+                $tasks->run($task);
 
                 $this->info("#{$task->id} „{$task->title}” elindítva: {$task->agent->name}.");
             } catch (Throwable $exception) {
