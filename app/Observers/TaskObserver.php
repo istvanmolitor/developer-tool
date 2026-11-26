@@ -2,40 +2,29 @@
 
 namespace App\Observers;
 
-use App\Enums\TaskStatus;
 use App\Mcp\Servers\TaskServer;
 use App\Models\Task;
 use App\Models\TaskChange;
 use App\Repositories\Contracts\SettingRepository;
-use App\Services\TaskService;
 use BackedEnum;
 use Carbon\CarbonInterface;
-use Throwable;
 
 class TaskObserver
 {
     public function __construct(
         private SettingRepository $settings,
-        private TaskService $tasks,
     ) {}
 
     /**
      * When the "automatic task start" setting is on, every new task is created
-     * with auto_run enabled so it is picked up and run without a manual start.
+     * with auto_run enabled. The flag records that intent; no run is started
+     * from the observer (that previously looped — see git history).
      */
     public function creating(Task $task): void
     {
         if ($this->settings->flag('auto_start_tasks')) {
             $task->auto_run = true;
         }
-    }
-
-    /**
-     * A freshly created auto-run task is handed to its agent right away.
-     */
-    public function created(Task $task): void
-    {
-        $this->autoRun($task);
     }
 
     /**
@@ -46,12 +35,6 @@ class TaskObserver
      */
     public function updated(Task $task): void
     {
-        // Capture these before any nested save (an auto-run moves the task to
-        // in_progress) resets the dirty tracking the change log reads below.
-        $agentChanged = $task->wasChanged('agent_id');
-        $statusChanged = $task->wasChanged('status');
-        $autoRunEnabled = $task->wasChanged('auto_run') && $task->auto_run;
-
         $changes = [];
 
         foreach (TaskChange::TRACKED_FIELDS as $field) {
@@ -75,32 +58,6 @@ class TaskObserver
                 'agent_id' => $userId === null ? TaskServer::currentAgentId() : null,
                 'changes' => $changes,
             ]);
-        }
-
-        // A meaningful change hands the (new) agent the task: a different
-        // assignee, the task (re)entering the actionable "todo" state (promoted
-        // from draft, reopened from done), or auto_run just switched on.
-        //
-        // Only becoming "todo" counts as a status trigger — never in_progress
-        // (that is the run's own "work has started" signal, so triggering on it
-        // would loop forever) nor done (a finished task has no new work).
-        $becameTodo = $statusChanged && $task->status === TaskStatus::Todo;
-
-        if ($agentChanged || $becameTodo || $autoRunEnabled) {
-            $this->autoRun($task);
-        }
-    }
-
-    /**
-     * Hand the task to its agent when it qualifies for auto-run, swallowing any
-     * start failure: a task that cannot be launched should still be saved.
-     */
-    private function autoRun(Task $task): void
-    {
-        try {
-            $this->tasks->autoRun($task);
-        } catch (Throwable $exception) {
-            report($exception);
         }
     }
 

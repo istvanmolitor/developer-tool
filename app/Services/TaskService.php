@@ -42,26 +42,4 @@ class TaskService
 
         return $run;
     }
-
-    /**
-     * Start the task automatically when it qualifies, otherwise do nothing.
-     *
-     * Called whenever a task is created or reassigned (see {@see \App\Observers\TaskObserver}):
-     * a task flagged auto_run, with an agent to hand the work to, sitting in a
-     * runnable status, is started right away instead of waiting for a tick.
-     * Returns the queued run, or null when the task does not qualify.
-     */
-    public function autoRun(Task $task): ?PromptRun
-    {
-        if (! $task->auto_run || ! $task->status->isRunnable()) {
-            return null;
-        }
-
-        // The agent (or project) may have been removed since; nothing to run.
-        if ($task->project === null || $task->agent === null) {
-            return null;
-        }
-
-        return $this->run($task);
-    }
 }
