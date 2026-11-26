@@ -24,6 +24,17 @@ enum TaskStatus: string
         return $this === self::Done;
     }
 
+    /**
+     * Whether a task in this status may be handed to its agent for a run.
+     *
+     * Draft is still being prepared and Closed is terminal; everything in
+     * between — todo, in progress, done — can be (re)started.
+     */
+    public function isRunnable(): bool
+    {
+        return in_array($this, [self::Todo, self::InProgress, self::Done], true);
+    }
+
     public function isClosed(): bool
     {
         return $this === self::Closed;

@@ -20,6 +20,7 @@ class SettingController extends Controller
         return Inertia::render('AppSettings/Index', [
             'settings' => [
                 'auto_start_tasks' => $this->settings->flag('auto_start_tasks'),
+                'pause_prompt_runs' => $this->settings->flag('pause_prompt_runs'),
             ],
         ]);
     }
@@ -30,6 +31,7 @@ class SettingController extends Controller
     public function update(UpdateSettingsRequest $request): RedirectResponse
     {
         $this->settings->setFlag('auto_start_tasks', $request->boolean('auto_start_tasks'));
+        $this->settings->setFlag('pause_prompt_runs', $request->boolean('pause_prompt_runs'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Beállítások mentve.')]);
 

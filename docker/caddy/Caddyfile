@@ -1,0 +1,13 @@
+molitoristvan.dunahousedev.com {
+	# Self-signed cert from Caddy's internal CA. Cloudflare's "Full" SSL mode
+	# accepts this on the origin (it does not validate the origin cert). Upgrade
+	# to a Cloudflare Origin Certificate here if you switch Cloudflare to
+	# "Full (strict)".
+	tls internal
+
+	encode zstd gzip
+
+	# Caddy automatically sets X-Forwarded-For / X-Forwarded-Proto / -Host,
+	# so Laravel (trustProxies: '*') generates correct https URLs.
+	reverse_proxy laravel.test:80
+}

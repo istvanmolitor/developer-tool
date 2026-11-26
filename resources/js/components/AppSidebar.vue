@@ -8,6 +8,7 @@ import {
     ListTodo,
     Mail,
     Settings,
+    Terminal,
 } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -26,6 +27,7 @@ import agents from '@/routes/agents';
 import { edit as appSettings } from '@/routes/app-settings';
 import { dashboard } from '@/routes';
 import mailboxes from '@/routes/mailboxes';
+import { index as promptRuns } from '@/routes/prompt-runs';
 import projects from '@/routes/projects';
 import tasks from '@/routes/tasks';
 import documentations from '@/routes/projects/documentations';
@@ -56,6 +58,11 @@ const mainNavItems: NavItem[] = [
         title: 'Postafiókok',
         href: mailboxes.index(),
         icon: Mail,
+    },
+    {
+        title: 'Prompt sor',
+        href: promptRuns(),
+        icon: Terminal,
     },
 ];
 

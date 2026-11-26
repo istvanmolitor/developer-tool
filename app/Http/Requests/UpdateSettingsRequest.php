@@ -18,6 +18,7 @@ class UpdateSettingsRequest extends FormRequest
     {
         return [
             'auto_start_tasks' => ['boolean'],
+            'pause_prompt_runs' => ['boolean'],
         ];
     }
 }

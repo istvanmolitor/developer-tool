@@ -3,6 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use App\Models\PromptRun;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -16,6 +17,19 @@ interface PromptRunRepository extends Repository
      * How many runs are still waiting in the queue.
      */
     public function pendingCount(): int;
+
+    /**
+     * The runs still waiting in the queue, in worker (queue) order, with their
+     * project and agent loaded — the prompt queue page.
+     *
+     * @return LengthAwarePaginator<int, PromptRun>
+     */
+    public function paginatePending(int $perPage): LengthAwarePaginator;
+
+    /**
+     * Discard every run still waiting in the queue. Returns how many were removed.
+     */
+    public function deletePending(): int;
 
     /**
      * The runs executing right now, oldest first, with their project and agent

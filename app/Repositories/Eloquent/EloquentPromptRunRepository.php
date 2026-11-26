@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Enums\PromptRunStatus;
 use App\Models\PromptRun;
 use App\Repositories\Contracts\PromptRunRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -21,6 +22,22 @@ class EloquentPromptRunRepository extends EloquentRepository implements PromptRu
     public function pendingCount(): int
     {
         return $this->newQuery()->where('status', PromptRunStatus::Pending)->count();
+    }
+
+    public function paginatePending(int $perPage): LengthAwarePaginator
+    {
+        return $this->newQuery()
+            ->where('status', PromptRunStatus::Pending)
+            ->with(['project:id,name', 'agent:id,name'])
+            ->select(['id', 'agent_context_id', 'prompt', 'status', 'created_at'])
+            ->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    public function deletePending(): int
+    {
+        return $this->newQuery()->where('status', PromptRunStatus::Pending)->delete();
     }
 
     public function running(): Collection

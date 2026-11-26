@@ -39,6 +39,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('app-settings', [SettingController::class, 'edit'])->name('app-settings.edit');
     Route::patch('app-settings', [SettingController::class, 'update'])->name('app-settings.update');
 
+    // The prompt queue: the runs still waiting to execute, the global pause
+    // switch that holds them, and the control to clear them out.
+    Route::get('prompt-runs', [PromptRunController::class, 'index'])->name('prompt-runs.index');
+    Route::patch('prompt-runs/pause', [PromptRunController::class, 'pause'])->name('prompt-runs.pause');
+    Route::delete('prompt-runs/pending', [PromptRunController::class, 'clearPending'])->name('prompt-runs.clear');
+
     // Refresh the agents from their definition files on disk.
     Route::post('agents/sync', [AgentController::class, 'sync'])->name('agents.sync');
     Route::get('agents/{agent}/profile', [AgentController::class, 'profile'])->name('agents.profile');

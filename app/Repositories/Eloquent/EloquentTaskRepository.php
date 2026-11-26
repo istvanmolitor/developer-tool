@@ -19,17 +19,6 @@ class EloquentTaskRepository extends EloquentRepository implements TaskRepositor
         return Task::class;
     }
 
-    public function autoRunnable(): Collection
-    {
-        return $this->newQuery()
-            ->where('auto_run', true)
-            ->whereNotNull('agent_id')
-            ->where('status', TaskStatus::Todo->value)
-            ->with(['project', 'agent'])
-            ->orderBy('position')
-            ->get();
-    }
-
     public function openForAgent(Agent $agent, ?Project $project = null): Collection
     {
         return $this->newQuery()

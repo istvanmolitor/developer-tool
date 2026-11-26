@@ -19,14 +19,6 @@ use Illuminate\Database\Eloquent\Collection;
 interface TaskRepository extends Repository
 {
     /**
-     * Pending auto-run tasks — flagged auto_run, assigned to an agent, still
-     * todo — in worker (position) order, with project and agent loaded.
-     *
-     * @return Collection<int, Task>
-     */
-    public function autoRunnable(): Collection;
-
-    /**
      * An agent's open tasks (optionally within one project), ordered
      * in-progress-then-todo, then by priority and position.
      *
