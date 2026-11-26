@@ -48,3 +48,7 @@ yarn-error.log
 
 # Mailbox credentials (sensitive) — read by MailboxSeeder, never commit
 /mail.md
+
+# Local SQLite test/dev database (never commit — large, churns constantly)
+/testing
+/testing-*
