@@ -95,6 +95,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('projects.attachments.store');
     Route::post('projects/{project}/attachments/sync', [ProjectAttachmentController::class, 'sync'])
         ->name('projects.attachments.sync');
+    // JSON endpoints for the chat attachment picker: list the project's files and
+    // upload a new one without leaving the page.
+    Route::get('projects/{project}/attachments/picker', [ProjectAttachmentController::class, 'picker'])
+        ->name('projects.attachments.picker');
+    Route::post('projects/{project}/attachments/picker', [ProjectAttachmentController::class, 'pickerUpload'])
+        ->name('projects.attachments.picker.upload');
     Route::get('projects/{project}/attachments/{attachment}/download', [ProjectAttachmentController::class, 'download'])
         ->scopeBindings()
         ->name('projects.attachments.download');

@@ -7,6 +7,7 @@ use App\Models\Attachment;
 use App\Models\Project;
 use App\Repositories\Contracts\AttachmentRepository;
 use App\Services\AttachmentService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,6 +46,55 @@ class ProjectAttachmentController extends Controller
         return redirect()
             ->route('projects.attachments.index', $project)
             ->with('status', "Csatolmány feltöltve: {$attachment->filename}.");
+    }
+
+    /**
+     * The project's attachments as JSON, for the chat attachment picker. Each row
+     * carries its absolute `path` so a reference inserted into the prompt points
+     * the agent straight at the file on disk.
+     */
+    public function picker(Project $project): JsonResponse
+    {
+        $attachments = $project->attachments()
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'attachments' => $attachments->map(fn (Attachment $attachment): array => $this->pickerPayload($attachment))->all(),
+        ]);
+    }
+
+    /**
+     * Upload a file from the chat attachment picker and return the stored
+     * attachment as JSON, so the modal can list it without a page reload.
+     */
+    public function pickerUpload(StoreProjectAttachmentRequest $request, Project $project): JsonResponse
+    {
+        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'));
+
+        return response()->json([
+            'attachment' => $this->pickerPayload($attachment),
+        ], 201);
+    }
+
+    /**
+     * Shape an attachment for the picker. `path` is the absolute filesystem path
+     * the agent reads once the reference lands in the prompt.
+     *
+     * @return array<string, mixed>
+     */
+    private function pickerPayload(Attachment $attachment): array
+    {
+        return [
+            'id' => $attachment->id,
+            'filename' => $attachment->filename,
+            'mime_type' => $attachment->mime_type,
+            'size' => $attachment->size,
+            'source' => $attachment->source,
+            'relative_path' => $attachment->relative_path,
+            'path' => $attachment->absolutePath(),
+            'created_at' => $attachment->created_at?->toIso8601String(),
+        ];
     }
 
     /**

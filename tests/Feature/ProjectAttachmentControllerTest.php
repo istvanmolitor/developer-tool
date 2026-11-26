@@ -153,3 +153,42 @@ test('guests cannot upload project attachments', function () {
         'file' => UploadedFile::fake()->create('a.txt'),
     ])->assertRedirect(route('login'));
 });
+
+test('the picker lists the project attachments with their absolute path as json', function () {
+    $project = Project::factory()->create();
+    $attachment = Attachment::factory()->for($project)->create(['filename' => 'terv.txt']);
+    Attachment::factory()->create(); // belongs to another project
+
+    $this->actingAs(User::factory()->create())
+        ->getJson(route('projects.attachments.picker', $project))
+        ->assertOk()
+        ->assertJsonCount(1, 'attachments')
+        ->assertJsonPath('attachments.0.id', $attachment->id)
+        ->assertJsonPath('attachments.0.filename', 'terv.txt')
+        ->assertJsonPath('attachments.0.path', $attachment->absolutePath());
+});
+
+test('the picker upload stores the file and returns it as json', function () {
+    $project = attachmentProject();
+
+    $response = $this->actingAs(User::factory()->create())
+        ->postJson(route('projects.attachments.picker.upload', $project), [
+            'file' => UploadedFile::fake()->createWithContent('terv.txt', 'the plan'),
+        ])
+        ->assertCreated()
+        ->assertJsonPath('attachment.filename', 'terv.txt');
+
+    $attachment = $project->attachments()->sole();
+
+    expect($attachment->source)->toBe('upload');
+    $response->assertJsonPath('attachment.path', $attachment->absolutePath());
+});
+
+test('guests cannot use the attachment picker', function () {
+    $project = Project::factory()->create();
+
+    $this->getJson(route('projects.attachments.picker', $project))->assertUnauthorized();
+    $this->postJson(route('projects.attachments.picker.upload', $project), [
+        'file' => UploadedFile::fake()->create('a.txt'),
+    ])->assertUnauthorized();
+});

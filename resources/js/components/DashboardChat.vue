@@ -9,6 +9,7 @@ import {
     Send,
 } from "@lucide/vue";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import AttachmentPicker from "@/components/AttachmentPicker.vue";
 import InputError from "@/components/InputError.vue";
 import PromptRunMessage from "@/components/PromptRunMessage.vue";
 import type { ChatPromptRun } from "@/components/PromptRunMessage.vue";
@@ -123,6 +124,30 @@ function submit(): void {
     form.post(projectRoutes.runs.store(selectedProject.value).url, {
         preserveScroll: true,
         onSuccess: () => form.reset("prompt"),
+    });
+}
+
+const promptTextarea = ref<HTMLTextAreaElement | null>(null);
+
+/** Drop an attachment reference into the prompt at the cursor, then refocus. */
+function insertReference(reference: string): void {
+    const insert = `${reference} `;
+    const el = promptTextarea.value;
+
+    if (!el) {
+        form.prompt += (form.prompt ? " " : "") + insert;
+
+        return;
+    }
+
+    const start = el.selectionStart ?? form.prompt.length;
+    const end = el.selectionEnd ?? form.prompt.length;
+    form.prompt = form.prompt.slice(0, start) + insert + form.prompt.slice(end);
+
+    nextTick(() => {
+        const caret = start + insert.length;
+        el.focus();
+        el.setSelectionRange(caret, caret);
     });
 }
 
@@ -290,7 +315,13 @@ watch(
                         </Select>
                     </div>
                     <div class="flex gap-2">
+                        <AttachmentPicker
+                            class="self-end"
+                            :project="selectedProject || null"
+                            @select="insertReference"
+                        />
                         <textarea
+                            ref="promptTextarea"
                             v-model="form.prompt"
                             rows="2"
                             aria-label="Üzenet"
