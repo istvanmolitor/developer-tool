@@ -92,29 +92,4 @@ class Agent extends Model
     {
         return $this->hasMany(AgentMessage::class, 'sender_agent_id');
     }
-
-    /**
-     * Normalize a tools value into a clean list of tool names, accepting either
-     * a comma-separated string (as used in the agent form and the `.md` front
-     * matter) or an already-split array. Returns null when nothing remains.
-     *
-     * @return list<string>|null
-     */
-    public static function normalizeTools(mixed $tools): ?array
-    {
-        if (is_string($tools)) {
-            $tools = explode(',', $tools);
-        }
-
-        if (! is_array($tools)) {
-            return null;
-        }
-
-        $normalized = array_values(array_filter(
-            array_map(fn ($tool): string => trim((string) $tool), $tools),
-            fn (string $tool): bool => $tool !== '',
-        ));
-
-        return $normalized === [] ? null : $normalized;
-    }
 }

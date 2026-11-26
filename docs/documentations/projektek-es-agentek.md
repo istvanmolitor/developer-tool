@@ -36,7 +36,28 @@ Szabályok: a név egyedi, nem tartalmazhat `/` vagy `\` jelet; `new`/`git` eset
 | `agents/{agent}/messages` | az agent beszélgetései más agentekkel (partner + projekt szerint), max. 200 üzenet |
 | `POST agents/sync` | agentek frissítése a definíciós fájlokból (`AgentSyncService::sync`) |
 
-Mezők (`agents` tábla): `name`, `slug`, `description`, `model`, `tools` (JSON lista; `Agent::normalizeTools` a vesszős szöveget is elfogadja), `system_prompt`, `source_path`.
+Mezők (`agents` tábla): `name`, `slug`, `description`, `model`, `tools` (JSON lista; `AgentToolService::normalize` a vesszős szöveget is elfogadja és a duplikátumokat eldobja), `system_prompt`, `source_path`.
+
+#### Eszközök (`AgentToolService`)
+
+`app/Services/AgentToolService.php` adja az eszközök katalógusát magyar megnevezésekkel, csoportosítva: a Claude Code beépített eszközei (Fájlok, Keresés, Parancsfuttatás, Web, Munkaszervezés) kézzel karbantartott listából, az alkalmazás MCP eszközei (`mcp__<szerver>__<eszköz>`) pedig az MCP szerverek definíciójából, az eszközosztályok `#[Title]` / `#[Description]` attribútumaiból — így új MCP eszköz külön munka nélkül megjelenik.
+
+- `groups()` – a teljes katalógus (az agent űrlap checkboxai ezt kapják `tool_groups` propként); minden csoport `kind` mezője `builtin` (Claude Code saját eszközei) vagy `mcp`.
+- `describe($tools)` – egy agent eszközei megjelenítéshez: magyar név, nyers eszköznév, csoport, `known` (katalóguson kívüli eszköz is látszik; a profil ezt kapja `tools` propként).
+- `label($tool)` – egy eszköz magyar neve, ismeretlenre a nyers név.
+- `normalize($tools)` – a tools érték tisztítása (szöveg vagy lista → lista).
+
+Az agent szerkesztő/létrehozó űrlapja (`AgentForm.vue`) teljes szélességű, és három fülre oszlik:
+
+| Fül | Tartalom |
+| --- | -------- |
+| Alapadatok | név, azonosító, modell, leírás, system prompt |
+| Jogosultságok | a Claude Code saját eszközei checkboxokkal (`kind: builtin`) |
+| MCP | az alkalmazás MCP eszközei (`kind: mcp`) és az „Egyéb eszközök” mező a katalóguson kívüli nevekhez; egy MCP szerver csak akkor indul el a futáshoz, ha innen be van jelölve belőle eszköz |
+
+A levelezés (`kind: mailbox`) szándékosan hiányzik a fülekről: a `reply-email` eszközt a postafiók-hozzárendelés adja (lásd [postafiok.md](postafiok.md)), nem az eszközlista — a katalógus csak a magyar nevét tartja nyilván.
+
+A checkboxokat az `AgentToolPicker.vue` rajzolja (csoportonként „Mind” / „Egyik sem”, `v-model` a `form.tools` listára; a nyers eszköznevet a `show-tool-names` kapcsolja — az MCP fülön ki van kapcsolva); a fülek jelvénye a bejelölt eszközök száma, hibás mentésnél a hibás fül nyílik meg. Üres eszközlista = az agent minden eszközt megkap. Az agent maga mindig a nyers eszközneveket kapja (`AgentMcpConfig`, lásd [prompt-futtatas.md](prompt-futtatas.md)).
 
 Az agent szerkesztése/létrehozása a definíciós fájlt is visszaírja (`AgentSyncService::writeFile`), törléskor a fájlt is törli (`deleteFile`); fájlhiba esetén toast jelzi, az adatbázis-változás megmarad (`AgentController::writeDefinition`).
 

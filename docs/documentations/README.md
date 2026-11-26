@@ -55,6 +55,8 @@ Mind `auth` + `verified` mögött (`routes/web.php`), kivéve `/` (átirányít)
 | Fájl | Szerep |
 | ---- | ------ |
 | `app/Services/ClaudePromptRunner.php` | claude futtatás, kontextusok |
+| `app/Services/AgentMcpConfig.php` | a futáshoz adott MCP szerverek és extra MCP eszközök |
+| `app/Services/AgentToolService.php` | eszköz-katalógus magyar megnevezésekkel (űrlap, profil) |
 | `app/Services/TaskService.php`, `TaskPromptBuilder.php`, `TaskChangeFormatter.php` | feladat indítása, prompt, változásnapló megjelenítése |
 | `app/Services/MailboxService.php`, `Mail/ImapMailFetcher.php` | levelezés |
 | `app/Services/Search/*` | keresés |

@@ -1,25 +1,30 @@
 <script setup lang="ts">
-import { Head, useForm } from "@inertiajs/vue3";
-import Heading from "@/components/Heading.vue";
-import agents from "@/routes/agents";
-import AgentForm from "./AgentForm.vue";
+import type { AgentToolGroup } from '@/types';
+import { Head, useForm } from '@inertiajs/vue3';
+import Heading from '@/components/Heading.vue';
+import agents from '@/routes/agents';
+import AgentForm from './AgentForm.vue';
+
+defineProps<{
+    tool_groups: AgentToolGroup[];
+}>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: "Agentek", href: agents.index().url },
-            { title: "Új", href: agents.create().url },
+            { title: 'Agentek', href: agents.index().url },
+            { title: 'Új', href: agents.create().url },
         ],
     },
 });
 
 const form = useForm({
-    name: "",
-    slug: "",
-    description: "",
-    model: "",
-    tools: "",
-    system_prompt: "",
+    name: '',
+    slug: '',
+    description: '',
+    model: '',
+    tools: [] as string[],
+    system_prompt: '',
 });
 
 function submit(): void {
@@ -38,6 +43,7 @@ function submit(): void {
 
         <AgentForm
             :form="form"
+            :tool-groups="tool_groups"
             submit-label="Agent létrehozása"
             :cancel-href="agents.index().url"
             @submit="submit"

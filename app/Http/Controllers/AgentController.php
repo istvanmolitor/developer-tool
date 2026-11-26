@@ -13,6 +13,7 @@ use App\Models\AgentMessage;
 use App\Models\Project;
 use App\Models\Task;
 use App\Services\AgentSyncService;
+use App\Services\AgentToolService;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,8 @@ use RuntimeException;
 
 class AgentController extends Controller
 {
+    public function __construct(private AgentToolService $tools) {}
+
     public function index(): Response
     {
         return Inertia::render('Agents/Index', [
@@ -32,7 +35,9 @@ class AgentController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Agents/Create');
+        return Inertia::render('Agents/Create', [
+            'tool_groups' => $this->tools->groups(),
+        ]);
     }
 
     public function store(StoreAgentRequest $request, AgentSyncService $agentSync): RedirectResponse
@@ -80,6 +85,9 @@ class AgentController extends Controller
     {
         return Inertia::render('Agents/Profile', [
             'agent' => $agent,
+            // The tools with their Hungarian names, so the profile shows what the
+            // agent may do rather than the raw tool names.
+            'tools' => $this->tools->describe($agent->tools),
         ]);
     }
 
@@ -218,6 +226,7 @@ class AgentController extends Controller
     {
         return Inertia::render('Agents/Edit', [
             'agent' => $agent,
+            'tool_groups' => $this->tools->groups(),
         ]);
     }
 

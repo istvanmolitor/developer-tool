@@ -19,7 +19,7 @@ Modellek: `IncomingEmail` (`read_at`, `prompt_run_id`, kereshető), `IncomingEma
 ## Levél → agent → válasz
 
 1. **Olvasás**: `POST mailboxes/{m}/emails/{e}/read` (vagy `auto_read`) → `MailboxService::sendToAgent`: az agent a postafiók projektjén promptként kapja a levelet (fejlécek, csatolmány-útvonalak, szöveg max. 50 000 karakter), a levél olvasottá válik és a futáshoz kötődik. Már olvasott levél nem adható át újra.
-2. **Válasz**: az agent a `mail` MCP szerver `reply-email` eszközével válaszol (levelenként egyszer). `MailboxService::reply` `OutgoingEmail`-t hoz létre `Re:` tárggyal.
+2. **Válasz**: az agent a `mail` MCP szerver `reply-email` eszközével válaszol (levelenként egyszer). Ezt az eszközt a postafiók-hozzárendelés adja: minden olyan agent megkapja a futásaihoz, akihez tartozik postafiók (`AgentMcpConfig`), az agent eszközlistájától függetlenül. `MailboxService::reply` `OutgoingEmail`-t hoz létre `Re:` tárggyal.
    - `auto_reply` bekapcsolva: azonnal kimegy.
    - különben `draft`: `POST mailboxes/{m}/replies/{o}/send` jóváhagyja és elküldi, `DELETE …/replies/{o}` elveti (elküldött válasz nem törölhető).
 3. `OutgoingEmailStatus`: `draft`, `sent`, `failed`; sikertelen küldés `failed` + `error`, újra küldhető (`isSendable`: minden, ami nem `sent`).

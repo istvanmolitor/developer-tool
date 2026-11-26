@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
-import { Pencil, Trash2 } from "@lucide/vue";
-import Heading from "@/components/Heading.vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import agents from "@/routes/agents";
-import AgentNav from "./AgentNav.vue";
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Pencil, Trash2 } from '@lucide/vue';
+import Heading from '@/components/Heading.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import agents from '@/routes/agents';
+import AgentNav from './AgentNav.vue';
+
+type Tool = {
+    name: string;
+    label: string;
+    description: string | null;
+    group: string | null;
+    known: boolean;
+};
 
 type Agent = {
     id: number;
@@ -21,11 +29,12 @@ type Agent = {
 
 const props = defineProps<{
     agent: Agent;
+    tools: Tool[];
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Agentek", href: agents.index().url }],
+        breadcrumbs: [{ title: 'Agentek', href: agents.index().url }],
     },
 });
 
@@ -115,15 +124,21 @@ function destroy(): void {
                         </p>
                         <div class="mt-1 flex flex-wrap gap-1.5">
                             <Badge
-                                v-for="tool in agent.tools ?? []"
-                                :key="tool"
+                                v-for="tool in tools"
+                                :key="tool.name"
                                 variant="outline"
-                                >{{ tool }}</Badge
+                                :title="
+                                    tool.description
+                                        ? `${tool.name} — ${tool.description}`
+                                        : tool.name
+                                "
+                                :class="tool.known ? undefined : 'font-mono'"
+                                >{{ tool.label }}</Badge
                             >
                             <span
-                                v-if="!(agent.tools ?? []).length"
+                                v-if="!tools.length"
                                 class="text-muted-foreground"
-                                >Öröklött alapértelmezés</span
+                                >Öröklött alapértelmezés — minden eszköz</span
                             >
                         </div>
                     </div>

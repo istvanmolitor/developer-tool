@@ -3,7 +3,7 @@
 use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Models\Agent;
-use App\Models\IncomingEmail;
+use App\Models\Mailbox;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Services\ClaudePromptRunner;
@@ -135,11 +135,11 @@ test('an agent without agent or docs tools gets neither server', function () {
     expect($servers)->not->toHaveKey('docs');
 });
 
-test('a run handling an e-mail gives the agent the mail mcp server bound to the run', function () {
+test('an agent with a mailbox gives the run the mail mcp server and the reply tool', function () {
     Process::fake();
     $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__tasks__create-task']]);
+    Mailbox::factory()->create(['agent_id' => $agent->id]);
     $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
-    IncomingEmail::factory()->create(['prompt_run_id' => $run->id]);
 
     app(ClaudePromptRunner::class)->run($run);
 
@@ -148,7 +148,7 @@ test('a run handling an e-mail gives the agent the mail mcp server bound to the 
         $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
         $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
 
-        return array_keys($mcpConfig['mcpServers']) === ['tasks', 'mail', 'messages']
+        return array_keys($mcpConfig['mcpServers']) === ['tasks', 'mail']
             && $mcpConfig['mcpServers']['tasks']['env'] === ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id]
             && $mcpConfig['mcpServers']['mail'] === [
                 'command' => 'php',
@@ -158,20 +158,14 @@ test('a run handling an e-mail gives the agent the mail mcp server bound to the 
             && reset($agents)['tools'] === [
                 'Read',
                 'mcp__tasks__create-task',
-                'mcp__tasks__next-task',
-                'mcp__tasks__update-task',
-                'mcp__tasks__add-task-comment',
                 'mcp__mail__reply-email',
-                'mcp__messages__list-agents',
-                'mcp__messages__send-message',
-                'mcp__messages__list-messages',
             ];
     });
 });
 
-test('a run without an e-mail gets no mail mcp server', function () {
+test('an agent without a mailbox gets no mail mcp server', function () {
     Process::fake();
-    $agent = Agent::factory()->create(['tools' => ['Read']]);
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__tasks__next-task']]);
     $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
@@ -184,9 +178,9 @@ test('a run without an e-mail gets no mail mcp server', function () {
     });
 });
 
-test('an agent run gets the messages mcp server bound to the run', function () {
+test('an agent allowed message tools gets the messages mcp server bound to the run', function () {
     Process::fake();
-    $agent = Agent::factory()->create(['tools' => ['Read']]);
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__messages__send-message']]);
     $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
@@ -194,39 +188,28 @@ test('an agent run gets the messages mcp server bound to the run', function () {
     Process::assertRan(function ($process) use ($run) {
         $command = $process->command;
         $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
-        $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
 
         return $mcpConfig['mcpServers']['messages'] === [
             'command' => 'php',
             'args' => [base_path('artisan'), 'mcp:start', 'messages'],
             'env' => ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id],
-        ]
-            && in_array('mcp__messages__send-message', reset($agents)['tools'], true);
+        ];
     });
 });
 
-test('every agent run gets the shared task tools and the tasks server bound to the run', function () {
+test('an agent without mcp tools gets no mcp servers and no extra tools in a run', function () {
     Process::fake();
-    // An agent whose tools list opts into no task tools at all.
     $agent = Agent::factory()->create(['tools' => ['Read', 'Grep']]);
     $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id, 'agent_id' => $agent->id])->create();
 
     app(ClaudePromptRunner::class)->run($run);
 
-    Process::assertRan(function ($process) use ($run) {
+    Process::assertRan(function ($process) {
         $command = $process->command;
-        $mcpConfig = json_decode($command[array_search('--mcp-config', $command, true) + 1], true);
         $agents = json_decode($command[array_search('--agents', $command, true) + 1], true);
-        $tools = reset($agents)['tools'];
 
-        return $mcpConfig['mcpServers']['tasks'] === [
-            'command' => 'php',
-            'args' => [base_path('artisan'), 'mcp:start', 'tasks'],
-            'env' => ['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id],
-        ]
-            && in_array('mcp__tasks__next-task', $tools, true)
-            && in_array('mcp__tasks__update-task', $tools, true)
-            && in_array('mcp__tasks__add-task-comment', $tools, true);
+        return ! in_array('--mcp-config', $command, true)
+            && reset($agents)['tools'] === ['Read', 'Grep'];
     });
 });
 

@@ -14,7 +14,7 @@ Státuszok: `app/Enums/PromptRunStatus.php` – `pending`, `running`, `completed
 - Agent esetén `--agents <json> --agent <slug>` inline definíciót kap (leírás, system prompt, modell, eszközök) – így bármely projekten fut.
 - Prompt nélkül az agent leírása (vagy „Kezdd el a feladatodat a projekten.”) a feladat (`agentPrompt`).
 - `--resume <session_id>`, ha a kontextusnak már van session-je; az új `session_id` a futás végén a kontextusra mentődik.
-- MCP szerverek a futáshoz (`--mcp-config`, `php artisan mcp:start <szerver>`): `tasks` (ha az agent eszközei között van `mcp__tasks__*`), `agents` és `docs` (csak ha az agent eszközei opt-in `mcp__agents__*` / `mcp__docs__*`), `mail` (ha a futás bejövő levélhez tartozik), `messages` (minden agent-futás). Korlátozott eszközlistájú agent megkapja a `reply-email` (levélnél) és a `messages` eszközöket is.
+- MCP szerverek a futáshoz (`AgentMcpConfig`, `--mcp-config`, `php artisan mcp:start <szerver>`): minden szerver (`tasks`, `agents`, `messages`, `docs`, `attachments`, `projects`) opt-in — akkor indul el, ha az agent eszközlistáján van `mcp__<szerver>__*` bejegyzés; eszközlista nélküli agent mindet megkapja. A `tasks` és a `messages` a futáshoz kötve indul (`PROMPT_RUN_ENV`). Kivétel a `mail`: azt a postafiók-hozzárendelés adja — ha az agenthez tartozik postafiók, a futása az eszközlistától függetlenül megkapja a szervert és a `reply-email` eszközt.
 - `--dangerously-skip-permissions`, ha `DEVELOPER_TOOL_CLAUDE_SKIP_PERMISSIONS` igaz.
 
 ## Költség („kreditek")

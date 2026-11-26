@@ -137,6 +137,49 @@ test('an agent can be created with comma-separated tools', function () {
         ->and($agent->system_prompt)->toBe('You write documentation.');
 });
 
+test('an agent can be created with the tools selected on the form', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('agents.store'), [
+            'name' => 'Kódoló',
+            'slug' => 'coder',
+            'tools' => ['Read', 'Edit', 'mcp__tasks__next-task'],
+            'system_prompt' => 'Kódolsz.',
+        ])
+        ->assertRedirect(route('agents.index'));
+
+    expect(Agent::where('slug', 'coder')->firstOrFail()->tools)
+        ->toBe(['Read', 'Edit', 'mcp__tasks__next-task']);
+});
+
+test('the agent form offers the tool catalogue with hungarian names', function () {
+    $user = User::factory()->create();
+    $agent = Agent::factory()->create(['tools' => ['Read']]);
+
+    foreach ([route('agents.create'), route('agents.edit', $agent)] as $url) {
+        $this->actingAs($user)
+            ->get($url)
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('tool_groups.0.tools.0.name')
+                ->where('tool_groups.0.label', 'Fájlok')
+                ->where('tool_groups.0.tools.0.label', 'Fájl olvasása')
+            );
+    }
+});
+
+test('the agent profile shows the tools with their hungarian names', function () {
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__tasks__next-task']]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('agents.profile', $agent))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Agents/Profile')
+            ->where('tools.0.name', 'Read')
+            ->where('tools.0.label', 'Fájl olvasása')
+            ->where('tools.1.name', 'mcp__tasks__next-task')
+            ->where('tools.1.label', 'A következő feladatom')
+        );
+});
+
 test('an agent name must be unique', function () {
     Agent::factory()->create(['name' => 'documentarian']);
 

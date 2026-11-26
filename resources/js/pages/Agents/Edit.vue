@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Head, useForm } from "@inertiajs/vue3";
-import Heading from "@/components/Heading.vue";
-import agents from "@/routes/agents";
-import AgentForm from "./AgentForm.vue";
+import type { AgentToolGroup } from '@/types';
+import { Head, useForm } from '@inertiajs/vue3';
+import Heading from '@/components/Heading.vue';
+import agents from '@/routes/agents';
+import AgentForm from './AgentForm.vue';
 
 type Agent = {
     id: number;
@@ -16,13 +17,14 @@ type Agent = {
 
 const props = defineProps<{
     agent: Agent;
+    tool_groups: AgentToolGroup[];
 }>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: "Agentek", href: agents.index().url },
-            { title: "Szerkesztés", href: "" },
+            { title: 'Agentek', href: agents.index().url },
+            { title: 'Szerkesztés', href: '' },
         ],
     },
 });
@@ -30,9 +32,9 @@ defineOptions({
 const form = useForm({
     name: props.agent.name,
     slug: props.agent.slug,
-    description: props.agent.description ?? "",
-    model: props.agent.model ?? "",
-    tools: (props.agent.tools ?? []).join(", "),
+    description: props.agent.description ?? '',
+    model: props.agent.model ?? '',
+    tools: props.agent.tools ?? [],
     system_prompt: props.agent.system_prompt,
 });
 
@@ -52,6 +54,7 @@ function submit(): void {
 
         <AgentForm
             :form="form"
+            :tool-groups="tool_groups"
             submit-label="Változtatások mentése"
             :cancel-href="agents.profile(agent.id).url"
             @submit="submit"

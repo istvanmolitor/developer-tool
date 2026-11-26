@@ -59,7 +59,7 @@ class AgentSyncService
                     'name' => $document->matter('title') ?: ($document->matter('name') ?: $slug),
                     'description' => $document->matter('description'),
                     'model' => $document->matter('model'),
-                    'tools' => Agent::normalizeTools($document->matter('tools')),
+                    'tools' => AgentToolService::normalize($document->matter('tools')),
                     'system_prompt' => $document->content,
                     'source_path' => $path,
                 ],
@@ -122,11 +122,11 @@ class AgentSyncService
     /**
      * Serialize an agent into the `*.md` definition format: YAML front matter
      * (name/title/description/model/tools) followed by the system prompt. Tools
-     * are written as the comma-separated string the files and the form use.
+     * are written as the comma-separated string the definition files use.
      */
     private function toMarkdown(Agent $agent): string
     {
-        $tools = Agent::normalizeTools($agent->tools);
+        $tools = AgentToolService::normalize($agent->tools);
 
         $matter = array_filter([
             'name' => $agent->slug,

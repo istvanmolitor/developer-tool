@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Agent;
+use App\Services\AgentToolService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,13 +14,14 @@ class UpdateAgentRequest extends FormRequest
     }
 
     /**
-     * Accept the tools field as a comma-separated string from the form and
-     * normalize it to a clean list before validation.
+     * Accept the tools field as the list of tool names the form's checkboxes
+     * produce (or a comma-separated string) and normalize it to a clean list
+     * before validation.
      */
     protected function prepareForValidation(): void
     {
         if ($this->has('tools')) {
-            $this->merge(['tools' => Agent::normalizeTools($this->input('tools'))]);
+            $this->merge(['tools' => AgentToolService::normalize($this->input('tools'))]);
         }
     }
 
