@@ -8,10 +8,12 @@ use App\Enums\TaskStatus;
 use App\Http\Requests\StoreAgentRequest;
 use App\Http\Requests\UpdateAgentRequest;
 use App\Models\Agent;
-use App\Models\AgentContext;
 use App\Models\AgentMessage;
-use App\Models\Project;
 use App\Models\Task;
+use App\Repositories\Contracts\AgentContextRepository;
+use App\Repositories\Contracts\AgentMessageRepository;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\ProjectRepository;
 use App\Services\AgentSyncService;
 use App\Services\AgentToolService;
 use App\Services\Search\SearchCriteria;
@@ -24,12 +26,18 @@ use RuntimeException;
 
 class AgentController extends Controller
 {
-    public function __construct(private AgentToolService $tools) {}
+    public function __construct(
+        private AgentToolService $tools,
+        private AgentRepository $agents,
+        private ProjectRepository $projects,
+        private AgentContextRepository $agentContexts,
+        private AgentMessageRepository $messages,
+    ) {}
 
     public function index(): Response
     {
         return Inertia::render('Agents/Index', [
-            'agents' => Agent::query()->orderBy('name')->get(),
+            'agents' => $this->agents->allOrderedByName(),
         ]);
     }
 
@@ -42,7 +50,7 @@ class AgentController extends Controller
 
     public function store(StoreAgentRequest $request, AgentSyncService $agentSync): RedirectResponse
     {
-        $agent = Agent::create($request->validated());
+        $agent = $this->agents->create($request->validated());
 
         $this->writeDefinition($agentSync, $agent);
 
@@ -59,22 +67,14 @@ class AgentController extends Controller
     {
         return Inertia::render('Agents/Show', [
             'agent' => $agent,
-            'projects' => Project::query()
-                ->orderBy('name')
-                ->get(['id', 'name'])
+            'projects' => $this->projects->allOrderedByName(['id', 'name'])
                 ->map->only(['id', 'name']),
             'runs' => $agent->promptRuns()
                 ->with('project:id,name,path')
                 ->latest('prompt_runs.created_at')
                 ->limit(20)
                 ->get(),
-            'contexts' => AgentContext::query()
-                ->whereIn('id', $agent->agentContexts()
-                    ->selectRaw('max(id)')
-                    ->where('user_id', $request->user()->id)
-                    ->whereNotNull('project_id')
-                    ->groupBy('project_id'))
-                ->get(['id', 'project_id', 'session_id', 'created_at']),
+            'contexts' => $this->agentContexts->latestPerProjectForAgentUser($agent, $request->user()),
         ]);
     }
 
@@ -127,10 +127,11 @@ class AgentController extends Controller
 
         return Inertia::render('Agents/Tasks', [
             'agent' => $agent->only(['id', 'name', 'slug']),
+            // Hydration builder for the search-result paginator.
             'tasks' => $results->paginate(Task::query()->with('project:id,name'), $request),
             'filters' => $filters,
             'search_degraded' => $results->degraded,
-            'projects' => Project::query()->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name']),
+            'projects' => $this->projects->allOrderedByName(['id', 'name'])->map->only(['id', 'name']),
             'statuses' => collect(TaskStatus::cases())->map(
                 fn (TaskStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
             ),
@@ -146,25 +147,11 @@ class AgentController extends Controller
      */
     public function messages(Request $request, Agent $agent): Response
     {
-        $partnerSql = 'case when sender_agent_id = ? then recipient_agent_id else sender_agent_id end';
+        $conversations = $this->messages->conversationSummariesFor($agent);
 
-        $conversations = AgentMessage::query()
-            ->where(fn ($query) => $query
-                ->where('sender_agent_id', $agent->id)
-                ->orWhere('recipient_agent_id', $agent->id))
-            ->select('project_id')
-            ->selectRaw("{$partnerSql} as partner_id", [$agent->id])
-            ->selectRaw('count(*) as message_count')
-            ->selectRaw('sum(case when recipient_agent_id = ? and is_read = ? then 1 else 0 end) as unread_count', [$agent->id, false])
-            ->selectRaw('max(id) as last_message_id')
-            ->groupBy('project_id', 'partner_id')
-            ->orderByDesc('last_message_id')
-            ->toBase()
-            ->get();
-
-        $partners = Agent::query()->whereKey($conversations->pluck('partner_id')->filter())->get(['id', 'name', 'slug'])->keyBy('id');
-        $projects = Project::query()->whereKey($conversations->pluck('project_id'))->get(['id', 'name'])->keyBy('id');
-        $lastMessages = AgentMessage::query()->whereKey($conversations->pluck('last_message_id'))->get()->keyBy('id');
+        $partners = $this->agents->byIdsKeyed($conversations->pluck('partner_id')->filter()->all(), ['id', 'name', 'slug']);
+        $projects = $this->projects->byIdsKeyed($conversations->pluck('project_id')->all(), ['id', 'name']);
+        $lastMessages = $this->messages->byIdsKeyed($conversations->pluck('last_message_id')->all());
 
         $conversations = $conversations->map(fn (object $conversation): array => [
             'partner' => $partners->get($conversation->partner_id)?->only(['id', 'name', 'slug']),
@@ -196,19 +183,7 @@ class AgentController extends Controller
      */
     private function conversationMessages(Agent $agent, int $projectId, ?int $partnerId): array
     {
-        return AgentMessage::query()
-            ->where('project_id', $projectId)
-            ->where(fn ($query) => $query
-                ->where(fn ($query) => $query->where('sender_agent_id', $agent->id)->where('recipient_agent_id', $partnerId))
-                ->orWhere(fn ($query) => $query->where('recipient_agent_id', $agent->id)
-                    ->when(
-                        $partnerId === null,
-                        fn ($query) => $query->whereNull('sender_agent_id'),
-                        fn ($query) => $query->where('sender_agent_id', $partnerId),
-                    )))
-            ->latest('id')
-            ->limit(200)
-            ->get()
+        return $this->messages->thread($agent, $projectId, $partnerId)
             ->reverse()
             ->map(fn (AgentMessage $message): array => [
                 'id' => $message->id,
@@ -234,7 +209,7 @@ class AgentController extends Controller
     {
         $previousSlug = $agent->slug;
 
-        $agent->update($request->validated());
+        $this->agents->update($agent, $request->validated());
 
         $this->writeDefinition($agentSync, $agent, $previousSlug);
 
@@ -245,7 +220,7 @@ class AgentController extends Controller
 
     public function destroy(Agent $agent, AgentSyncService $agentSync): RedirectResponse
     {
-        $agent->delete();
+        $this->agents->delete($agent);
 
         try {
             $agentSync->deleteFile($agent);

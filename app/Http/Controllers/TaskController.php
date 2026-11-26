@@ -8,11 +8,12 @@ use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Models\Agent;
 use App\Models\Attachment;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\TaskRepository;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
 use App\Services\TaskChangeFormatter;
@@ -24,6 +25,11 @@ use Inertia\Response;
 
 class TaskController extends Controller
 {
+    public function __construct(
+        private TaskRepository $tasks,
+        private AgentRepository $agents,
+    ) {}
+
     /**
      * The project's tasks from the search index: filterable by free text,
      * status, priority, type and assignee, and paginated.
@@ -52,6 +58,7 @@ class TaskController extends Controller
 
         return Inertia::render('Projects/Tasks/Index', [
             'project' => $project,
+            // Hydration builder for the search-result paginator.
             'tasks' => $results->paginate(Task::query()->with('agent:id,name'), $request),
             'filters' => $filters,
             'search_degraded' => $results->degraded,
@@ -145,7 +152,7 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, Project $project, Task $task): RedirectResponse
     {
-        $task->update($request->validated());
+        $this->tasks->update($task, $request->validated());
 
         return redirect()
             ->route('projects.tasks.index', $project)
@@ -154,7 +161,7 @@ class TaskController extends Controller
 
     public function destroy(Project $project, Task $task): RedirectResponse
     {
-        $task->delete();
+        $this->tasks->delete($task);
 
         return redirect()
             ->route('projects.tasks.index', $project)
@@ -209,7 +216,7 @@ class TaskController extends Controller
     {
         $options = [];
 
-        foreach (Agent::query()->orderBy('name')->get(['id', 'name']) as $agent) {
+        foreach ($this->agents->allOrderedByName(['id', 'name']) as $agent) {
             $options[] = ['id' => $agent->id, 'name' => $agent->name];
         }
 

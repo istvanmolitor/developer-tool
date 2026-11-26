@@ -3,7 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Servers\TaskServer;
-use App\Models\Task;
+use App\Repositories\Contracts\TaskRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,14 +17,14 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Hozzászólás írása egy feladat alá (pl. haladás, kérdés, eredmény összefoglalása). Agent futás közben a hozzászólás az agent nevén jelenik meg.')]
 class AddTaskCommentTool extends Tool
 {
-    public function handle(Request $request): Response
+    public function handle(Request $request, TaskRepository $tasks): Response
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
             'body' => ['required', 'string', 'max:5000'],
         ]);
 
-        $task = Task::whereKey($validated['task_id'])->first();
+        $task = $tasks->find($validated['task_id']);
 
         if ($task === null) {
             return Response::error("Nincs {$validated['task_id']} azonosítójú feladat.");

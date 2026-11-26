@@ -2,12 +2,13 @@
 
 namespace App\Mcp\Tools;
 
-use App\Enums\TaskStatus;
 use App\Mcp\Concerns\FormatsTasks;
 use App\Mcp\Servers\TaskServer;
 use App\Models\Agent;
 use App\Models\Project;
-use App\Models\Task;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\ProjectRepository;
+use App\Repositories\Contracts\TaskRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -52,18 +53,7 @@ class NextTaskTool extends Tool
             return Response::error("Nincs „{$validated['project']}” nevű projekt. Használd a list-projects eszközt a nevekhez.");
         }
 
-        $tasks = Task::query()
-            ->where('agent_id', $agent->id)
-            ->whereNotIn('status', [TaskStatus::Done->value, TaskStatus::Closed->value])
-            ->when($project !== null, fn ($query) => $query->where('project_id', $project->id))
-            // Folyamatban lévő előbb, mint a teendő; azon belül a magasabb prioritás,
-            // majd a sorrend (position), végül a régebbi feladat.
-            ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'todo' THEN 1 ELSE 2 END")
-            ->orderByRaw("CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END")
-            ->orderBy('position')
-            ->orderBy('id')
-            ->with('project')
-            ->get();
+        $tasks = app(TaskRepository::class)->openForAgent($agent, $project);
 
         $next = $tasks->first();
 
@@ -105,7 +95,7 @@ class NextTaskTool extends Tool
     {
         $id = TaskServer::currentAgentId();
 
-        return $id !== null ? Agent::find($id) : null;
+        return $id !== null ? app(AgentRepository::class)->find($id) : null;
     }
 
     /**
@@ -115,6 +105,6 @@ class NextTaskTool extends Tool
     {
         $id = TaskServer::currentProjectId();
 
-        return $id !== null ? Project::find($id) : null;
+        return $id !== null ? app(ProjectRepository::class)->find($id) : null;
     }
 }

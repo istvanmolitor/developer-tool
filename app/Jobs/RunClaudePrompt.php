@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\PromptRunStatus;
 use App\Models\PromptRun;
+use App\Repositories\Contracts\PromptRunRepository;
 use App\Services\ClaudePromptRunner;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -33,6 +34,7 @@ class RunClaudePrompt implements ShouldQueue
             'status' => PromptRunStatus::Failed,
             'error_output' => $exception?->getMessage() ?? 'A feladat váratlanul meghiúsult.',
             'finished_at' => now(),
-        ])->save();
+        ]);
+        app(PromptRunRepository::class)->save($this->promptRun);
     }
 }

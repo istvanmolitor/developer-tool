@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\OutgoingEmailStatus;
 use App\Models\Mailbox;
 use App\Models\OutgoingEmail;
+use App\Repositories\Contracts\OutgoingEmailRepository;
 use App\Services\MailboxService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -15,6 +16,8 @@ use RuntimeException;
  */
 class OutgoingEmailController extends Controller
 {
+    public function __construct(private OutgoingEmailRepository $outgoingEmails) {}
+
     /**
      * Send the draft reply through the mailbox's SMTP account.
      */
@@ -46,7 +49,7 @@ class OutgoingEmailController extends Controller
             return redirect()->route('mailboxes.show', $mailbox);
         }
 
-        $outgoingEmail->delete();
+        $this->outgoingEmails->delete($outgoingEmail);
 
         return redirect()
             ->route('mailboxes.show', $mailbox)

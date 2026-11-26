@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PromptRunStatus;
 use App\Models\Agent;
 use App\Models\AgentContext;
-use App\Models\Project;
 use App\Models\PromptRun;
-use Illuminate\Database\Eloquent\Builder;
+use App\Repositories\Contracts\AgentContextRepository;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\ProjectRepository;
+use App\Repositories\Contracts\PromptRunRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -30,6 +31,13 @@ class DashboardController extends Controller
      */
     private const RECENT_CONTEXT_LIMIT = 20;
 
+    public function __construct(
+        private PromptRunRepository $promptRuns,
+        private ProjectRepository $projects,
+        private AgentRepository $agents,
+        private AgentContextRepository $agentContexts,
+    ) {}
+
     /**
      * Show the dashboard with the prompts running right now, the ones still
      * waiting in the queue (in the order the worker will pick them up) and a
@@ -39,16 +47,9 @@ class DashboardController extends Controller
     {
         return Inertia::render('Dashboard', [
             'promptQueue' => fn (): array => [
-                'running' => $this->runsWithStatus(PromptRunStatus::Running)
-                    ->orderBy('started_at')
-                    ->get(),
-                'queued' => $this->runsWithStatus(PromptRunStatus::Pending)
-                    ->orderBy('id')
-                    ->limit(self::QUEUED_LIST_LIMIT)
-                    ->get(),
-                'queued_count' => PromptRun::query()
-                    ->where('status', PromptRunStatus::Pending)
-                    ->count(),
+                'running' => $this->promptRuns->running(),
+                'queued' => $this->promptRuns->queued(self::QUEUED_LIST_LIMIT),
+                'queued_count' => $this->promptRuns->pendingCount(),
             ],
             'chat' => fn (): array => $this->chat($request),
         ]);
@@ -74,13 +75,12 @@ class DashboardController extends Controller
      */
     private function chat(Request $request): array
     {
-        $projects = Project::query()->orderBy('name')->get(['id', 'name', 'is_system']);
-        $agents = Agent::query()->orderBy('name')->get(['id', 'name']);
+        $projects = $this->projects->allOrderedByName(['id', 'name', 'is_system']);
+        $agents = $this->agents->allOrderedByName(['id', 'name']);
 
-        $chosenContext = $request->filled('context') ? AgentContext::query()
-            ->where('user_id', $request->user()->id)
-            ->whereNotNull('project_id')
-            ->find($request->integer('context'), ['id', 'project_id', 'agent_id', 'session_id']) : null;
+        $chosenContext = $request->filled('context')
+            ? $this->agentContexts->findForUser($request->user(), $request->integer('context'), ['id', 'project_id', 'agent_id', 'session_id'])
+            : null;
 
         if ($chosenContext !== null) {
             $project = $projects->firstWhere('id', $chosenContext->project_id);
@@ -93,12 +93,12 @@ class DashboardController extends Controller
             $agent = $agents->firstWhere('id', $request->integer('agent'));
 
             // Only look the conversation up: the first message creates it.
-            $context = $project === null ? null : AgentContext::query()
-                ->where('project_id', $project->id)
-                ->where('agent_id', $agent?->id)
-                ->where('user_id', $request->user()->id)
-                ->latest('id')
-                ->first(['id', 'session_id']);
+            $context = $project === null ? null : $this->agentContexts->currentForUser(
+                $project,
+                $agent,
+                $request->user(),
+                ['id', 'session_id'],
+            );
         }
 
         return [
@@ -127,22 +127,7 @@ class DashboardController extends Controller
      */
     private function recentContexts(Request $request): array
     {
-        return AgentContext::query()
-            ->where('user_id', $request->user()->id)
-            ->whereHas('project')
-            ->whereHas('promptRuns')
-            ->with(['project:id,name', 'agent:id,name'])
-            ->withMax('promptRuns', 'id')
-            ->withMax('promptRuns', 'created_at')
-            ->addSelect(['title' => PromptRun::query()
-                ->select('prompt')
-                ->whereColumn('agent_context_id', 'agent_contexts.id')
-                ->orderBy('id')
-                ->limit(1),
-            ])
-            ->orderByDesc('prompt_runs_max_id')
-            ->limit(self::RECENT_CONTEXT_LIMIT)
-            ->get()
+        return $this->agentContexts->recentForUser($request->user(), self::RECENT_CONTEXT_LIMIT)
             ->map(function (AgentContext $context): array {
                 $title = $context->getAttribute('title');
                 $lastActivityAt = $context->getAttribute('prompt_runs_max_created_at');
@@ -157,16 +142,5 @@ class DashboardController extends Controller
             })
             ->values()
             ->all();
-    }
-
-    /**
-     * @return Builder<PromptRun>
-     */
-    private function runsWithStatus(PromptRunStatus $status): Builder
-    {
-        return PromptRun::query()
-            ->where('status', $status)
-            ->with(['project:id,name', 'agent:id,name'])
-            ->select(['id', 'agent_context_id', 'prompt', 'status', 'started_at', 'created_at']);
     }
 }

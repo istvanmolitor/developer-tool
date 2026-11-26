@@ -6,6 +6,7 @@ use App\Enums\TaskStatus;
 use App\Models\PromptRun;
 use App\Models\Task;
 use App\Models\User;
+use App\Repositories\Contracts\TaskRepository;
 use RuntimeException;
 
 class TaskService
@@ -13,6 +14,7 @@ class TaskService
     public function __construct(
         private ClaudePromptRunner $runner,
         private TaskPromptBuilder $prompts,
+        private TaskRepository $tasks,
     ) {}
 
     /**
@@ -36,7 +38,7 @@ class TaskService
 
         $run = $this->runner->queueAgent($project, $agent, $this->prompts->build($project, $task), $user);
 
-        $task->update(['status' => TaskStatus::InProgress]);
+        $this->tasks->update($task, ['status' => TaskStatus::InProgress]);
 
         return $run;
     }

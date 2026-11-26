@@ -2,7 +2,7 @@
 
 namespace App\Mcp\Tools;
 
-use App\Models\PromptRun;
+use App\Repositories\Contracts\PromptRunRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,15 +18,15 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class GetPromptRunTool extends Tool
 {
+    public function __construct(private PromptRunRepository $promptRuns) {}
+
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
             'run_id' => ['required', 'integer'],
         ]);
 
-        $run = PromptRun::query()
-            ->with(['agent:id,name', 'project:id,name,path'])
-            ->find($validated['run_id']);
+        $run = $this->promptRuns->findForStatusView($validated['run_id']);
 
         if ($run === null) {
             return Response::error("Nincs {$validated['run_id']} azonosítójú futtatás.");

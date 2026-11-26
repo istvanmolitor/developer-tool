@@ -7,6 +7,7 @@ use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Mcp\Concerns\FormatsAttachments;
 use App\Models\Attachment;
+use App\Repositories\Contracts\AttachmentRepository;
 use App\Services\AttachmentService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rules\Enum;
@@ -24,7 +25,7 @@ class CreateTaskTool extends Tool
 {
     use FormatsAttachments;
 
-    public function handle(Request $request, AttachmentService $attachments): Response
+    public function handle(Request $request, AttachmentService $attachments, AttachmentRepository $attachmentRepository): Response
     {
         $validated = $request->validate([
             'project' => ['required', 'string'],
@@ -61,7 +62,7 @@ class CreateTaskTool extends Tool
         // Resolve the related attachments before creating anything, so an invalid
         // id fails fast instead of leaving a task with no files behind.
         $attachmentIds = array_values(array_unique($validated['attachment_ids'] ?? []));
-        $related = Attachment::query()->whereKey($attachmentIds)->get();
+        $related = $attachmentRepository->byIds($attachmentIds);
 
         if (count($related) !== count($attachmentIds)) {
             $missing = array_diff($attachmentIds, $related->pluck('id')->all());

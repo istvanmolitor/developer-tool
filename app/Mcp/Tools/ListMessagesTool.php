@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\ResolvesMessagingContext;
 use App\Models\AgentMessage;
+use App\Repositories\Contracts\AgentMessageRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -24,6 +25,8 @@ class ListMessagesTool extends Tool
      */
     private const LIMIT = 50;
 
+    public function __construct(private AgentMessageRepository $messages) {}
+
     public function handle(Request $request): Response
     {
         $validated = $request->validate([
@@ -41,38 +44,21 @@ class ListMessagesTool extends Tool
         [$recipient, $project] = $context;
         $unreadOnly = $validated['unread_only'] ?? true;
 
-        $messages = AgentMessage::query()
-            ->with(['sender:id,name', 'recipient:id,name'])
-            ->whereBelongsTo($project)
-            ->where('recipient_agent_id', $recipient->id)
-            ->when($unreadOnly, fn ($query) => $query->unread())
-            ->when(
-                $unreadOnly,
-                fn ($query) => $query->oldest('id'),
-                fn ($query) => $query->latest('id'),
-            )
-            ->limit(self::LIMIT)
-            ->get()
+        $messages = $this->messages
+            ->inboxFor($project, $recipient, $unreadOnly, self::LIMIT)
             ->sortBy('id')
             ->values();
 
         // Shape the messages before marking them, so the response shows which ones were new.
         $display = $messages->map(fn (AgentMessage $message): array => $message->toDisplayArray())->all();
 
-        AgentMessage::query()
-            ->whereKey($messages->modelKeys())
-            ->unread()
-            ->update(['is_read' => true, 'read_at' => now()]);
+        $this->messages->markRead($messages->modelKeys());
 
         return Response::json([
             'project' => $project->name,
             'agent' => $recipient->name,
             'count' => count($display),
-            'remaining_unread' => AgentMessage::query()
-                ->whereBelongsTo($project)
-                ->where('recipient_agent_id', $recipient->id)
-                ->unread()
-                ->count(),
+            'remaining_unread' => $this->messages->unreadCountFor($project, $recipient),
             'messages' => $display,
         ]);
     }

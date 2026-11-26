@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\Agent;
 use App\Models\TaskChange;
+use App\Repositories\Contracts\AgentRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -15,6 +15,8 @@ use Illuminate\Support\Collection;
  */
 class TaskChangeFormatter
 {
+    public function __construct(private AgentRepository $agents) {}
+
     /**
      * Hungarian names of the tracked task fields.
      *
@@ -109,7 +111,7 @@ class TaskChangeFormatter
             return [];
         }
 
-        return Agent::query()->whereKey($ids)->pluck('name', 'id')->all();
+        return $this->agents->namesByIds($ids->all());
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ProjectProvisionStatus;
 use App\Jobs\ProvisionProject;
 use App\Models\Project;
+use App\Repositories\Contracts\ProjectRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\Rule;
@@ -12,6 +13,8 @@ use RuntimeException;
 
 class ProjectService
 {
+    public function __construct(private ProjectRepository $projects) {}
+
     /**
      * Absolute path to the directory that contains the project directories
      * this tool can import from.
@@ -28,7 +31,7 @@ class ProjectService
      */
     public function all(): Collection
     {
-        return Project::query()->orderBy('name')->get();
+        return $this->projects->allOrderedByName();
     }
 
     /**
@@ -40,7 +43,7 @@ class ProjectService
             return null;
         }
 
-        return Project::query()->where('name', $name)->first();
+        return $this->projects->findByName($name);
     }
 
     /**
@@ -80,7 +83,7 @@ class ProjectService
      */
     public function availableDirectories(): array
     {
-        $existing = Project::query()->pluck('name')->all();
+        $existing = $this->projects->names();
 
         return array_values(
             $this->scanDirectories()
@@ -236,7 +239,8 @@ class ProjectService
             'provision_status' => $needsClone
                 ? ProjectProvisionStatus::Pending
                 : ProjectProvisionStatus::Ready,
-        ])->save();
+        ]);
+        $this->projects->save($project);
 
         if ($needsClone) {
             ProvisionProject::dispatch($project);
@@ -260,7 +264,8 @@ class ProjectService
             $project->forceFill([
                 'provision_status' => ProjectProvisionStatus::Failed,
                 'provision_error' => $e->getMessage(),
-            ])->save();
+            ]);
+            $this->projects->save($project);
         }
     }
 
@@ -322,13 +327,13 @@ class ProjectService
      */
     public function importFromDisk(): array
     {
-        $existing = Project::query()->pluck('name')->all();
+        $existing = $this->projects->names();
 
         return array_values(
             $this->scanDirectories()
                 ->reject(fn (string $name): bool => in_array($name, $existing, true))
                 ->map(function (string $name): string {
-                    Project::create([
+                    $this->projects->create([
                         'name' => $name,
                         'path' => $this->pathFor($name),
                     ]);

@@ -4,6 +4,8 @@ namespace App\Mcp\Concerns;
 
 use App\Models\Attachment;
 use App\Models\Task;
+use App\Repositories\Contracts\AttachmentRepository;
+use App\Repositories\Contracts\TaskRepository;
 
 trait FormatsAttachments
 {
@@ -14,7 +16,7 @@ trait FormatsAttachments
      */
     protected function resolveTask(int|string $id): ?Task
     {
-        return Task::query()->whereKey((int) $id)->first();
+        return app(TaskRepository::class)->find((int) $id);
     }
 
     /**
@@ -22,7 +24,7 @@ trait FormatsAttachments
      */
     protected function resolveAttachment(int|string $id): ?Attachment
     {
-        return Attachment::query()->whereKey((int) $id)->first();
+        return app(AttachmentRepository::class)->find((int) $id);
     }
 
     /**

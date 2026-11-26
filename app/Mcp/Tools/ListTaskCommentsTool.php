@@ -2,8 +2,8 @@
 
 namespace App\Mcp\Tools;
 
-use App\Models\Task;
 use App\Models\TaskComment;
+use App\Repositories\Contracts\TaskRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -19,13 +19,13 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class ListTaskCommentsTool extends Tool
 {
-    public function handle(Request $request): Response
+    public function handle(Request $request, TaskRepository $tasks): Response
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
         ]);
 
-        $task = Task::whereKey($validated['task_id'])->first();
+        $task = $tasks->find($validated['task_id']);
 
         if ($task === null) {
             return Response::error("Nincs {$validated['task_id']} azonosítójú feladat.");

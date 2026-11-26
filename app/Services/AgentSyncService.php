@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Agent;
+use App\Repositories\Contracts\AgentRepository;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
@@ -15,7 +16,7 @@ use Symfony\Component\Yaml\Yaml;
  */
 class AgentSyncService
 {
-    public function __construct(public MarkdownFileReader $reader) {}
+    public function __construct(public MarkdownFileReader $reader, private AgentRepository $agents) {}
 
     /**
      * Absolute path to the directory holding the agent definition files.
@@ -53,17 +54,14 @@ class AgentSyncService
 
             $slug = pathinfo($path, PATHINFO_FILENAME);
 
-            Agent::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $document->matter('title') ?: ($document->matter('name') ?: $slug),
-                    'description' => $document->matter('description'),
-                    'model' => $document->matter('model'),
-                    'tools' => AgentToolService::normalize($document->matter('tools')),
-                    'system_prompt' => $document->content,
-                    'source_path' => $path,
-                ],
-            );
+            $this->agents->upsertBySlug($slug, [
+                'name' => $document->matter('title') ?: ($document->matter('name') ?: $slug),
+                'description' => $document->matter('description'),
+                'model' => $document->matter('model'),
+                'tools' => AgentToolService::normalize($document->matter('tools')),
+                'system_prompt' => $document->content,
+                'source_path' => $path,
+            ]);
         }
 
         return count($paths);

@@ -3,7 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\ResolvesMessagingContext;
-use App\Models\AgentMessage;
+use App\Repositories\Contracts\AgentMessageRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +18,8 @@ use Laravel\Mcp\Server\Tool;
 class SendMessageTool extends Tool
 {
     use ResolvesMessagingContext;
+
+    public function __construct(private AgentMessageRepository $messages) {}
 
     public function handle(Request $request): Response
     {
@@ -46,7 +48,7 @@ class SendMessageTool extends Tool
             return Response::error('Saját magadnak nem küldhetsz üzenetet.');
         }
 
-        $message = AgentMessage::create([
+        $message = $this->messages->create([
             'project_id' => $project->id,
             'sender_agent_id' => $sender->id,
             'recipient_agent_id' => $recipient->id,

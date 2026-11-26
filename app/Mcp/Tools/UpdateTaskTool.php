@@ -6,7 +6,7 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Mcp\Concerns\FormatsTasks;
-use App\Models\Task;
+use App\Repositories\Contracts\TaskRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
@@ -23,7 +23,7 @@ class UpdateTaskTool extends Tool
 {
     use FormatsTasks;
 
-    public function handle(Request $request): Response
+    public function handle(Request $request, TaskRepository $tasks): Response
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
@@ -37,7 +37,7 @@ class UpdateTaskTool extends Tool
             'due_date' => ['nullable', 'date'],
         ]);
 
-        $task = Task::whereKey($validated['task_id'])->first();
+        $task = $tasks->find($validated['task_id']);
 
         if ($task === null) {
             return Response::error("Nincs {$validated['task_id']} azonosítójú feladat.");
@@ -62,7 +62,7 @@ class UpdateTaskTool extends Tool
         }
 
         $task->fill(collect($validated)->except(['task_id', 'agent'])->all());
-        $task->save();
+        $tasks->save($task);
 
         return Response::json([
             'message' => 'Feladat frissítve.',

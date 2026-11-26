@@ -5,8 +5,8 @@ namespace App\Mcp\Tools;
 use App\Mcp\Concerns\FormatsAttachments;
 use App\Mcp\Servers\TaskServer;
 use App\Models\Attachment;
-use App\Models\Task;
 use App\Models\TaskComment;
+use App\Repositories\Contracts\TaskRepository;
 use App\Services\TaskChangeFormatter;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -25,25 +25,13 @@ class GetTaskTool extends Tool
 {
     use FormatsAttachments;
 
-    public function handle(Request $request, TaskChangeFormatter $changes): Response
+    public function handle(Request $request, TaskChangeFormatter $changes, TaskRepository $tasks): Response
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
         ]);
 
-        $task = Task::query()
-            ->with([
-                'project',
-                'agent',
-                'comments.user:id,name',
-                'comments.agent:id,name',
-                'taskChanges.user:id,name',
-                'taskChanges.agent:id,name',
-                'attachments.project',
-                'attachments.tasks:id',
-            ])
-            ->whereKey($validated['task_id'])
-            ->first();
+        $task = $tasks->findWithDetails($validated['task_id']);
 
         if ($task === null) {
             return Response::error("Nincs {$validated['task_id']} azonosítójú feladat.");

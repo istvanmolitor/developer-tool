@@ -11,6 +11,9 @@ use App\Models\Mailbox;
 use App\Models\OutgoingEmail;
 use App\Models\PromptRun;
 use App\Models\User;
+use App\Repositories\Contracts\IncomingEmailRepository;
+use App\Repositories\Contracts\MailboxRepository;
+use App\Repositories\Contracts\OutgoingEmailRepository;
 use App\Services\Mail\FetchedAttachment;
 use App\Services\Mail\FetchedEmail;
 use App\Services\Mail\ImapMailFetcher;
@@ -36,6 +39,9 @@ class MailboxService
         private ImapMailFetcher $fetcher,
         private ClaudePromptRunner $runner,
         private AttachmentService $attachments,
+        private MailboxRepository $mailboxes,
+        private IncomingEmailRepository $incomingEmails,
+        private OutgoingEmailRepository $outgoingEmails,
     ) {}
 
     /**
@@ -60,7 +66,8 @@ class MailboxService
             $lastUid = max($lastUid, $email->uid);
         }
 
-        $mailbox->forceFill(['last_fetched_at' => now(), 'last_uid' => $lastUid ?: null])->save();
+        $mailbox->forceFill(['last_fetched_at' => now(), 'last_uid' => $lastUid ?: null]);
+        $this->mailboxes->save($mailbox);
 
         // Without an agent or project (e.g. one was deleted since) the messages stay unread for later.
         if ($mailbox->auto_read && $mailbox->canAgentRead()) {
@@ -82,7 +89,7 @@ class MailboxService
     {
         return DB::transaction(function () use ($incomingEmail, $user): PromptRun {
             // Lock the row so a double click cannot hand the same message over twice.
-            $locked = IncomingEmail::query()->lockForUpdate()->findOrFail($incomingEmail->getKey());
+            $locked = $this->incomingEmails->lockForUpdate($incomingEmail->getKey());
             $mailbox = $locked->mailbox()->with(['agent', 'project'])->firstOrFail();
 
             if ($locked->isRead()) {
@@ -95,7 +102,8 @@ class MailboxService
 
             $run = $this->runner->queueAgent($mailbox->project, $mailbox->agent, $this->agentPrompt($mailbox, $locked), $user);
 
-            $locked->forceFill(['read_at' => now(), 'prompt_run_id' => $run->id])->save();
+            $locked->forceFill(['read_at' => now(), 'prompt_run_id' => $run->id]);
+            $this->incomingEmails->save($locked);
             $incomingEmail->setRawAttributes($locked->getAttributes(), true);
 
             return $run;
@@ -226,7 +234,7 @@ class MailboxService
     {
         $outgoing = DB::transaction(function () use ($incomingEmail, $body, $promptRun): OutgoingEmail {
             // Lock the message so two parallel calls cannot both answer it.
-            $locked = IncomingEmail::query()->lockForUpdate()->findOrFail($incomingEmail->getKey());
+            $locked = $this->incomingEmails->lockForUpdate($incomingEmail->getKey());
 
             if ($locked->from_address === null || $locked->from_address === '') {
                 throw new RuntimeException('A levélnek nincs feladója, ezért nem lehet rá válaszolni.');
@@ -264,7 +272,7 @@ class MailboxService
     {
         DB::transaction(function () use ($outgoingEmail): void {
             // Lock the row so a double click cannot send the same message twice.
-            $locked = OutgoingEmail::query()->lockForUpdate()->findOrFail($outgoingEmail->getKey());
+            $locked = $this->outgoingEmails->lockForUpdate($outgoingEmail->getKey());
 
             if (! $locked->status->isSendable()) {
                 throw new RuntimeException('Ez a levél már el lett küldve.');
@@ -277,11 +285,13 @@ class MailboxService
                     ->to($locked->to)
                     ->send(new MailboxMessage($mailbox, $locked->subject, $locked->body_text, inReplyTo: $locked->in_reply_to));
 
-                $locked->forceFill(['status' => OutgoingEmailStatus::Sent, 'sent_at' => now(), 'error' => null])->save();
+                $locked->forceFill(['status' => OutgoingEmailStatus::Sent, 'sent_at' => now(), 'error' => null]);
+                $this->outgoingEmails->save($locked);
             } catch (Throwable $exception) {
                 report($exception);
 
-                $locked->forceFill(['status' => OutgoingEmailStatus::Failed, 'error' => $exception->getMessage()])->save();
+                $locked->forceFill(['status' => OutgoingEmailStatus::Failed, 'error' => $exception->getMessage()]);
+                $this->outgoingEmails->save($locked);
             }
 
             $outgoingEmail->setRawAttributes($locked->getAttributes(), true);

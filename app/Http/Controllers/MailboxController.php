@@ -6,14 +6,14 @@ use App\Enums\MailEncryption;
 use App\Enums\SearchType;
 use App\Http\Requests\StoreMailboxRequest;
 use App\Http\Requests\UpdateMailboxRequest;
-use App\Models\Agent;
 use App\Models\IncomingEmail;
 use App\Models\Mailbox;
-use App\Models\Project;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\MailboxRepository;
+use App\Repositories\Contracts\ProjectRepository;
 use App\Services\MailboxService;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
-use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,17 +22,16 @@ use RuntimeException;
 
 class MailboxController extends Controller
 {
+    public function __construct(
+        private MailboxRepository $mailboxes,
+        private AgentRepository $agents,
+        private ProjectRepository $projects,
+    ) {}
+
     public function index(): Response
     {
         return Inertia::render('Mailboxes/Index', [
-            'mailboxes' => Mailbox::query()
-                ->with(['agent:id,name', 'project:id,name'])
-                ->withCount([
-                    'incomingEmails',
-                    'incomingEmails as unread_emails_count' => fn (Builder $query) => $query->whereNull('read_at'),
-                ])
-                ->orderBy('name')
-                ->get(),
+            'mailboxes' => $this->mailboxes->allForIndex(),
         ]);
     }
 
@@ -47,7 +46,7 @@ class MailboxController extends Controller
 
     public function store(StoreMailboxRequest $request): RedirectResponse
     {
-        Mailbox::create($request->validated());
+        $this->mailboxes->create($request->validated());
 
         return redirect()
             ->route('mailboxes.index')
@@ -79,6 +78,7 @@ class MailboxController extends Controller
 
         return Inertia::render('Mailboxes/Show', [
             'mailbox' => $mailbox->load(['agent:id,name', 'project:id,name']),
+            // Hydration builder for the search-result paginator.
             'incomingEmails' => $results->paginate(
                 IncomingEmail::query()
                     ->select(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id'])
@@ -114,7 +114,7 @@ class MailboxController extends Controller
             unset($data['password']);
         }
 
-        $mailbox->update($data);
+        $this->mailboxes->update($mailbox, $data);
 
         return redirect()
             ->route('mailboxes.show', $mailbox)
@@ -123,7 +123,7 @@ class MailboxController extends Controller
 
     public function destroy(Mailbox $mailbox): RedirectResponse
     {
-        $mailbox->delete();
+        $this->mailboxes->delete($mailbox);
 
         return redirect()
             ->route('mailboxes.index')
@@ -170,7 +170,7 @@ class MailboxController extends Controller
     {
         $options = [];
 
-        foreach (Agent::query()->orderBy('name')->get(['id', 'name']) as $agent) {
+        foreach ($this->agents->allOrderedByName(['id', 'name']) as $agent) {
             $options[] = ['id' => $agent->id, 'name' => $agent->name];
         }
 
@@ -186,7 +186,7 @@ class MailboxController extends Controller
     {
         $options = [];
 
-        foreach (Project::query()->orderBy('name')->get(['id', 'name']) as $project) {
+        foreach ($this->projects->allOrderedByName(['id', 'name']) as $project) {
             $options[] = ['id' => $project->id, 'name' => $project->name];
         }
 

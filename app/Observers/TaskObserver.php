@@ -3,21 +3,23 @@
 namespace App\Observers;
 
 use App\Mcp\Servers\TaskServer;
-use App\Models\Setting;
 use App\Models\Task;
 use App\Models\TaskChange;
+use App\Repositories\Contracts\SettingRepository;
 use BackedEnum;
 use Carbon\CarbonInterface;
 
 class TaskObserver
 {
+    public function __construct(private SettingRepository $settings) {}
+
     /**
      * When the "automatic task start" setting is on, every new task is created
      * with auto_run enabled so it is picked up and run without a manual start.
      */
     public function creating(Task $task): void
     {
-        if (Setting::flag('auto_start_tasks')) {
+        if ($this->settings->flag('auto_start_tasks')) {
             $task->auto_run = true;
         }
     }

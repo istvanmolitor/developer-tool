@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Mailbox;
+use App\Repositories\Contracts\MailboxRepository;
 use App\Services\MailboxService;
 use Illuminate\Console\Command;
 use RuntimeException;
@@ -13,18 +13,11 @@ class FetchMailboxes extends Command
 
     protected $description = 'Új levelek letöltése a postafiókok IMAP szerveréről.';
 
-    public function handle(MailboxService $mailboxService): int
+    public function handle(MailboxService $mailboxService, MailboxRepository $mailboxRepository): int
     {
         $identifier = $this->argument('mailbox');
 
-        $mailboxes = Mailbox::query()
-            ->when(
-                $identifier !== null,
-                fn ($query) => $query->where('name', $identifier)->orWhere('id', $identifier),
-                fn ($query) => $query->where('is_active', true),
-            )
-            ->orderBy('name')
-            ->get();
+        $mailboxes = $mailboxRepository->toFetch($identifier);
 
         if ($mailboxes->isEmpty()) {
             $this->warn('Nincs letölthető postafiók.');

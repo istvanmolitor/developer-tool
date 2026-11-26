@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Repositories\Contracts\SettingRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Application-wide key-value setting.
+ *
+ * The static accessors below are a thin convenience shim that delegates to the
+ * {@see SettingRepository}; the repository owns the storage and caching, and
+ * application code should type-hint the repository rather than reach for these.
  *
  * @property int $id
  * @property string $key
@@ -23,22 +27,11 @@ class Setting extends Model
     ];
 
     /**
-     * Cache key for a single setting value.
-     */
-    private static function cacheKey(string $key): string
-    {
-        return "setting:{$key}";
-    }
-
-    /**
      * The raw stored value for the key, or the default when it is not set.
      */
     public static function get(string $key, ?string $default = null): ?string
     {
-        return Cache::rememberForever(
-            self::cacheKey($key),
-            fn (): ?string => self::query()->where('key', $key)->value('value'),
-        ) ?? $default;
+        return app(SettingRepository::class)->get($key, $default);
     }
 
     /**
@@ -46,7 +39,7 @@ class Setting extends Model
      */
     public static function flag(string $key): bool
     {
-        return self::get($key) === '1';
+        return app(SettingRepository::class)->flag($key);
     }
 
     /**
@@ -54,9 +47,7 @@ class Setting extends Model
      */
     public static function set(string $key, ?string $value): void
     {
-        self::query()->updateOrCreate(['key' => $key], ['value' => $value]);
-
-        Cache::forget(self::cacheKey($key));
+        app(SettingRepository::class)->set($key, $value);
     }
 
     /**
@@ -64,6 +55,6 @@ class Setting extends Model
      */
     public static function setFlag(string $key, bool $value): void
     {
-        self::set($key, $value ? '1' : '0');
+        app(SettingRepository::class)->setFlag($key, $value);
     }
 }

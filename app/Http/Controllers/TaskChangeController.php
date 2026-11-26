@@ -3,23 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
-use App\Models\TaskChange;
+use App\Repositories\Contracts\TaskChangeRepository;
 use App\Services\TaskChangeFormatter;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TaskChangeController extends Controller
 {
+    public function __construct(private TaskChangeRepository $taskChanges) {}
+
     /**
      * The change log of all of a project's tasks, newest first.
      */
     public function index(Project $project, TaskChangeFormatter $formatter): Response
     {
-        $entries = TaskChange::query()
-            ->whereHas('task', fn ($query) => $query->whereBelongsTo($project))
-            ->with(['task:id,title', 'user:id,name', 'agent:id,name'])
-            ->latest('id')
-            ->paginate(50);
+        $entries = $this->taskChanges->forProjectPaginated($project);
 
         return Inertia::render('Projects/TaskChanges/Index', [
             'project' => $project,

@@ -5,6 +5,8 @@ namespace App\Mcp\Concerns;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\Task;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\ProjectRepository;
 
 trait FormatsTasks
 {
@@ -13,10 +15,7 @@ trait FormatsTasks
      */
     protected function resolveProject(string $project): ?Project
     {
-        return Project::query()
-            ->where('name', $project)
-            ->when(is_numeric($project), fn ($query) => $query->orWhere('id', (int) $project))
-            ->first();
+        return app(ProjectRepository::class)->resolveByNameOrId($project);
     }
 
     /**
@@ -24,11 +23,7 @@ trait FormatsTasks
      */
     protected function resolveAgent(string $agent): ?Agent
     {
-        return Agent::query()
-            ->where('name', $agent)
-            ->orWhere('slug', $agent)
-            ->when(is_numeric($agent), fn ($query) => $query->orWhere('id', (int) $agent))
-            ->first();
+        return app(AgentRepository::class)->resolveByIdentifier($agent);
     }
 
     /**

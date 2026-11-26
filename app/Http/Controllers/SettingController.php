@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateSettingsRequest;
-use App\Models\Setting;
+use App\Repositories\Contracts\SettingRepository;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SettingController extends Controller
 {
+    public function __construct(private SettingRepository $settings) {}
+
     /**
      * Show the application settings page.
      */
@@ -17,7 +19,7 @@ class SettingController extends Controller
     {
         return Inertia::render('AppSettings/Index', [
             'settings' => [
-                'auto_start_tasks' => Setting::flag('auto_start_tasks'),
+                'auto_start_tasks' => $this->settings->flag('auto_start_tasks'),
             ],
         ]);
     }
@@ -27,7 +29,7 @@ class SettingController extends Controller
      */
     public function update(UpdateSettingsRequest $request): RedirectResponse
     {
-        Setting::setFlag('auto_start_tasks', $request->boolean('auto_start_tasks'));
+        $this->settings->setFlag('auto_start_tasks', $request->boolean('auto_start_tasks'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Beállítások mentve.')]);
 

@@ -9,11 +9,18 @@ use App\Models\AgentContext;
 use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
+use App\Repositories\Contracts\AgentContextRepository;
+use App\Repositories\Contracts\PromptRunRepository;
 use Illuminate\Support\Facades\Process;
 use Throwable;
 
 class ClaudePromptRunner
 {
+    public function __construct(
+        private PromptRunRepository $promptRuns,
+        private AgentContextRepository $agentContexts,
+    ) {}
+
     /**
      * Create a pending prompt run for the given project in a new context — a fresh
      * claude session — and queue it for execution. Returns the freshly created record.
@@ -45,7 +52,7 @@ class ClaudePromptRunner
     {
         $agent = $context->agent;
 
-        $run = PromptRun::create([
+        $run = $this->promptRuns->create([
             'agent_context_id' => $context->id,
             'prompt' => $agent !== null ? $this->agentPrompt($agent, $prompt) : (string) $prompt,
             'status' => PromptRunStatus::Pending,
@@ -77,7 +84,8 @@ class ClaudePromptRunner
         $run->forceFill([
             'status' => PromptRunStatus::Running,
             'started_at' => now(),
-        ])->save();
+        ]);
+        $this->promptRuns->save($run);
 
         try {
             $result = Process::path($project->path)
@@ -97,10 +105,12 @@ class ClaudePromptRunner
             'error_output' => $result->errorOutput(),
             'cost_usd' => $parsed['cost_usd'],
             'finished_at' => now(),
-        ])->save();
+        ]);
+        $this->promptRuns->save($run);
 
         if ($parsed['session_id'] !== null && $parsed['session_id'] !== $context->session_id) {
-            $context->forceFill(['session_id' => $parsed['session_id']])->save();
+            $context->forceFill(['session_id' => $parsed['session_id']]);
+            $this->agentContexts->save($context);
         }
 
         return $run;
@@ -233,7 +243,8 @@ class ClaudePromptRunner
             'status' => PromptRunStatus::Failed,
             'error_output' => $message,
             'finished_at' => now(),
-        ])->save();
+        ]);
+        $this->promptRuns->save($run);
 
         return $run;
     }

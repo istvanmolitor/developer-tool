@@ -5,7 +5,7 @@ namespace App\Mcp\Concerns;
 use App\Mcp\Servers\MessageServer;
 use App\Models\Agent;
 use App\Models\Project;
-use App\Models\PromptRun;
+use App\Repositories\Contracts\PromptRunRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 
 trait ResolvesMessagingContext
@@ -25,7 +25,7 @@ trait ResolvesMessagingContext
         $promptRunId = (int) getenv(MessageServer::PROMPT_RUN_ENV);
 
         if ($promptRunId > 0) {
-            $run = PromptRun::query()->with(['agent', 'project'])->find($promptRunId);
+            $run = app(PromptRunRepository::class)->findWithAgentAndProject($promptRunId);
 
             if ($run?->agent === null || $run->project === null) {
                 return 'Ez az agent-futás nem tartozik agenthez és projekthez, ezért nem használhatja az üzeneteket.';

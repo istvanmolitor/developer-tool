@@ -6,9 +6,9 @@ use App\Enums\SearchType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
-use App\Models\Agent;
-use App\Models\Project;
 use App\Models\Task;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\ProjectRepository;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
 use Illuminate\Http\Request;
@@ -17,6 +17,11 @@ use Inertia\Response;
 
 class AllTasksController extends Controller
 {
+    public function __construct(
+        private AgentRepository $agents,
+        private ProjectRepository $projects,
+    ) {}
+
     /**
      * Every task in the system, across all projects, from the search index:
      * filterable by free text, project, status, priority, type and assignee,
@@ -49,6 +54,7 @@ class AllTasksController extends Controller
         );
 
         return Inertia::render('Tasks/Index', [
+            // Hydration builder for the search-result paginator.
             'tasks' => $results->paginate(
                 Task::query()->with(['agent:id,name', 'project:id,name']),
                 $request,
@@ -158,7 +164,7 @@ class AllTasksController extends Controller
     {
         $options = [];
 
-        foreach (Agent::query()->orderBy('name')->get(['id', 'name']) as $agent) {
+        foreach ($this->agents->allOrderedByName(['id', 'name']) as $agent) {
             $options[] = ['id' => $agent->id, 'name' => $agent->name];
         }
 
@@ -174,7 +180,7 @@ class AllTasksController extends Controller
     {
         $options = [];
 
-        foreach (Project::query()->orderBy('name')->get(['id', 'name']) as $project) {
+        foreach ($this->projects->allOrderedByName(['id', 'name']) as $project) {
             $options[] = ['id' => $project->id, 'name' => $project->name];
         }
 

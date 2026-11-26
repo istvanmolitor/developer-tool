@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProjectAttachmentRequest;
 use App\Models\Attachment;
 use App\Models\Project;
+use App\Repositories\Contracts\AttachmentRepository;
 use App\Services\AttachmentService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -13,7 +14,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProjectAttachmentController extends Controller
 {
-    public function __construct(private AttachmentService $attachments) {}
+    public function __construct(
+        private AttachmentService $attachments,
+        private AttachmentRepository $attachmentRepository,
+    ) {}
 
     /**
      * The project's attachments (uploaded, synced from docs/attachments, or
@@ -61,7 +65,7 @@ class ProjectAttachmentController extends Controller
     {
         $attachment->tasks()->detach();
         $attachment->incomingEmails()->detach();
-        $attachment->delete();
+        $this->attachmentRepository->delete($attachment);
 
         return redirect()
             ->route('projects.attachments.index', $project)

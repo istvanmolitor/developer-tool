@@ -11,7 +11,7 @@ use App\Mcp\Tools\ListTasksTool;
 use App\Mcp\Tools\NextTaskTool;
 use App\Mcp\Tools\UpdateTaskTool;
 use App\Models\AgentContext;
-use App\Models\PromptRun;
+use App\Repositories\Contracts\PromptRunRepository;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
@@ -97,6 +97,6 @@ class TaskServer extends Server
             return null;
         }
 
-        return PromptRun::query()->with('agentContext')->find($promptRunId)?->agentContext;
+        return app(PromptRunRepository::class)->findWithContext($promptRunId)?->agentContext;
     }
 }

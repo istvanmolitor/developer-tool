@@ -6,9 +6,10 @@ use App\Enums\PromptRunStatus;
 use App\Enums\SearchType;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
-use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
+use App\Repositories\Contracts\AgentRepository;
+use App\Repositories\Contracts\ProjectRepository;
 use App\Services\ProjectService;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
@@ -19,18 +20,16 @@ use Inertia\Response;
 
 class ProjectController extends Controller
 {
-    public function __construct(private ProjectService $projects) {}
+    public function __construct(
+        private ProjectService $projects,
+        private ProjectRepository $projectRepository,
+        private AgentRepository $agents,
+    ) {}
 
     public function index(): Response
     {
-        $projects = Project::query()
-            ->withCount('promptRuns as runs_count')
-            ->withMax('promptRuns as last_run_at', 'created_at')
-            ->orderBy('name')
-            ->get();
-
         return Inertia::render('Projects/Index', [
-            'projects' => $projects,
+            'projects' => $this->projectRepository->allWithRunStats(),
             'projects_path' => $this->projects->projectsPath(),
         ]);
     }
@@ -87,9 +86,9 @@ class ProjectController extends Controller
 
         return Inertia::render('Projects/Prompts', [
             'project' => $project,
-            'agents' => Agent::query()
-                ->orderBy('name')
-                ->get(['id', 'name', 'description']),
+            'agents' => $this->agents->allOrderedByName(['id', 'name', 'description']),
+            // Hydration builder for the search-result paginator — the search
+            // index does the filtering/ordering, Eloquent only loads the rows.
             'runs' => $results->paginate(PromptRun::query()->with('agent:id,name'), $request),
             'filters' => $filters,
             'search_degraded' => $results->degraded,
@@ -117,7 +116,7 @@ class ProjectController extends Controller
             $validated['path'] = $project->path;
         }
 
-        $project->update($validated);
+        $this->projectRepository->update($project, $validated);
 
         return redirect()
             ->route('projects.show', $project)
@@ -132,7 +131,7 @@ class ProjectController extends Controller
                 ->with('status', 'A rendszer saját projektje nem törölhető.');
         }
 
-        $project->delete();
+        $this->projectRepository->delete($project);
 
         return redirect()
             ->route('projects.index')

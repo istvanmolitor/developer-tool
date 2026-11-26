@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Documentation;
 use App\Models\Project;
+use App\Repositories\Contracts\DocumentationRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\File;
  */
 class DocumentationService
 {
-    public function __construct(private MarkdownFileReader $reader) {}
+    public function __construct(
+        private MarkdownFileReader $reader,
+        private DocumentationRepository $documentations,
+    ) {}
 
     /**
      * Absolute path to the project's documentation folder.
@@ -56,8 +60,9 @@ class DocumentationService
 
                 $document = $this->reader->read($file->getPathname());
 
-                $documentation = Documentation::updateOrCreate(
-                    ['project_id' => $project->id, 'path' => $relativePath],
+                $documentation = $this->documentations->upsertForProjectPath(
+                    $project->id,
+                    $relativePath,
                     [
                         'title' => $this->resolveTitle($document, $relativePath),
                         'content' => $document->content,
@@ -70,13 +75,7 @@ class DocumentationService
 
         // Drop rows for files that have since been removed (or all of them when
         // the folder is gone/empty — whereNotIn([]) matches every project row).
-        // Deleted one by one so each leaves the search index too.
-        Documentation::query()
-            ->where('project_id', $project->id)
-            ->whereNotIn('id', $seen)
-            ->get()
-            ->each
-            ->delete();
+        $this->documentations->deleteStaleForProject($project->id, $seen);
 
         return $project->documentations()->orderBy('path')->get();
     }

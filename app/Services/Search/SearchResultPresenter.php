@@ -3,7 +3,7 @@
 namespace App\Services\Search;
 
 use App\Enums\SearchType;
-use App\Models\Project;
+use App\Repositories\Contracts\ProjectRepository;
 
 /**
  * Turns search hits into display rows for the global search: label, title,
@@ -11,14 +11,16 @@ use App\Models\Project;
  */
 class SearchResultPresenter
 {
+    public function __construct(private ProjectRepository $projects) {}
+
     /**
      * @return list<array{key: string, type: string, type_label: string, title: string, title_html: string, snippet: string|null, url: string|null, project: string|null, created_at: string|null}>
      */
     public function present(SearchResults $results): array
     {
-        $projectNames = Project::query()
-            ->whereKey(array_filter(array_map(fn (SearchHit $hit): mixed => $hit->document['project_id'] ?? null, $results->hits)))
-            ->pluck('name', 'id');
+        $projectNames = collect($this->projects->namesByIds(
+            array_filter(array_map(fn (SearchHit $hit): mixed => $hit->document['project_id'] ?? null, $results->hits)),
+        ));
 
         return array_map(function (SearchHit $hit) use ($projectNames): array {
             $projectName = $projectNames->get($hit->document['project_id'] ?? null);

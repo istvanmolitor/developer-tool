@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attachment;
 use App\Models\IncomingEmail;
 use App\Models\Mailbox;
+use App\Repositories\Contracts\IncomingEmailRepository;
 use App\Services\MailboxService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IncomingEmailController extends Controller
 {
+    public function __construct(private IncomingEmailRepository $incomingEmails) {}
+
     /**
      * Have the mailbox's agent read the message: it receives the message as a prompt on the mailbox's project.
      */
@@ -35,7 +38,7 @@ class IncomingEmailController extends Controller
      */
     public function destroy(Mailbox $mailbox, IncomingEmail $incomingEmail): RedirectResponse
     {
-        $incomingEmail->delete();
+        $this->incomingEmails->delete($incomingEmail);
 
         return redirect()
             ->route('mailboxes.show', $mailbox)

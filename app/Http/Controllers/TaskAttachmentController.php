@@ -6,13 +6,17 @@ use App\Http\Requests\StoreTaskAttachmentRequest;
 use App\Models\Attachment;
 use App\Models\Project;
 use App\Models\Task;
+use App\Repositories\Contracts\AttachmentRepository;
 use App\Services\AttachmentService;
 use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TaskAttachmentController extends Controller
 {
-    public function __construct(private AttachmentService $attachments) {}
+    public function __construct(
+        private AttachmentService $attachments,
+        private AttachmentRepository $attachmentRepository,
+    ) {}
 
     /**
      * Upload a file and attach it to the task.
@@ -43,7 +47,7 @@ class TaskAttachmentController extends Controller
         $task->attachments()->detach($attachment->id);
 
         if ($attachment->tasks()->count() === 0 && $attachment->incomingEmails()->count() === 0) {
-            $attachment->delete();
+            $this->attachmentRepository->delete($attachment);
         }
 
         return back()->with('status', 'Csatolmány eltávolítva.');

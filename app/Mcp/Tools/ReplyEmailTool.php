@@ -4,7 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Enums\OutgoingEmailStatus;
 use App\Mcp\Servers\MailServer;
-use App\Models\IncomingEmail;
+use App\Repositories\Contracts\IncomingEmailRepository;
 use App\Services\MailboxService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -20,7 +20,7 @@ use RuntimeException;
 #[Description('Válasz a feldolgozásra kapott levél feladójának, abból a postafiókból, amelybe a levél érkezett. Levelenként egyszer használható. A postafiók beállításától függően a válasz azonnal kimegy, vagy piszkozatként jóváhagyásra vár.')]
 class ReplyEmailTool extends Tool
 {
-    public function handle(Request $request, MailboxService $mailboxes): Response
+    public function handle(Request $request, MailboxService $mailboxes, IncomingEmailRepository $incomingEmails): Response
     {
         $validated = $request->validate([
             'incoming_email_id' => ['required', 'integer'],
@@ -34,11 +34,7 @@ class ReplyEmailTool extends Tool
         }
 
         // Only the message handed to this run can be answered, so an agent cannot write from another mailbox.
-        $incomingEmail = IncomingEmail::query()
-            ->with('promptRun')
-            ->whereKey($validated['incoming_email_id'])
-            ->where('prompt_run_id', $promptRunId)
-            ->first();
+        $incomingEmail = $incomingEmails->findForPromptRun($validated['incoming_email_id'], $promptRunId);
 
         if ($incomingEmail === null) {
             return Response::error("A(z) {$validated['incoming_email_id']} azonosítójú levelet nem ebben a futásban kaptad, ezért nem válaszolhatsz rá.");

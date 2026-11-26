@@ -6,6 +6,7 @@ use App\Models\Attachment;
 use App\Models\IncomingEmail;
 use App\Models\Project;
 use App\Models\Task;
+use App\Repositories\Contracts\AttachmentRepository;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -26,6 +27,8 @@ use RuntimeException;
 class AttachmentService
 {
     private const DISK = 'local';
+
+    public function __construct(private AttachmentRepository $attachments) {}
 
     /**
      * Absolute path to the project's attachments folder. The system project
@@ -79,7 +82,7 @@ class AttachmentService
                 throw new RuntimeException("Nem sikerült menteni a(z) „{$filename}” csatolmányt.");
             }
 
-            return Attachment::create([
+            return $this->attachments->create([
                 'project_id' => $project->id,
                 'disk' => Attachment::PROJECT_DISK,
                 'path' => $path,
@@ -100,7 +103,7 @@ class AttachmentService
             throw new RuntimeException("Nem sikerült menteni a(z) „{$filename}” csatolmányt.");
         }
 
-        return Attachment::create([
+        return $this->attachments->create([
             'project_id' => null,
             'disk' => self::DISK,
             'path' => $path,
@@ -188,7 +191,7 @@ class AttachmentService
             ->get()
             ->each(function (Attachment $attachment) use ($disk, $files): void {
                 if (! $files->contains($attachment->relative_path)) {
-                    $attachment->delete();
+                    $this->attachments->delete($attachment);
 
                     return;
                 }
@@ -209,7 +212,7 @@ class AttachmentService
     {
         $contents = (string) $disk->get($path);
 
-        return Attachment::create([
+        return $this->attachments->create([
             'project_id' => $project->id,
             'disk' => Attachment::PROJECT_DISK,
             'path' => $path,
@@ -235,7 +238,7 @@ class AttachmentService
             return;
         }
 
-        $attachment->update([
+        $this->attachments->update($attachment, [
             'size' => strlen($contents),
             'checksum' => $checksum,
             'mime_type' => $disk->mimeType($attachment->relative_path) ?: $attachment->mime_type,

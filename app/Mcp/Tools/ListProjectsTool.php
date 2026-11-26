@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Models\Project;
+use App\Repositories\Contracts\ProjectRepository;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -15,12 +16,9 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Listázza az összes projektet (név, azonosító, feladatok száma, a mappa előkészítésének állapota és hibája). A projektre a nevével hivatkozz a többi eszközben.')]
 class ListProjectsTool extends Tool
 {
-    public function handle(Request $request): Response
+    public function handle(Request $request, ProjectRepository $projects): Response
     {
-        $projects = Project::query()
-            ->withCount('tasks')
-            ->orderBy('name')
-            ->get()
+        $projects = $projects->allWithTaskCounts()
             ->map(fn (Project $project): array => [
                 'id' => $project->id,
                 'name' => $project->name,

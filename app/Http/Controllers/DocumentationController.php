@@ -7,6 +7,7 @@ use App\Http\Requests\StoreDocumentationRequest;
 use App\Http\Requests\UpdateDocumentationRequest;
 use App\Models\Documentation;
 use App\Models\Project;
+use App\Repositories\Contracts\DocumentationRepository;
 use App\Services\DocumentationService;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
@@ -20,7 +21,10 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class DocumentationController extends Controller
 {
-    public function __construct(private DocumentationService $documentations) {}
+    public function __construct(
+        private DocumentationService $documentations,
+        private DocumentationRepository $documentationRepository,
+    ) {}
 
     /**
      * The project's documentation from the search index: searchable by title,
@@ -40,6 +44,7 @@ class DocumentationController extends Controller
 
         return Inertia::render('Projects/Documentations/Index', [
             'project' => $project,
+            // Hydration builder for the search-result paginator.
             'documentations' => $results->paginate(
                 Documentation::query()->select(['id', 'path', 'title', 'updated_at']),
                 $request,
@@ -85,7 +90,7 @@ class DocumentationController extends Controller
 
     public function update(UpdateDocumentationRequest $request, Project $project, Documentation $documentation): RedirectResponse
     {
-        $documentation->update($request->validated());
+        $this->documentationRepository->update($documentation, $request->validated());
 
         return redirect()
             ->route('projects.documentations.show', [$project, $documentation])
@@ -94,7 +99,7 @@ class DocumentationController extends Controller
 
     public function destroy(Project $project, Documentation $documentation): RedirectResponse
     {
-        $documentation->delete();
+        $this->documentationRepository->delete($documentation);
 
         return redirect()
             ->route('projects.documentations.index', $project)
