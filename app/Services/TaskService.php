@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\TaskStatus;
+use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\Task;
 use App\Models\User;
@@ -16,6 +17,48 @@ class TaskService
         private TaskPromptBuilder $prompts,
         private TaskRepository $tasks,
     ) {}
+
+    /**
+     * Create a task under the given project.
+     *
+     * The single entry point for task creation: callers hand over the
+     * validated attributes and the owning project, and the project binding is
+     * applied here so no caller writes it directly on the model.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function create(Project $project, array $attributes): Task
+    {
+        // project_id is guarded, so compose the task through the project
+        // relation (which sets the foreign key) and let the repository persist.
+        return $this->tasks->save($project->tasks()->make($attributes));
+    }
+
+    /**
+     * Apply the attributes to an existing task and persist it.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(Task $task, array $attributes): Task
+    {
+        return $this->tasks->update($task, $attributes);
+    }
+
+    /**
+     * Persist an already-composed (new or dirty) task.
+     */
+    public function save(Task $task): Task
+    {
+        return $this->tasks->save($task);
+    }
+
+    /**
+     * Delete the given task.
+     */
+    public function delete(Task $task): void
+    {
+        $this->tasks->delete($task);
+    }
 
     /**
      * Hand the task to its assigned agent: queue a prompt run that drives the work

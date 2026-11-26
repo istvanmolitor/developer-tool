@@ -9,6 +9,7 @@ use App\Mcp\Concerns\FormatsAttachments;
 use App\Models\Attachment;
 use App\Repositories\Contracts\AttachmentRepository;
 use App\Services\AttachmentService;
+use App\Services\TaskService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
@@ -25,7 +26,7 @@ class CreateTaskTool extends Tool
 {
     use FormatsAttachments;
 
-    public function handle(Request $request, AttachmentService $attachments, AttachmentRepository $attachmentRepository): Response
+    public function handle(Request $request, AttachmentService $attachments, AttachmentRepository $attachmentRepository, TaskService $tasks): Response
     {
         $validated = $request->validate([
             'project' => ['required', 'string'],
@@ -78,7 +79,7 @@ class CreateTaskTool extends Tool
             return Response::error('A(z) '.$foreign->pluck('id')->join(', ')." csatolmány másik projekthez tartozik, nem köthető a(z) „{$project->name}” projekt feladatához.");
         }
 
-        $task = $project->tasks()->create([
+        $task = $tasks->create($project, [
             'agent_id' => $agentId,
             'title' => $validated['title'],
             'type' => $validated['type'] ?? TaskType::Development->value,

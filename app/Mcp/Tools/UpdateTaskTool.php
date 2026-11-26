@@ -7,6 +7,7 @@ use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Mcp\Concerns\FormatsTasks;
 use App\Repositories\Contracts\TaskRepository;
+use App\Services\TaskService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rules\Enum;
 use Laravel\Mcp\Request;
@@ -23,7 +24,7 @@ class UpdateTaskTool extends Tool
 {
     use FormatsTasks;
 
-    public function handle(Request $request, TaskRepository $tasks): Response
+    public function handle(Request $request, TaskRepository $tasks, TaskService $taskService): Response
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
@@ -43,13 +44,15 @@ class UpdateTaskTool extends Tool
             return Response::error("Nincs {$validated['task_id']} azonosítójú feladat.");
         }
 
+        $attributes = collect($validated)->except(['task_id', 'agent'])->all();
+
         // The `agent` argument takes an agent name/id, not the agent_id column
         // directly. An empty string clears the assignment.
         if ($request->has('agent')) {
             $agentName = (string) $validated['agent'];
 
             if ($agentName === '') {
-                $task->agent_id = null;
+                $attributes['agent_id'] = null;
             } else {
                 $agent = $this->resolveAgent($agentName);
 
@@ -57,12 +60,11 @@ class UpdateTaskTool extends Tool
                     return Response::error("Nincs „{$agentName}” nevű agent. Használd a list-agents eszközt a nevekhez.");
                 }
 
-                $task->agent_id = $agent->id;
+                $attributes['agent_id'] = $agent->id;
             }
         }
 
-        $task->fill(collect($validated)->except(['task_id', 'agent'])->all());
-        $tasks->save($task);
+        $task = $taskService->update($task, $attributes);
 
         return Response::json([
             'message' => 'Feladat frissítve.',

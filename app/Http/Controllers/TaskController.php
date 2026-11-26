@@ -13,7 +13,6 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Repositories\Contracts\AgentRepository;
-use App\Repositories\Contracts\TaskRepository;
 use App\Services\Search\SearchCriteria;
 use App\Services\Search\SearchService;
 use App\Services\TaskChangeFormatter;
@@ -26,7 +25,7 @@ use Inertia\Response;
 class TaskController extends Controller
 {
     public function __construct(
-        private TaskRepository $tasks,
+        private TaskService $tasks,
         private AgentRepository $agents,
     ) {}
 
@@ -82,7 +81,7 @@ class TaskController extends Controller
 
     public function store(StoreTaskRequest $request, Project $project): RedirectResponse
     {
-        $project->tasks()->create($request->validated());
+        $this->tasks->create($project, $request->validated());
 
         return redirect()
             ->route('projects.tasks.index', $project)
@@ -120,7 +119,7 @@ class TaskController extends Controller
      * Hand the task to its assigned agent as a prompt run on the task's project,
      * so the agent can carry the work out. The task's details become the prompt.
      */
-    public function run(Project $project, Task $task, TaskService $tasks): RedirectResponse
+    public function run(Project $project, Task $task): RedirectResponse
     {
         $task->loadMissing('agent');
 
@@ -130,7 +129,7 @@ class TaskController extends Controller
 
         $task->setRelation('project', $project);
 
-        $tasks->run($task, request()->user());
+        $this->tasks->run($task, request()->user());
 
         return back()->with(
             'status',

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Repositories\Contracts\TaskRepository;
+use App\Services\TaskService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,7 +17,7 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Egy feladat végleges törlése az azonosítója alapján.')]
 class DeleteTaskTool extends Tool
 {
-    public function handle(Request $request, TaskRepository $tasks): Response
+    public function handle(Request $request, TaskRepository $tasks, TaskService $taskService): Response
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
@@ -28,7 +29,7 @@ class DeleteTaskTool extends Tool
             return Response::error("Nincs {$validated['task_id']} azonosítójú feladat.");
         }
 
-        $tasks->delete($task);
+        $taskService->delete($task);
 
         return Response::json([
             'message' => "A(z) {$validated['task_id']} azonosítójú feladat törölve.",
