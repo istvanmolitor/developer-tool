@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgentContextController;
 use App\Http\Controllers\AgentController;
+use App\Http\Controllers\AllTasksController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\IncomingEmailController;
@@ -26,6 +27,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    // Every task across all projects: filterable, sortable, paginated.
+    Route::get('tasks', [AllTasksController::class, 'index'])->name('tasks.index');
 
     // Global Elasticsearch search over tasks, docs, prompts, messages, mails and comments.
     Route::get('search', [SearchController::class, 'index'])->name('search.index');

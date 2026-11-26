@@ -5,6 +5,7 @@ import {
     Bot,
     FolderKanban,
     LayoutGrid,
+    ListTodo,
     Mail,
     Settings,
 } from '@lucide/vue';
@@ -26,6 +27,7 @@ import { edit as appSettings } from '@/routes/app-settings';
 import { dashboard } from '@/routes';
 import mailboxes from '@/routes/mailboxes';
 import projects from '@/routes/projects';
+import tasks from '@/routes/tasks';
 import documentations from '@/routes/projects/documentations';
 import type { NavItem } from '@/types';
 
@@ -39,6 +41,11 @@ const mainNavItems: NavItem[] = [
         title: 'Projektek',
         href: projects.index(),
         icon: FolderKanban,
+    },
+    {
+        title: 'Feladatok',
+        href: tasks.index(),
+        icon: ListTodo,
     },
     {
         title: 'Agentek',
