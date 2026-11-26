@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('list-tasks')]
 #[Title('Feladatok listázása')]
-#[Description('Egy projekt feladatainak listázása, prioritás és sorrend szerint rendezve. Opcionálisan szűrhető státuszra (todo, in_progress, done) és típusra (pl. bug).')]
+#[Description('Egy projekt feladatainak listázása, prioritás és sorrend szerint rendezve. Opcionálisan szűrhető státuszra (draft, todo, in_progress, done, closed) és típusra (pl. bug).')]
 class ListTasksTool extends Tool
 {
     use FormatsTasks;
@@ -26,7 +26,7 @@ class ListTasksTool extends Tool
     {
         $validated = $request->validate([
             'project' => ['required', 'string'],
-            'status' => ['nullable', 'in:todo,in_progress,done'],
+            'status' => ['nullable', 'in:draft,todo,in_progress,done,closed'],
             'type' => ['nullable', new Enum(TaskType::class)],
         ]);
 

@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('update-task')]
 #[Title('Feladat módosítása')]
-#[Description('Egy meglévő feladat módosítása az azonosítója alapján. Csak a megadott mezők változnak. Státusz állításához (pl. "done") is ezt használd.')]
+#[Description('Egy meglévő feladat módosítása az azonosítója alapján. Csak a megadott mezők változnak. Státusz állításához (pl. "done") és egy másik agentnek átadáshoz (az "agent" mezővel) is ezt használd. A "closed" (Lezárt) státuszt csak a projektvezető állítsa be.')]
 class UpdateTaskTool extends Tool
 {
     use FormatsTasks;
@@ -31,7 +31,7 @@ class UpdateTaskTool extends Tool
             'type' => ['sometimes', 'required', new Enum(TaskType::class)],
             'agent' => ['sometimes', 'nullable', 'string'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'status' => ['sometimes', 'required', 'in:draft,todo,in_progress,done'],
+            'status' => ['sometimes', 'required', 'in:draft,todo,in_progress,done,closed'],
             'auto_run' => ['sometimes', 'boolean'],
             'priority' => ['sometimes', 'required', 'in:low,medium,high'],
             'due_date' => ['nullable', 'date'],

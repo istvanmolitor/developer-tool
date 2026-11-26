@@ -95,9 +95,15 @@ function typeLabel(value: string): string {
 }
 
 function statusVariant(status: string): 'secondary' | 'default' | 'outline' {
-    if (status === 'done') return 'secondary';
+    if (status === 'done' || status === 'closed') return 'secondary';
     if (status === 'in_progress') return 'default';
     return 'outline';
+}
+
+// A befejezett (kész vagy lezárt) feladatok terminálisak: halványítva,
+// áthúzva jelennek meg, és nem indíthatók újra.
+function isCompleted(status: string): boolean {
+    return status === 'done' || status === 'closed';
 }
 
 function priorityVariant(
@@ -236,7 +242,7 @@ function formatDate(value: string | null): string {
                 v-for="task in tasks.data"
                 :key="task.id"
                 class="transition-colors hover:border-primary/50"
-                :class="task.status === 'done' ? 'opacity-70' : ''"
+                :class="isCompleted(task.status) ? 'opacity-70' : ''"
             >
                 <CardHeader
                     class="flex flex-row items-center justify-between gap-3"
@@ -252,7 +258,9 @@ function formatDate(value: string | null): string {
                                 "
                                 class="flex items-center gap-2 outline-none hover:underline focus-visible:underline"
                                 :class="
-                                    task.status === 'done' ? 'line-through' : ''
+                                    isCompleted(task.status)
+                                        ? 'line-through'
+                                        : ''
                                 "
                             >
                                 {{ task.title }}
@@ -305,7 +313,7 @@ function formatDate(value: string | null): string {
                     </div>
                     <div class="flex shrink-0 items-center gap-1">
                         <Button
-                            v-if="task.status !== 'done'"
+                            v-if="!isCompleted(task.status)"
                             variant="ghost"
                             size="sm"
                             class="text-primary hover:text-primary"

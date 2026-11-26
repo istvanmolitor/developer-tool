@@ -102,7 +102,7 @@ class AgentController extends Controller
 
         $filters = [
             'q' => trim($request->string('q')->toString()),
-            // "open" (the default) hides done tasks, "all" shows every status.
+            // "open" (the default) hides done and closed tasks, "all" shows every status.
             'status' => $status === 'all' || TaskStatus::tryFrom($status) !== null ? $status : 'open',
             'priority' => TaskPriority::tryFrom($request->string('priority')->toString())?->value,
             'project' => $request->integer('project') ?: null,
@@ -118,7 +118,7 @@ class AgentController extends Controller
             ->paginate($request->integer('page', 1), 20);
 
         match ($filters['status']) {
-            'open' => $criteria->whereNot('status', TaskStatus::Done->value),
+            'open' => $criteria->whereNot('status', [TaskStatus::Done->value, TaskStatus::Closed->value]),
             'all' => null,
             default => $criteria->where('status', $filters['status']),
         };

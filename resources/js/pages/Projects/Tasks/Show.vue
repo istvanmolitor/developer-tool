@@ -49,6 +49,7 @@ const statusLabels: Record<string, string> = {
     todo: "Teendő",
     in_progress: "Folyamatban",
     done: "Kész",
+    closed: "Lezárt",
 };
 
 const priorityLabels: Record<string, string> = {
@@ -62,7 +63,7 @@ function typeLabel(value: string): string {
 }
 
 function statusVariant(status: string): "secondary" | "default" | "outline" {
-    if (status === "done") return "secondary";
+    if (status === "done" || status === "closed") return "secondary";
     if (status === "in_progress") return "default";
     return "outline";
 }
@@ -105,7 +106,7 @@ function run(): void {
                     </Link>
                 </Button>
                 <Button
-                    v-if="task.status !== 'done'"
+                    v-if="task.status !== 'done' && task.status !== 'closed'"
                     size="sm"
                     :disabled="!task.agent"
                     :title="

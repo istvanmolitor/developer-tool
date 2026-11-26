@@ -32,7 +32,7 @@ class CreateTaskTool extends Tool
             'type' => ['nullable', new Enum(TaskType::class)],
             'agent' => ['nullable', 'string'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'status' => ['nullable', 'in:draft,todo,in_progress,done'],
+            'status' => ['nullable', 'in:draft,todo,in_progress,done,closed'],
             'auto_run' => ['nullable', 'boolean'],
             'priority' => ['nullable', 'in:low,medium,high'],
             'due_date' => ['nullable', 'date'],

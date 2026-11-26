@@ -5,6 +5,7 @@ namespace App\Mcp\Servers;
 use App\Mcp\Tools\AddTaskCommentTool;
 use App\Mcp\Tools\CreateTaskTool;
 use App\Mcp\Tools\DeleteTaskTool;
+use App\Mcp\Tools\GetTaskTool;
 use App\Mcp\Tools\ListTaskCommentsTool;
 use App\Mcp\Tools\ListTasksTool;
 use App\Mcp\Tools\NextTaskTool;
@@ -25,9 +26,12 @@ use Laravel\Mcp\Server\Tool;
 
     Tipikus munkafolyamat:
     1. Hívd a `list-tasks` eszközt egy projekt feladatainak listázásához
-       (opcionálisan szűrj státuszra: todo, in_progress, done). A hozzád
-       rendelt következő feladatot a `next-task` eszközzel kérdezheted le.
-    2. Új feladatot a `create-task`, módosítást a `update-task`, törlést a
+       (opcionálisan szűrj státuszra: draft, todo, in_progress, done, closed).
+       A hozzád rendelt következő feladatot a `next-task` eszközzel kérdezheted le.
+    2. Amikor egy konkrét feladaton dolgozol, előbb a `get-task` eszközzel olvasd be
+       a teljes kontextusát (adatok, projekt, felelős agent, hozzászólás-előzmény,
+       változásnapló, csatolt fájlok) — ebből derül ki, mi vonatkozik rád.
+    3. Új feladatot a `create-task`, módosítást a `update-task`, törlést a
        `delete-task` eszközzel végezhetsz.
     3. Egy feladat hozzászólásait a `list-task-comments` eszközzel olvashatod,
        új hozzászólást (pl. haladás, kérdés, eredmény) az `add-task-comment`
@@ -39,7 +43,8 @@ use Laravel\Mcp\Server\Tool;
     törölheted. A projektek és az agentek nevét a `projects` szerver
     `list-projects`, illetve az `agents` szerver `list-agents` eszköze adja.
 
-    Státuszok: todo, in_progress, done. Prioritások: low, medium, high.
+    Státuszok: draft, todo, in_progress, done, closed (Lezárt — csak a
+    projektvezető állítja). Prioritások: low, medium, high.
     A feladatokra az azonosítójukkal (`task_id`), a projektekre és agentekre a
     nevükkel (`project`, `agent`) hivatkozz.
     TXT)]
@@ -57,6 +62,7 @@ class TaskServer extends Server
     protected array $tools = [
         ListTasksTool::class,
         NextTaskTool::class,
+        GetTaskTool::class,
         CreateTaskTool::class,
         UpdateTaskTool::class,
         DeleteTaskTool::class,

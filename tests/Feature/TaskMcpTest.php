@@ -3,13 +3,17 @@
 use App\Mcp\Servers\TaskServer;
 use App\Mcp\Tools\CreateTaskTool;
 use App\Mcp\Tools\DeleteTaskTool;
+use App\Mcp\Tools\GetTaskTool;
 use App\Mcp\Tools\ListTasksTool;
 use App\Mcp\Tools\NextTaskTool;
 use App\Mcp\Tools\UpdateTaskTool;
 use App\Models\Agent;
 use App\Models\Attachment;
 use App\Models\Project;
+use App\Models\PromptRun;
 use App\Models\Task;
+use App\Models\TaskChange;
+use App\Models\TaskComment;
 
 beforeEach(function () {
     $this->project = Project::factory()->create(['name' => 'alpha']);
@@ -146,6 +150,65 @@ test('update-task changes the status', function () {
     expect($task->fresh()->status->value)->toBe('done');
 });
 
+test('update-task can close a task', function () {
+    $task = Task::factory()->create(['project_id' => $this->project->id, 'status' => 'done']);
+
+    TaskServer::tool(UpdateTaskTool::class, [
+        'task_id' => $task->id,
+        'status' => 'closed',
+    ])->assertOk();
+
+    expect($task->fresh()->status->value)->toBe('closed');
+});
+
+test('get-task returns the full task context and flags it as the current agents', function () {
+    $agent = Agent::factory()->create(['name' => 'backend-developer']);
+    $run = PromptRun::factory()
+        ->inContext(['project_id' => $this->project->id, 'agent_id' => $agent->id])
+        ->create();
+
+    $task = Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'title' => 'MCP olvasós feladat',
+        'description' => 'A teljes kontextus.',
+        'status' => 'in_progress',
+        'priority' => 'high',
+    ]);
+
+    TaskComment::factory()->create([
+        'task_id' => $task->id,
+        'agent_id' => $agent->id,
+        'body' => 'Elkezdtem a munkát.',
+    ]);
+    TaskChange::factory()->create([
+        'task_id' => $task->id,
+        'agent_id' => $agent->id,
+        'changes' => ['status' => ['old' => 'todo', 'new' => 'in_progress']],
+    ]);
+
+    $attachment = Attachment::factory()->create(['project_id' => $this->project->id]);
+    $task->attachments()->attach($attachment->id);
+
+    // Bind the call to the agent's run, so get-task can tell the task is "mine".
+    putenv(TaskServer::PROMPT_RUN_ENV.'='.$run->id);
+    $response = TaskServer::tool(GetTaskTool::class, ['task_id' => $task->id]);
+    putenv(TaskServer::PROMPT_RUN_ENV);
+
+    $response->assertOk()
+        ->assertSee('MCP olvasós feladat')
+        ->assertSee('A teljes kontextus.')
+        ->assertSee('Folyamatban')          // status_label
+        ->assertSee('Elkezdtem a munkát.')  // comment history
+        ->assertSee('backend-developer')    // assigned agent / comment author
+        ->assertSee('"assigned_to_you":true')
+        ->assertSee($attachment->filename);
+});
+
+test('get-task errors on a missing task', function () {
+    TaskServer::tool(GetTaskTool::class, ['task_id' => 999999])->assertHasErrors();
+});
+
 test('delete-task removes the task', function () {
     $task = Task::factory()->create(['project_id' => $this->project->id]);
 
@@ -207,7 +270,7 @@ test('next-task prefers an in-progress task over a todo one', function () {
         ->assertSee('Már elkezdett');
 });
 
-test('next-task ignores done tasks and other agents tasks', function () {
+test('next-task ignores done, closed and other agents tasks', function () {
     $agent = Agent::factory()->create(['name' => 'backend-developer']);
     $other = Agent::factory()->create(['name' => 'frontend-developer']);
 
@@ -216,6 +279,12 @@ test('next-task ignores done tasks and other agents tasks', function () {
         'agent_id' => $agent->id,
         'status' => 'done',
         'title' => 'Kész feladat',
+    ]);
+    Task::factory()->create([
+        'project_id' => $this->project->id,
+        'agent_id' => $agent->id,
+        'status' => 'closed',
+        'title' => 'Lezárt feladat',
     ]);
     Task::factory()->create([
         'project_id' => $this->project->id,
@@ -228,6 +297,7 @@ test('next-task ignores done tasks and other agents tasks', function () {
         ->assertOk()
         ->assertSee('"next_task":null')
         ->assertDontSee('Kész feladat')
+        ->assertDontSee('Lezárt feladat')
         ->assertDontSee('Másik agent feladata');
 });
 

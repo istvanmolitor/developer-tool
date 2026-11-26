@@ -1,0 +1,76 @@
+# Production-ish compose for the test VPS (molitoristvan.dunahousedev.com).
+# Same custom PHP 8.5 image as compose.yaml, but WITHOUT Elasticsearch
+# (SEARCH_DRIVER=collection) and without the Vite dev port. The app container's
+# supervisord already runs php serve + scheduler + queue worker.
+services:
+    laravel.test:
+        build:
+            context: './docker/8.5'
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-1000}'
+        image: 'sail-8.5/app'
+        restart: unless-stopped
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+        environment:
+            WWWUSER: '${WWWUSER:-1000}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+            - '${DEVELOPER_TOOL_PROJECTS_HOST_PATH:-../projects}:/projects'
+            - '${HOME}/.claude:/home/sail/.claude'
+            - '${HOME}/.claude.json:/home/sail/.claude.json'
+        networks:
+            - sail
+        depends_on:
+            - mysql
+            - redis
+    mysql:
+        image: 'mysql:8.4'
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+            MYSQL_EXTRA_OPTIONS: '${MYSQL_EXTRA_OPTIONS:-}'
+        volumes:
+            - 'prod-mysql:/var/lib/mysql'
+            - './docker/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - mysqladmin
+                - ping
+                - '-p${DB_PASSWORD}'
+            retries: 3
+            timeout: 5s
+    redis:
+        image: 'redis:alpine'
+        restart: unless-stopped
+        volumes:
+            - 'prod-redis:/data'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+networks:
+    sail:
+        driver: bridge
+volumes:
+    prod-mysql:
+        driver: local
+    prod-redis:
+        driver: local

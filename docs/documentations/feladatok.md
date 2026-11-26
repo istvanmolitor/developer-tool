@@ -6,7 +6,7 @@ Minden feladat egy projekthez tartozik (`Task`, `app/Models/Task.php`), opcioná
 
 | Enum | Értékek |
 | ---- | ------- |
-| `TaskStatus` | `draft` (Piszkozat), `todo` (Teendő), `in_progress` (Folyamatban), `done` (Kész) |
+| `TaskStatus` | `draft` (Piszkozat), `todo` (Teendő), `in_progress` (Folyamatban), `done` (Kész), `closed` (Lezárt) |
 | `TaskPriority` | `low`, `medium`, `high` |
 | `TaskType` | `development`, `design`, `bug`, `documentation`, `testing`, `other` |
 
@@ -14,7 +14,7 @@ Oldalak (`TaskController`, `routes/web.php`): lista (`projects/{p}/tasks`, a ker
 
 ### Feladat futtatása („play")
 
-`POST projects/{p}/tasks/{t}/run` → `TaskController::run` → `TaskService::run`: a feladat agentje új kontextusban megkapja a feladatot promptként (`TaskPromptBuilder`: azonosító, cím, típus, prioritás, leírás + utasítás a státusz állítására `update-task`-kal, hozzászólásra `add-task-comment`-tel, következő feladatra `next-task`-kal), a feladat `in_progress` lesz. Agent nélküli feladat nem indítható (`RuntimeException` / üzenet a felületen).
+`POST projects/{p}/tasks/{t}/run` → `TaskController::run` → `TaskService::run`: a feladat agentje új kontextusban megkapja a feladatot promptként, a feladat `in_progress` lesz. A prompt (`TaskPromptBuilder`) ma már **minimális**: csak a feladatot nevezi meg (`#id` + projekt) és utasít a teljes kontextus beolvasására a `get-task` eszközzel — a cím, leírás, előzmény és a csatolmányok onnan jönnek. A státusz állítása, naplózás és átadás az agent system promptjából következik (lásd [feladat-atadasi-lanc.md](feladat-atadasi-lanc.md)). Agent nélküli feladat nem indítható (`RuntimeException` / üzenet a felületen).
 
 ### Automatikus futtatás
 

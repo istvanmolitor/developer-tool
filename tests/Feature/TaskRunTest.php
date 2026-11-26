@@ -47,8 +47,11 @@ test('running a task queues a run as its assigned agent with the task as prompt'
         ->and($run->agentContext->project_id)->toBe($this->alpha->id)
         ->and($run->status)->toBe(PromptRunStatus::Pending)
         ->and($run->prompt)->toContain("#{$task->id}")
-        ->and($run->prompt)->toContain('Készíts REST végpontot')
-        ->and($run->prompt)->toContain('A projektek listázásához.');
+        ->and($run->prompt)->toContain('alpha')
+        // The prompt no longer embeds the task's title/description — the agent reads
+        // the full context through get-task instead.
+        ->and($run->prompt)->toContain('get-task')
+        ->and($run->prompt)->not->toContain('Készíts REST végpontot');
 
     Queue::assertPushed(RunClaudePrompt::class, fn (RunClaudePrompt $job) => $job->promptRun->is($run));
 });

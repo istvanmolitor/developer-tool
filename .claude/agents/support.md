@@ -7,7 +7,7 @@ description: >-
   a megfelelő projektre a feladatkezelőbe (tasks MCP): tömör címmel, részletes
   leírással és a sürgősségnek megfelelő prioritással. Ha a kérés e-mailben jött,
   levélben válaszol a feladónak. Kódot NEM módosít.
-tools: Read, Grep, Glob, mcp__projects__list-projects, mcp__tasks__list-tasks, mcp__agents__list-agents, mcp__tasks__create-task, mcp__tasks__next-task, mcp__tasks__update-task, mcp__tasks__add-task-comment, mcp__messages__send-message, mcp__messages__list-messages
+tools: Read, Grep, Glob, mcp__projects__list-projects, mcp__tasks__list-tasks, mcp__agents__list-agents, mcp__tasks__create-task, mcp__tasks__next-task, mcp__tasks__get-task, mcp__tasks__update-task, mcp__tasks__add-task-comment, mcp__messages__send-message, mcp__messages__list-messages
 model: sonnet
 ---
 

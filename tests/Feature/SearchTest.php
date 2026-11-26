@@ -89,10 +89,11 @@ test('the task list is filtered by text and status and paginated', function () {
         );
 });
 
-test('the agent task list shows done tasks only when asked', function () {
+test('the agent task list hides done and closed tasks unless all is asked', function () {
     $agent = Agent::factory()->create();
     Task::factory()->for($this->project)->create(['agent_id' => $agent->id, 'status' => TaskStatus::Todo]);
     Task::factory()->for($this->project)->create(['agent_id' => $agent->id, 'status' => TaskStatus::Done]);
+    Task::factory()->for($this->project)->create(['agent_id' => $agent->id, 'status' => TaskStatus::Closed]);
 
     $this->actingAs(User::factory()->create())
         ->get(route('agents.tasks', $agent))
@@ -100,7 +101,7 @@ test('the agent task list shows done tasks only when asked', function () {
 
     $this->actingAs(User::factory()->create())
         ->get(route('agents.tasks', ['agent' => $agent, 'status' => 'all']))
-        ->assertInertia(fn (Assert $page) => $page->where('tasks.total', 2));
+        ->assertInertia(fn (Assert $page) => $page->where('tasks.total', 3));
 });
 
 test('the mailbox mails can be filtered to the unread ones', function () {

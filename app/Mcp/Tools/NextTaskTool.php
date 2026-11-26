@@ -54,7 +54,7 @@ class NextTaskTool extends Tool
 
         $tasks = Task::query()
             ->where('agent_id', $agent->id)
-            ->where('status', '!=', TaskStatus::Done->value)
+            ->whereNotIn('status', [TaskStatus::Done->value, TaskStatus::Closed->value])
             ->when($project !== null, fn ($query) => $query->where('project_id', $project->id))
             // Folyamatban lévő előbb, mint a teendő; azon belül a magasabb prioritás,
             // majd a sorrend (position), végül a régebbi feladat.

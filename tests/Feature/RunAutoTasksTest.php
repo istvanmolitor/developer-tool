@@ -44,7 +44,7 @@ test('it starts auto-run todo tasks that have an agent and moves them to in prog
         ->and($run->agentContext->project_id)->toBe($this->alpha->id)
         ->and($run->status)->toBe(PromptRunStatus::Pending)
         ->and($run->prompt)->toContain("#{$task->id}")
-        ->and($run->prompt)->toContain('Készíts REST végpontot');
+        ->and($run->prompt)->toContain('get-task');
 
     Queue::assertPushed(RunClaudePrompt::class, fn (RunClaudePrompt $job) => $job->promptRun->is($run));
 });

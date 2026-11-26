@@ -13,6 +13,7 @@ Verziók (`composer.json`, `package.json`): PHP ^8.3 (a Sail konténer PHP 8.5, 
 | [projektek-es-agentek.md](projektek-es-agentek.md) | projektek (létrehozási módok, provisioning), agentek, agent-szinkron, seederek |
 | [prompt-futtatas.md](prompt-futtatas.md) | `ClaudePromptRunner`, queue job, kontextusok (chat), költség, dashboard |
 | [feladatok.md](feladatok.md) | feladatok, státuszok/típusok, kommentek, változásnapló, play, auto-run, agentek közti üzenetek |
+| [feladat-atadasi-lanc.md](feladat-atadasi-lanc.md) | ki kinek adja tovább a feladatot (pipeline), átadás, naplózás, lezárás (`closed`), `get-task` |
 | [postafiok.md](postafiok.md) | postafiókok, bejövő/kimenő levelek, `mailboxes:fetch` |
 | [kereses-es-dokumentacio.md](kereses-es-dokumentacio.md) | Elasticsearch keresés, `search:reindex`, dokumentáció-modul |
 | [mcp-szerverek.md](mcp-szerverek.md) | `routes/ai.php` MCP szerverek és eszközeik |

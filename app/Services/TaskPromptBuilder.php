@@ -8,31 +8,20 @@ use App\Models\Task;
 class TaskPromptBuilder
 {
     /**
-     * Build the prompt that hands the task to its agent: the task's id, title,
-     * type and priority, its description, and how to report progress through the
-     * tasks MCP tools.
+     * Build the prompt that hands the task to its agent. The prompt only names the
+     * task (id + project) and tells the agent to read its full context through the
+     * tasks MCP `get-task` tool — the task's title, description, history, change log
+     * and attachments all come from there, so this prompt stays minimal.
      */
     public function build(Project $project, Task $task): string
     {
-        $lines = [
+        return implode("\n", [
             "Dolgozz a(z) #{$task->id} azonosítójú feladaton a(z) „{$project->name}” projektben.",
             '',
-            "Cím: {$task->title}",
-            "Típus: {$task->type->label()}",
-            "Prioritás: {$task->priority->label()}",
-        ];
-
-        if (filled($task->description)) {
-            $lines[] = '';
-            $lines[] = 'Leírás:';
-            $lines[] = $task->description;
-        }
-
-        $lines[] = '';
-        $lines[] = 'Amikor nekikezdesz, állítsd a feladat státuszát „folyamatban”-ra, '
-            .'amikor pedig elkészültél, „kész”-re (update-task). A haladásodat és az '
-            .'eredményt írd a feladathoz hozzászólásként (add-task-comment)';
-
-        return implode("\n", $lines);
+            "Először olvasd be a feladat teljes kontextusát a `get-task` eszközzel (task_id: {$task->id}): "
+                .'a leírást, a hozzászólás-előzményt, a változásnaplót és a csatolt fájlokat. Ebből derül ki, '
+                .'mi a dolgod és mi vonatkozik rád. Ezután a system promptod szerint dolgozz a feladaton: '
+                .'állítsd a státuszt, naplózd a munkád hozzászólásként, és add tovább a láncban.',
+        ]);
     }
 }

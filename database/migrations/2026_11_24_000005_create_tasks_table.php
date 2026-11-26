@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->string('title');
             $table->text('description')->nullable();
-            // Workflow state: todo / in_progress / done.
+            // Workflow state: draft / todo / in_progress / done / closed.
             $table->string('status')->default(TaskStatus::Todo->value);
             // Importance: low / medium / high.
             $table->string('priority')->default(TaskPriority::Medium->value);
