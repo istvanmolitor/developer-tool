@@ -156,8 +156,11 @@ function isSelected(name: string): boolean {
             </button>
         </nav>
 
-        <div v-show="tab === 'general'" class="flex flex-col gap-5">
-            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+            v-show="tab === 'general'"
+            class="grid gap-5 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]"
+        >
+            <div class="flex flex-col gap-5">
                 <div class="flex flex-col gap-2">
                     <Label for="name">Név</Label>
                     <Input
@@ -209,23 +212,23 @@ function isSelected(name: string): boolean {
                     </p>
                     <InputError :message="form.errors.model" />
                 </div>
-            </div>
 
-            <div class="flex flex-col gap-2">
-                <Label for="description"
-                    >Leírás
-                    <span class="text-muted-foreground"
-                        >(opcionális)</span
-                    ></Label
-                >
-                <textarea
-                    id="description"
-                    v-model="form.description"
-                    rows="2"
-                    placeholder="Mire való, mikor hívd ezt az agentet?"
-                    class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
-                />
-                <InputError :message="form.errors.description" />
+                <div class="flex flex-col gap-2">
+                    <Label for="description"
+                        >Leírás
+                        <span class="text-muted-foreground"
+                            >(opcionális)</span
+                        ></Label
+                    >
+                    <textarea
+                        id="description"
+                        v-model="form.description"
+                        rows="3"
+                        placeholder="Mire való, mikor hívd ezt az agentet?"
+                        class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                    />
+                    <InputError :message="form.errors.description" />
+                </div>
             </div>
 
             <div class="flex flex-col gap-2">
@@ -233,9 +236,9 @@ function isSelected(name: string): boolean {
                 <textarea
                     id="system_prompt"
                     v-model="form.system_prompt"
-                    rows="20"
+                    rows="24"
                     placeholder="Az agent instrukciói — ez a lelke."
-                    class="w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                    class="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 lg:min-h-[32rem]"
                 />
                 <InputError :message="form.errors.system_prompt" />
             </div>

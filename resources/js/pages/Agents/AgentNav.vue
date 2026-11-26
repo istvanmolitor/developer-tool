@@ -17,16 +17,16 @@ const page = usePage();
 
 const items = computed(() => [
     {
-        title: "Chat",
-        icon: MessageSquare,
-        href: agents.show(props.agentId).url,
-        component: "Agents/Show",
-    },
-    {
         title: "Profil",
         icon: UserRound,
         href: agents.profile(props.agentId).url,
         component: "Agents/Profile",
+    },
+    {
+        title: "Chat",
+        icon: MessageSquare,
+        href: agents.show(props.agentId).url,
+        component: "Agents/Show",
     },
     {
         title: "Feladatok",

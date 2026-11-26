@@ -3,6 +3,7 @@ import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Bot,
     ChevronRight,
+    MessageSquare,
     Pencil,
     Plus,
     RefreshCw,
@@ -161,6 +162,15 @@ function destroy(agent: Agent): void {
                     <div class="absolute top-2 right-2 flex items-center">
                         <Button variant="ghost" size="icon-sm" as-child>
                             <Link
+                                :href="agentRoutes.show(agent.id).url"
+                                :title="`Chat a(z) ${agent.name} agenttel`"
+                                :aria-label="`Chat a(z) ${agent.name} agenttel`"
+                            >
+                                <MessageSquare class="size-3.5" />
+                            </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" as-child>
+                            <Link
                                 :href="agentRoutes.edit(agent.id).url"
                                 :title="`${agent.name} szerkesztése`"
                                 :aria-label="`${agent.name} szerkesztése`"
@@ -179,10 +189,10 @@ function destroy(agent: Agent): void {
                             <Trash2 class="size-3.5" />
                         </Button>
                     </div>
-                    <CardHeader class="pr-20">
+                    <CardHeader class="pr-28">
                         <CardTitle class="min-w-0">
                             <Link
-                                :href="agentRoutes.show(agent.id).url"
+                                :href="agentRoutes.profile(agent.id).url"
                                 :title="agent.name"
                                 class="flex min-w-0 items-center gap-2 outline-none hover:underline focus-visible:underline"
                             >

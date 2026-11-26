@@ -83,27 +83,27 @@ function destroy(): void {
 
         <AgentNav :agent-id="agent.id" />
 
-        <Card>
-            <CardHeader>
-                <CardTitle class="text-base">Beállítások</CardTitle>
-            </CardHeader>
-            <CardContent class="flex flex-col gap-5 text-sm">
-                <div>
-                    <p class="text-xs font-medium text-muted-foreground">
-                        Leírás
-                    </p>
-                    <p
-                        v-if="agent.description"
-                        class="mt-1 whitespace-pre-line"
-                    >
-                        {{ agent.description }}
-                    </p>
-                    <p v-else class="mt-1 text-muted-foreground italic">
-                        Nincs leírás.
-                    </p>
-                </div>
+        <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+            <Card>
+                <CardHeader>
+                    <CardTitle class="text-base">Adatok</CardTitle>
+                </CardHeader>
+                <CardContent class="flex flex-col gap-5 text-sm">
+                    <div>
+                        <p class="text-xs font-medium text-muted-foreground">
+                            Leírás
+                        </p>
+                        <p
+                            v-if="agent.description"
+                            class="mt-1 whitespace-pre-line"
+                        >
+                            {{ agent.description }}
+                        </p>
+                        <p v-else class="mt-1 text-muted-foreground italic">
+                            Nincs leírás.
+                        </p>
+                    </div>
 
-                <div class="grid gap-5 sm:grid-cols-2">
                     <div>
                         <p class="text-xs font-medium text-muted-foreground">
                             Modell
@@ -142,26 +142,28 @@ function destroy(): void {
                             >
                         </div>
                     </div>
-                </div>
 
-                <div v-if="agent.source_path">
-                    <p class="text-xs font-medium text-muted-foreground">
-                        Forrás
-                    </p>
-                    <p class="mt-1 font-mono break-all">
-                        {{ agent.source_path }}
-                    </p>
-                </div>
+                    <div v-if="agent.source_path">
+                        <p class="text-xs font-medium text-muted-foreground">
+                            Forrás
+                        </p>
+                        <p class="mt-1 font-mono break-all">
+                            {{ agent.source_path }}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
 
-                <div>
-                    <p class="text-xs font-medium text-muted-foreground">
-                        System prompt
-                    </p>
+            <Card class="flex flex-col">
+                <CardHeader>
+                    <CardTitle class="text-base">System prompt</CardTitle>
+                </CardHeader>
+                <CardContent class="min-h-0 flex-1">
                     <pre
-                        class="mt-1 max-h-[32rem] overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap"
+                        class="h-full max-h-[40rem] overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap"
                         >{{ agent.system_prompt }}</pre>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </div>
     </div>
 </template>
