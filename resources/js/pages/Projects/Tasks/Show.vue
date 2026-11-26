@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, router } from "@inertiajs/vue3";
-import { ArrowLeft, Bot, Pencil, Play, Zap } from "@lucide/vue";
+import { ArrowLeft, Bot, Pencil, Play, ScrollText, User, Zap } from "@lucide/vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogDescription,
+    DialogHeader,
+    DialogScrollContent,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import projects from "@/routes/projects";
 import TaskChangeList from "../TaskChanges/TaskChangeList.vue";
 import type { TaskChangeEntry } from "../TaskChanges/TaskChangeList.vue";
@@ -14,6 +22,8 @@ import TaskComments from "./TaskComments.vue";
 import type { TaskComment } from "./TaskComments.vue";
 
 type Project = { id: number; name: string; path: string };
+
+type Creator = { type: "user" | "agent" | null; name: string | null };
 
 type Task = {
     id: number;
@@ -27,6 +37,7 @@ type Task = {
     created_at: string | null;
     updated_at: string | null;
     agent: { id: number; name: string } | null;
+    creator: Creator;
 };
 
 const props = defineProps<{
@@ -135,85 +146,153 @@ function run(): void {
             </div>
         </div>
 
-        <Card class="max-w-3xl">
-            <CardHeader>
-                <CardTitle class="flex flex-wrap items-center gap-2">
-                    <Badge :variant="statusVariant(task.status)">
-                        {{ statusLabels[task.status] ?? task.status }}
-                    </Badge>
-                    <Badge
-                        :variant="
-                            task.type === 'bug' ? 'destructive' : 'secondary'
-                        "
-                    >
-                        {{ typeLabel(task.type) }}
-                    </Badge>
-                    <Badge :variant="priorityVariant(task.priority)">
-                        {{ priorityLabels[task.priority] ?? task.priority }}
-                    </Badge>
-                    <Badge
-                        v-if="task.auto_run"
-                        variant="outline"
-                        class="gap-1"
-                    >
-                        <Zap class="size-3" />
-                        Automatikus végrehajtás
-                    </Badge>
-                    <Badge v-if="task.agent" variant="secondary" class="gap-1">
-                        <Bot class="size-3" />
-                        {{ task.agent.name }}
-                    </Badge>
-                    <span class="text-sm font-normal text-muted-foreground">
-                        Határidő: {{ formatDate(task.due_date) }}
-                    </span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent class="flex flex-col gap-4">
-                <p
-                    v-if="task.description"
-                    class="text-sm whitespace-pre-wrap text-foreground"
-                >
-                    {{ task.description }}
-                </p>
-                <p v-else class="text-sm text-muted-foreground">
-                    Nincs leírás.
-                </p>
-                <p class="text-xs text-muted-foreground">
-                    Létrehozva: {{ formatDate(task.created_at) }} · Frissítve:
-                    {{ formatDate(task.updated_at) }}
-                </p>
-            </CardContent>
-        </Card>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <!-- Bal oldal: a feladat és a kommentek -->
+            <div class="flex flex-col gap-6 lg:col-span-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle class="flex flex-wrap items-center gap-2">
+                            <Badge :variant="statusVariant(task.status)">
+                                {{ statusLabels[task.status] ?? task.status }}
+                            </Badge>
+                            <Badge
+                                :variant="
+                                    task.type === 'bug'
+                                        ? 'destructive'
+                                        : 'secondary'
+                                "
+                            >
+                                {{ typeLabel(task.type) }}
+                            </Badge>
+                            <Badge :variant="priorityVariant(task.priority)">
+                                {{
+                                    priorityLabels[task.priority] ??
+                                    task.priority
+                                }}
+                            </Badge>
+                            <Badge
+                                v-if="task.auto_run"
+                                variant="outline"
+                                class="gap-1"
+                            >
+                                <Zap class="size-3" />
+                                Automatikus végrehajtás
+                            </Badge>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p
+                            v-if="task.description"
+                            class="text-sm whitespace-pre-wrap text-foreground"
+                        >
+                            {{ task.description }}
+                        </p>
+                        <p v-else class="text-sm text-muted-foreground">
+                            Nincs leírás.
+                        </p>
+                    </CardContent>
+                </Card>
 
-        <section class="flex max-w-3xl flex-col gap-3">
-            <h2 class="text-lg font-semibold">Csatolmányok</h2>
-            <TaskAttachments
-                :attachments="attachments"
-                :project-name="project.name"
-                :task-id="task.id"
-            />
-        </section>
+                <section class="flex flex-col gap-3">
+                    <h2 class="text-lg font-semibold">Hozzászólások</h2>
+                    <TaskComments
+                        :comments="comments"
+                        :project-name="project.name"
+                        :task-id="task.id"
+                    />
+                </section>
+            </div>
 
-        <section class="flex max-w-3xl flex-col gap-3">
-            <h2 class="text-lg font-semibold">Hozzászólások</h2>
-            <TaskComments
-                :comments="comments"
-                :project-name="project.name"
-                :task-id="task.id"
-            />
-        </section>
+            <!-- Jobb oldal: a többi -->
+            <div class="flex flex-col gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle class="text-base">Részletek</CardTitle>
+                    </CardHeader>
+                    <CardContent class="flex flex-col gap-3 text-sm">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-muted-foreground">Felelős</span>
+                            <Badge
+                                v-if="task.agent"
+                                variant="secondary"
+                                class="gap-1"
+                            >
+                                <Bot class="size-3" />
+                                {{ task.agent.name }}
+                            </Badge>
+                            <span v-else class="text-muted-foreground"
+                                >Nincs</span
+                            >
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-muted-foreground">Létrehozta</span>
+                            <Badge
+                                v-if="task.creator.type"
+                                variant="outline"
+                                class="gap-1"
+                            >
+                                <Bot
+                                    v-if="task.creator.type === 'agent'"
+                                    class="size-3"
+                                />
+                                <User v-else class="size-3" />
+                                {{ task.creator.name ?? "Ismeretlen" }}
+                            </Badge>
+                            <span v-else class="text-muted-foreground"
+                                >Ismeretlen</span
+                            >
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-muted-foreground">Határidő</span>
+                            <span>{{ formatDate(task.due_date) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-muted-foreground">Létrehozva</span>
+                            <span>{{ formatDate(task.created_at) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-muted-foreground">Frissítve</span>
+                            <span>{{ formatDate(task.updated_at) }}</span>
+                        </div>
+                    </CardContent>
+                </Card>
 
-        <section class="flex max-w-3xl flex-col gap-3">
-            <h2 class="text-lg font-semibold">Változásnapló</h2>
-            <TaskChangeList
-                v-if="history.length > 0"
-                :entries="history"
-                :project-name="project.name"
-            />
-            <p v-else class="text-sm text-muted-foreground">
-                Még nem változott a feladat státusza, prioritása, típusa,
-                felelőse vagy határideje.
-            </p>
-        </section>
+                <section class="flex flex-col gap-3">
+                    <h2 class="text-lg font-semibold">Csatolmányok</h2>
+                    <TaskAttachments
+                        :attachments="attachments"
+                        :project-name="project.name"
+                        :task-id="task.id"
+                    />
+                </section>
+
+                <Dialog>
+                    <DialogTrigger as-child>
+                        <Button variant="outline" class="w-full justify-start">
+                            <ScrollText class="size-4" />
+                            Változásnapló
+                        </Button>
+                    </DialogTrigger>
+                    <DialogScrollContent class="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>Változásnapló</DialogTitle>
+                            <DialogDescription>
+                                A feladat státuszának, prioritásának, típusának,
+                                felelősének és határidejének módosításai.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <TaskChangeList
+                            v-if="history.length > 0"
+                            :entries="history"
+                            :project-name="project.name"
+                        />
+                        <p v-else class="text-sm text-muted-foreground">
+                            Még nem változott a feladat státusza, prioritása,
+                            típusa, felelőse vagy határideje.
+                        </p>
+                    </DialogScrollContent>
+                </Dialog>
+            </div>
+        </div>
     </div>
 </template>

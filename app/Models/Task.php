@@ -12,6 +12,7 @@ use App\Services\Search\Searchable;
 use Carbon\CarbonImmutable;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $project_id
  * @property int|null $agent_id
+ * @property int|null $created_by_user_id
+ * @property int|null $created_by_agent_id
  * @property string $title
  * @property TaskType $type
  * @property string|null $description
@@ -35,6 +38,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $updated_at
  * @property-read Project $project
  * @property-read Agent|null $agent
+ * @property-read User|null $createdByUser
+ * @property-read Agent|null $createdByAgent
+ * @property-read array{type: 'user'|'agent'|null, name: string|null} $creator
  * @property-read Collection<int, TaskChange> $taskChanges
  * @property-read Collection<int, TaskComment> $comments
  */
@@ -90,6 +96,41 @@ class Task extends Model implements Searchable
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    /**
+     * The user who created the task from the web UI, if any.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function createdByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /**
+     * The agent who created the task through the tasks MCP, if any.
+     *
+     * @return BelongsTo<Agent, $this>
+     */
+    public function createdByAgent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'created_by_agent_id');
+    }
+
+    /**
+     * Display-ready creator: a user, an agent, or neither (legacy rows).
+     * The createdByUser and createdByAgent relations should be eager loaded.
+     *
+     * @return Attribute<array{type: 'user'|'agent'|null, name: string|null}, never>
+     */
+    protected function creator(): Attribute
+    {
+        return Attribute::get(fn (): array => match (true) {
+            $this->created_by_user_id !== null => ['type' => 'user', 'name' => $this->createdByUser?->name],
+            $this->created_by_agent_id !== null => ['type' => 'agent', 'name' => $this->createdByAgent?->name],
+            default => ['type' => null, 'name' => null],
+        });
     }
 
     /**

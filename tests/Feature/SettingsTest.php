@@ -3,6 +3,7 @@
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\TaskService;
 
 beforeEach(function () {
     $this->actingAs(User::factory()->create());
@@ -47,7 +48,7 @@ test('new tasks are created with auto_run when the setting is on', function () {
     Setting::setFlag('auto_start_tasks', true);
 
     $project = Project::factory()->create();
-    $task = $project->tasks()->create(['title' => 'Auto feladat']);
+    $task = app(TaskService::class)->create($project, ['title' => 'Auto feladat']);
 
     expect($task->auto_run)->toBeTrue();
 });
@@ -56,7 +57,17 @@ test('new tasks keep auto_run false when the setting is off', function () {
     Setting::setFlag('auto_start_tasks', false);
 
     $project = Project::factory()->create();
-    $task = $project->tasks()->create(['title' => 'Kézi feladat']);
+    $task = app(TaskService::class)->create($project, ['title' => 'Kézi feladat']);
 
     expect($task->fresh()->auto_run)->toBeFalse();
+});
+
+test('create always overrides a caller-supplied auto_run with the system default', function () {
+    Setting::setFlag('auto_start_tasks', false);
+
+    $project = Project::factory()->create();
+    // A hívó auto_run=true-t ad át, de create-nél a rendszer alapértelmezése (false) dönt.
+    $task = app(TaskService::class)->create($project, ['title' => 'Feladat', 'auto_run' => true]);
+
+    expect($task->auto_run)->toBeFalse();
 });

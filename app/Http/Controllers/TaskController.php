@@ -92,7 +92,9 @@ class TaskController extends Controller
     {
         return Inertia::render('Projects/Tasks/Show', [
             'project' => $project,
-            'task' => $task->load('agent:id,name'),
+            'task' => $task
+                ->load('agent:id,name', 'createdByUser:id,name', 'createdByAgent:id,name')
+                ->append('creator'),
             'types' => $this->typeOptions(),
             'history' => $formatter->format(
                 $task->taskChanges()->with(['user:id,name', 'agent:id,name'])->get()

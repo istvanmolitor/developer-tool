@@ -27,7 +27,10 @@ class TaskFactory extends Factory
             'type' => $this->faker->randomElement(TaskType::cases()),
             'description' => $this->faker->optional()->paragraph(),
             'status' => $this->faker->randomElement(TaskStatus::cases()),
-            'auto_run' => $this->faker->boolean(20),
+            // Determinisztikus alapérték: az auto_run most már futást indíthat
+            // (agent-átrendeléskor), ezért a véletlen true flaky tesztet okozna.
+            // Aki az automatikus indítást teszteli, explicit állítsa true-ra.
+            'auto_run' => false,
             'priority' => $this->faker->randomElement(TaskPriority::cases()),
             'due_date' => $this->faker->optional()->dateTimeBetween('now', '+1 month'),
             'position' => 0,

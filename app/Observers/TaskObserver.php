@@ -5,28 +5,11 @@ namespace App\Observers;
 use App\Mcp\Servers\TaskServer;
 use App\Models\Task;
 use App\Models\TaskChange;
-use App\Repositories\Contracts\SettingRepository;
 use BackedEnum;
 use Carbon\CarbonInterface;
 
 class TaskObserver
 {
-    public function __construct(
-        private SettingRepository $settings,
-    ) {}
-
-    /**
-     * When the "automatic task start" setting is on, every new task is created
-     * with auto_run enabled. The flag records that intent; no run is started
-     * from the observer (that previously looped — see git history).
-     */
-    public function creating(Task $task): void
-    {
-        if ($this->settings->flag('auto_start_tasks')) {
-            $task->auto_run = true;
-        }
-    }
-
     /**
      * Log the old and new value of every tracked field the save changed.
      *

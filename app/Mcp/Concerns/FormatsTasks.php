@@ -38,6 +38,7 @@ trait FormatsTasks
             'project' => $task->project->name ?? null,
             'agent' => $task->agent?->name,
             'agent_id' => $task->agent_id,
+            'created_by' => $task->creator,
             'title' => $task->title,
             'type' => $task->type->value,
             'description' => $task->description,
