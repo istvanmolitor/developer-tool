@@ -3,8 +3,6 @@
 use App\Mcp\Servers\TaskServer;
 use App\Mcp\Tools\CreateTaskTool;
 use App\Mcp\Tools\DeleteTaskTool;
-use App\Mcp\Tools\ListAgentsTool;
-use App\Mcp\Tools\ListProjectsTool;
 use App\Mcp\Tools\ListTasksTool;
 use App\Mcp\Tools\NextTaskTool;
 use App\Mcp\Tools\UpdateTaskTool;
@@ -18,20 +16,11 @@ beforeEach(function () {
 });
 
 test('the server registers all task tools', function () {
-    TaskServer::tool(ListProjectsTool::class);
     TaskServer::tool(ListTasksTool::class);
     TaskServer::tool(CreateTaskTool::class);
     TaskServer::tool(UpdateTaskTool::class);
     TaskServer::tool(DeleteTaskTool::class);
 })->throwsNoExceptions();
-
-test('list-projects returns projects with task counts', function () {
-    Task::factory()->count(2)->create(['project_id' => $this->project->id]);
-
-    TaskServer::tool(ListProjectsTool::class)
-        ->assertOk()
-        ->assertSee('alpha');
-});
 
 test('create-task creates a task under a project', function () {
     TaskServer::tool(CreateTaskTool::class, [
@@ -88,14 +77,6 @@ test('create-task rejects an attachment belonging to another project', function 
     ])->assertHasErrors();
 
     expect(Task::count())->toBe(0);
-});
-
-test('list-agents returns the agents', function () {
-    Agent::factory()->create(['name' => 'documentarian']);
-
-    TaskServer::tool(ListAgentsTool::class)
-        ->assertOk()
-        ->assertSee('documentarian');
 });
 
 test('create-task assigns an agent by name', function () {

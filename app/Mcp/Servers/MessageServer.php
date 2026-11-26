@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Servers;
 
-use App\Mcp\Tools\ListAgentsTool;
 use App\Mcp\Tools\ListMessagesTool;
 use App\Mcp\Tools\SendMessageTool;
 use Laravel\Mcp\Server;
@@ -21,12 +20,13 @@ use Laravel\Mcp\Server\Tool;
 #[Instructions(<<<'TXT'
     Üzenetküldés az ugyanazon a projekten dolgozó agentek között.
 
-    - A `list-agents` eszközzel kérdezheted le, kinek írhatsz.
     - A `send-message` eszközzel üzenetet küldhetsz egy másik agentnek
       (a `to` paraméterben az agent neve, slug-ja vagy azonosítója).
     - A `list-messages` eszközzel olvashatod a neked érkezett üzeneteket.
       Alapértelmezetten csak az olvasatlanokat adja vissza, és a visszaadott
       üzeneteket olvasottnak jelöli.
+
+    Hogy kinek írhatsz, azt az `agents` szerver `list-agents` eszköze mondja meg.
 
     Agent-futás közben a küldő/olvasó agent és a projekt automatikusan a
     futásból jön. Futáson kívül add meg a `project` és az `agent` paramétert
@@ -43,7 +43,6 @@ class MessageServer extends Server
      * @var array<int, class-string<Tool>>
      */
     protected array $tools = [
-        ListAgentsTool::class,
         SendMessageTool::class,
         ListMessagesTool::class,
     ];

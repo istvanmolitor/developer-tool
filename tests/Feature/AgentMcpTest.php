@@ -4,6 +4,7 @@ use App\Enums\PromptRunStatus;
 use App\Jobs\RunClaudePrompt;
 use App\Mcp\Servers\AgentServer;
 use App\Mcp\Tools\GetPromptRunTool;
+use App\Mcp\Tools\ListAgentsTool;
 use App\Mcp\Tools\RunAgentTool;
 use App\Models\Agent;
 use App\Models\Project;
@@ -15,6 +16,12 @@ beforeEach(function () {
 
     $this->project = Project::factory()->create(['name' => 'alpha']);
     $this->agent = Agent::factory()->create(['name' => 'documentarian', 'description' => 'Writes the docs.']);
+});
+
+test('list-agents returns the agents, so the other servers need no copy of it', function () {
+    AgentServer::tool(ListAgentsTool::class)
+        ->assertOk()
+        ->assertSee('documentarian');
 });
 
 test('run-agent queues the prompt as the agent on the project', function () {

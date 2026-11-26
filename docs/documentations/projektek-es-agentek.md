@@ -42,6 +42,8 @@ Mezők (`agents` tábla): `name`, `slug`, `description`, `model`, `tools` (JSON 
 
 `app/Services/AgentToolService.php` adja az eszközök katalógusát magyar megnevezésekkel, csoportosítva: a Claude Code beépített eszközei (Fájlok, Keresés, Parancsfuttatás, Web, Munkaszervezés) kézzel karbantartott listából, az alkalmazás MCP eszközei (`mcp__<szerver>__<eszköz>`) pedig az MCP szerverek definíciójából, az eszközosztályok `#[Title]` / `#[Description]` attribútumaiból — így új MCP eszköz külön munka nélkül megjelenik.
 
+Minden eszköz egyszer szerepel a katalógusban, mert minden eszköz pontosan egy MCP szerveren él (lásd [mcp-szerverek.md](mcp-szerverek.md)).
+
 - `groups()` – a teljes katalógus (az agent űrlap checkboxai ezt kapják `tool_groups` propként); minden csoport `kind` mezője `builtin` (Claude Code saját eszközei) vagy `mcp`.
 - `describe($tools)` – egy agent eszközei megjelenítéshez: magyar név, nyers eszköznév, csoport, `known` (katalóguson kívüli eszköz is látszik; a profil ezt kapja `tools` propként).
 - `label($tool)` – egy eszköz magyar neve, ismeretlenre a nyers név.

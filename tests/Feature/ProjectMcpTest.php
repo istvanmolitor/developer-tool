@@ -9,6 +9,7 @@ use App\Mcp\Tools\ListProjectsTool;
 use App\Models\Agent;
 use App\Models\Project;
 use App\Models\PromptRun;
+use App\Models\Task;
 use App\Services\ClaudePromptRunner;
 use App\Services\ProjectService;
 use Illuminate\Support\Facades\Bus;
@@ -32,6 +33,16 @@ test('the server registers all project tools', function () {
     ProjectServer::tool(ListProjectDirectoriesTool::class);
     ProjectServer::tool(CreateProjectTool::class);
 })->throwsNoExceptions();
+
+test('list-projects returns the projects with their task counts', function () {
+    $project = Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
+    Task::factory()->count(2)->create(['project_id' => $project->id]);
+
+    ProjectServer::tool(ListProjectsTool::class)
+        ->assertOk()
+        ->assertSee('alpha')
+        ->assertSee('tasks_count');
+});
 
 test('create-project in new mode creates a ready project with its directory, no job', function () {
     ProjectServer::tool(CreateProjectTool::class, [

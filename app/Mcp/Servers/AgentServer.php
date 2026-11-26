@@ -4,7 +4,6 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Tools\GetPromptRunTool;
 use App\Mcp\Tools\ListAgentsTool;
-use App\Mcp\Tools\ListProjectsTool;
 use App\Mcp\Tools\RunAgentTool;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -28,7 +27,8 @@ use Laravel\Mcp\Server\Tool;
     promptjával, modelljével és eszközeivel).
 
     Tipikus munkafolyamat:
-    1. Hívd a `list-agents` és a `list-projects` eszközt a nevekért.
+    1. Hívd a `list-agents` eszközt az agentek nevéért; a projektek nevét a
+       `projects` szerver `list-projects` eszköze adja.
     2. A `run-agent` eszközzel sorba állítod a promptot; a válasz tartalmazza a
        futtatás azonosítóját (`run_id`). A prompt elhagyható — ekkor az agent a
        leírása alapján indul.
@@ -42,7 +42,6 @@ class AgentServer extends Server
      */
     protected array $tools = [
         ListAgentsTool::class,
-        ListProjectsTool::class,
         RunAgentTool::class,
         GetPromptRunTool::class,
     ];

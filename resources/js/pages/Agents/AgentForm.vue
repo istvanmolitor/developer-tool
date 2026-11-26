@@ -242,13 +242,6 @@ function isSelected(name: string): boolean {
         </div>
 
         <div v-show="tab === 'permissions'" class="flex flex-col gap-4">
-            <p class="text-sm text-muted-foreground">
-                A Claude Code saját eszközei — amihez az agent hozzáfér a
-                projekten. Ha egyetlen eszközt sem jelölsz be (sem itt, sem az
-                MCP fülön), az agent minden eszközt megkap (öröklött
-                alapértelmezés).
-            </p>
-
             <AgentToolPicker v-model="form.tools" :groups="builtinGroups" />
         </div>
 

@@ -103,6 +103,22 @@ test('only the built-in groups hold tools that are not mcp tools', function () {
     }
 });
 
+test('no tool is offered twice, so each one lives on exactly one server', function () {
+    $tools = [];
+
+    foreach (app(AgentToolService::class)->groups() as $group) {
+        foreach ($group['tools'] as $tool) {
+            $tools[] = ['name' => $tool['name'], 'label' => $tool['label'], 'group' => $group['label']];
+        }
+    }
+
+    $labels = array_column($tools, 'label');
+    $duplicated = array_values(array_unique(array_diff_assoc($labels, array_unique($labels))));
+
+    expect(array_column($tools, 'name'))->toHaveCount(count(array_unique(array_column($tools, 'name'))));
+    expect($duplicated)->toBe([]);
+});
+
 test('every group of the catalogue has tools', function () {
     foreach (app(AgentToolService::class)->groups() as $group) {
         expect($group['tools'])->not->toBeEmpty();

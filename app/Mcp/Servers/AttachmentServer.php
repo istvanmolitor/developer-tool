@@ -7,7 +7,6 @@ use App\Mcp\Tools\CreateAttachmentTool;
 use App\Mcp\Tools\DeleteAttachmentTool;
 use App\Mcp\Tools\DetachFromTaskTool;
 use App\Mcp\Tools\ListAttachmentsTool;
-use App\Mcp\Tools\ListProjectsTool;
 use App\Mcp\Tools\SyncAttachmentsTool;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -32,19 +31,19 @@ use Laravel\Mcp\Server\Tool;
     tartalmazza a tárolt abszolút útvonalat (`path`), amelyre hivatkozni tudsz.
 
     Tipikus munkafolyamat:
-    1. Hívd a `list-projects` eszközt a projektek nevének megismeréséhez.
-    2. Mappa-alapú: tegyél fájlokat a projekt `docs/attachments` mappájába, majd
+    1. Mappa-alapú: tegyél fájlokat a projekt `docs/attachments` mappájába, majd
        hívd a `sync-attachments` eszközt — a fájlok a lemezre másolódnak és az
        adatbázisba kerülnek (a törölt fájlok sorai eltűnnek).
-    3. Egyedi fájl: a `create-attachment` eszközzel egy lemezen lévő fájlt
+    2. Egyedi fájl: a `create-attachment` eszközzel egy lemezen lévő fájlt
        csatolmányként elmentesz (visszakapod az azonosítót és az útvonalat).
-    4. A `attach-to-task` eszközzel egy csatolmányt egy feladathoz kötsz, hogy a
+    3. A `attach-to-task` eszközzel egy csatolmányt egy feladathoz kötsz, hogy a
        feladatnál hivatkozhass rá; a `detach-from-task` bontja a kötést.
-    5. A `list-attachments` eszközzel egy projekt vagy egy feladat (task_id)
+    4. A `list-attachments` eszközzel egy projekt vagy egy feladat (task_id)
        csatolmányait listázod; a `delete-attachment` véglegesen töröl egyet.
 
     A csatolmányokra az azonosítójukkal (`attachment_id`), a projektekre a nevükkel
-    (`project`), a feladatokra az azonosítójukkal (`task_id`) hivatkozz.
+    (`project`), a feladatokra az azonosítójukkal (`task_id`) hivatkozz. A projektek
+    nevét a `projects` szerver `list-projects` eszköze adja.
     TXT)]
 class AttachmentServer extends Server
 {
@@ -52,7 +51,6 @@ class AttachmentServer extends Server
      * @var array<int, class-string<Tool>>
      */
     protected array $tools = [
-        ListProjectsTool::class,
         SyncAttachmentsTool::class,
         CreateAttachmentTool::class,
         ListAttachmentsTool::class,

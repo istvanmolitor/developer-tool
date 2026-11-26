@@ -12,16 +12,20 @@ use Laravel\Mcp\Server\Attributes\Version;
 use Laravel\Mcp\Server\Tool;
 
 /**
- * Lets a Claude Code session create projects in the developer-tool.
+ * The projects of the developer-tool: the one place that lists them, and that
+ * registers new ones. Every other server points here for project names instead
+ * of carrying its own copy of the listing tool.
  *
- * Deliberately not given to the prompt runs themselves, so an agent cannot
- * keep registering further projects.
+ * Given to a prompt run only when the agent's tools opt into it (an
+ * `mcp__projects__*` entry); listing and creating are separate tools, so an
+ * agent allowed to list projects still cannot register one.
  */
 #[Name('Developer Tool – Projektek')]
 #[Version('1.0.0')]
 #[Instructions(<<<'TXT'
-    Projekteket hozhatsz létre a developer-tool alkalmazásban. Egy projekt a
-    projektek könyvtárának egy mappája.
+    A developer-tool projektjei: itt kérdezheted le őket, és itt hozhatsz létre
+    újat. Egy projekt a projektek könyvtárának egy mappája. A többi szerver (pl.
+    `tasks`, `attachments`) a projektek nevét innen várja.
 
     Tipikus munkafolyamat:
     1. A `list-projects` eszközzel nézd meg, mely projektek léteznek már
