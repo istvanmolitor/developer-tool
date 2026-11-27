@@ -21,7 +21,7 @@ class ProjectAttachmentController extends Controller
     ) {}
 
     /**
-     * The project's attachments (uploaded, synced from docs/attachments, or
+     * The project's attachments (uploaded, synced from the attachments folder, or
      * saved from a message), newest first.
      */
     public function index(Project $project): Response
@@ -36,8 +36,8 @@ class ProjectAttachmentController extends Controller
     }
 
     /**
-     * Upload a file into the project's docs/attachments folder and record it, so
-     * it lives alongside the project's own files on disk.
+     * Upload a file into the project's attachments folder and record it, so the
+     * bytes live in the shared attachments store, outside the project's own tree.
      */
     public function store(StoreProjectAttachmentRequest $request, Project $project): RedirectResponse
     {
@@ -108,8 +108,8 @@ class ProjectAttachmentController extends Controller
 
     /**
      * Remove the attachment: detach it from any tasks and messages, then delete
-     * the row — which also removes its file from the project's folder, so a later
-     * sync does not re-import it.
+     * the row — which also removes its file from the attachments folder, so a
+     * later sync does not re-import it.
      */
     public function destroy(Project $project, Attachment $attachment): RedirectResponse
     {
@@ -123,7 +123,7 @@ class ProjectAttachmentController extends Controller
     }
 
     /**
-     * Reload the project's docs/attachments folder into the database.
+     * Reload the project's attachments folder into the database.
      */
     public function sync(Project $project): RedirectResponse
     {

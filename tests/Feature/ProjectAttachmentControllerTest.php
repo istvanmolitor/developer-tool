@@ -11,21 +11,34 @@ use Illuminate\Support\Facades\File;
 uses(RefreshDatabase::class);
 
 /**
- * A project rooted at a throwaway directory, so uploaded files land somewhere
- * real and writable. The directory is removed in afterEach().
+ * A throwaway projects directory, so uploaded files land somewhere real and
+ * writable. Attachments live in `<projects_path>/attachments/<name>`, beside the
+ * project directories rather than inside them. Removed in afterEach().
+ */
+beforeEach(function (): void {
+    $this->projectsPath = sys_get_temp_dir().'/project-attachments-'.uniqid();
+    config(['developer-tool.projects_path' => $this->projectsPath]);
+});
+
+afterEach(function (): void {
+    File::deleteDirectory($this->projectsPath);
+});
+
+/**
+ * A project whose attachments land in the throwaway projects directory.
  */
 function attachmentProject(): Project
 {
-    return Project::factory()->create([
-        'path' => sys_get_temp_dir().'/project-attachments-'.uniqid(),
-    ]);
+    return Project::factory()->create();
 }
 
-afterEach(function (): void {
-    foreach (glob(sys_get_temp_dir().'/project-attachments-*') ?: [] as $directory) {
-        File::deleteDirectory($directory);
-    }
-});
+/**
+ * Absolute path of a project's attachments folder, mirroring the service.
+ */
+function projectAttachmentsDir(Project $project): string
+{
+    return config('developer-tool.projects_path').'/attachments/'.$project->name;
+}
 
 test('the attachments index lists the project files', function () {
     $project = Project::factory()->create();
@@ -42,7 +55,7 @@ test('the attachments index lists the project files', function () {
         );
 });
 
-test('an uploaded file is saved in the project docs/attachments folder', function () {
+test('an uploaded file is saved in the project attachments folder', function () {
     $project = attachmentProject();
 
     $this->actingAs(User::factory()->create())
@@ -59,7 +72,7 @@ test('an uploaded file is saved in the project docs/attachments folder', functio
         ->disk->toBe(Attachment::PROJECT_DISK)
         ->relative_path->toBe('terv.txt');
 
-    expect($attachment->absolutePath())->toBe($project->path.'/docs/attachments/terv.txt')
+    expect($attachment->absolutePath())->toBe(projectAttachmentsDir($project).'/terv.txt')
         ->and(File::get($attachment->absolutePath()))->toBe('the plan');
 });
 
@@ -130,9 +143,9 @@ test('an uploaded file is not re-imported as a duplicate by sync', function () {
         ->and($project->attachments()->sole()->source)->toBe('upload');
 });
 
-test('sync imports the project docs/attachments folder into the database', function () {
+test('sync imports the project attachments folder into the database', function () {
     $project = attachmentProject();
-    $directory = $project->path.'/docs/attachments';
+    $directory = projectAttachmentsDir($project);
     File::ensureDirectoryExists($directory);
     File::put($directory.'/kep.txt', 'image bytes');
 

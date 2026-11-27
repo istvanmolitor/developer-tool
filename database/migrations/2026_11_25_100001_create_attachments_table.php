@@ -11,7 +11,7 @@ return new class extends Migration
      * The central store for attached files. Every row is one physical file on a
      * filesystem disk (its bytes live under `path` on `disk`), scoped to a
      * project. Files reach the table through {@see AttachmentService}:
-     * uploaded (source=upload), synced from the project's docs/attachments folder
+     * uploaded (source=upload), synced from the project's attachments folder
      * (source=sync), or saved from a downloaded message (source=mail). Tasks and
      * messages reference attachments through their own pivot tables, so one file
      * can be shared by several of them.
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('checksum')->nullable();
             // Where the file came from: upload | sync | mail.
             $table->string('source')->default('upload');
-            // For source=sync: the path relative to the project's docs/attachments
+            // For source=sync: the path relative to the project's attachments
             // folder. The sync upserts on (project_id, relative_path).
             $table->string('relative_path')->nullable();
             $table->timestamps();

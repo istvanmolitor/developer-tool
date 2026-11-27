@@ -88,7 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('projects.documentations.pdf');
     Route::resource('projects.documentations', DocumentationController::class)->scoped();
 
-    // Files stored for the project, and reloading its docs/attachments folder.
+    // Files stored for the project, and reloading its attachments folder.
     Route::get('projects/{project}/attachments', [ProjectAttachmentController::class, 'index'])
         ->name('projects.attachments.index');
     Route::post('projects/{project}/attachments', [ProjectAttachmentController::class, 'store'])

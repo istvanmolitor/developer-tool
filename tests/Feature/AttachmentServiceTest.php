@@ -9,25 +9,30 @@ use Illuminate\Support\Facades\File;
 uses(RefreshDatabase::class);
 
 /**
- * A project rooted at a throwaway directory, so writes land somewhere real and
- * writable. The directory is removed in afterEach().
+ * A throwaway projects directory, so attachment writes land somewhere real and
+ * writable. Attachments live in `<projects_path>/attachments/<name>`, next to
+ * the project directories rather than inside them, so the tests point the
+ * configured projects path at this temp folder. It is removed in afterEach().
  */
-function tempProject(): Project
-{
-    return Project::factory()->create([
-        'path' => sys_get_temp_dir().'/attach-'.uniqid(),
-    ]);
-}
-
-afterEach(function (): void {
-    foreach (glob(sys_get_temp_dir().'/attach-*') ?: [] as $directory) {
-        File::deleteDirectory($directory);
-    }
-    File::deleteDirectory(storage_path('attachments'));
+beforeEach(function (): void {
+    $this->projectsPath = sys_get_temp_dir().'/attach-'.uniqid();
+    config(['developer-tool.projects_path' => $this->projectsPath]);
 });
 
-test('store writes the bytes into the project folder and records the row', function () {
-    $project = tempProject();
+afterEach(function (): void {
+    File::deleteDirectory($this->projectsPath);
+});
+
+/**
+ * Absolute path of a project's attachments folder, mirroring the service.
+ */
+function attachmentsDir(Project $project): string
+{
+    return config('developer-tool.projects_path').'/attachments/'.$project->name;
+}
+
+test('store writes the bytes into the central attachments folder and records the row', function () {
+    $project = Project::factory()->create();
 
     $attachment = app(AttachmentService::class)->store($project, 'hello world', 'note.txt', 'text/plain');
 
@@ -40,22 +45,22 @@ test('store writes the bytes into the project folder and records the row', funct
         ->disk->toBe(Attachment::PROJECT_DISK)
         ->relative_path->toBe('note.txt');
 
-    expect($attachment->absolutePath())->toBe($project->path.'/docs/attachments/note.txt')
+    expect($attachment->absolutePath())->toBe(attachmentsDir($project).'/note.txt')
         ->and(File::get($attachment->absolutePath()))->toBe('hello world');
 });
 
-test('store writes the system project files under storage', function () {
-    $project = tempProject();
+test('the system project also stores in the central attachments folder, not inside itself', function () {
+    $project = Project::factory()->create();
     $project->forceFill(['is_system' => true])->saveQuietly();
 
     $attachment = app(AttachmentService::class)->store($project, 'x', 'sys.txt');
 
-    expect($attachment->absolutePath())->toBe(storage_path('attachments/sys.txt'))
+    expect($attachment->absolutePath())->toBe(attachmentsDir($project).'/sys.txt')
         ->and(File::get($attachment->absolutePath()))->toBe('x');
 });
 
 test('uploading the same filename twice keeps both files', function () {
-    $project = tempProject();
+    $project = Project::factory()->create();
     $service = app(AttachmentService::class);
 
     $first = $service->store($project, 'one', 'dup.txt');
@@ -67,7 +72,7 @@ test('uploading the same filename twice keeps both files', function () {
 });
 
 test('deleting an attachment removes its file', function () {
-    $project = tempProject();
+    $project = Project::factory()->create();
     $attachment = app(AttachmentService::class)->store($project, 'bytes', 'a.txt');
     $absolute = $attachment->absolutePath();
 
@@ -79,7 +84,7 @@ test('deleting an attachment removes its file', function () {
 });
 
 test('deleting a project removes its attachment files and rows', function () {
-    $project = tempProject();
+    $project = Project::factory()->create();
     $attachment = app(AttachmentService::class)->store($project, 'bytes', 'a.txt');
     $absolute = $attachment->absolutePath();
 
@@ -89,9 +94,9 @@ test('deleting a project removes its attachment files and rows', function () {
     expect(File::exists($absolute))->toBeFalse();
 });
 
-test('syncProject imports the docs/attachments folder as rows', function () {
-    $project = tempProject();
-    $directory = $project->path.'/docs/attachments';
+test('syncProject imports the attachments folder as rows', function () {
+    $project = Project::factory()->create();
+    $directory = attachmentsDir($project);
     File::ensureDirectoryExists($directory.'/sub');
     File::put($directory.'/a.txt', 'alpha');
     File::put($directory.'/sub/b.txt', 'beta');
@@ -105,7 +110,7 @@ test('syncProject imports the docs/attachments folder as rows', function () {
 });
 
 test('syncProject does not duplicate an already uploaded file', function () {
-    $project = tempProject();
+    $project = Project::factory()->create();
     $service = app(AttachmentService::class);
 
     $uploaded = $service->store($project, 'body', 'report.txt');
@@ -119,8 +124,8 @@ test('syncProject does not duplicate an already uploaded file', function () {
 });
 
 test('syncProject prunes rows whose source file disappeared', function () {
-    $project = tempProject();
-    $directory = $project->path.'/docs/attachments';
+    $project = Project::factory()->create();
+    $directory = attachmentsDir($project);
     File::ensureDirectoryExists($directory);
     File::put($directory.'/keep.txt', 'keep');
     File::put($directory.'/gone.txt', 'gone');
@@ -137,8 +142,8 @@ test('syncProject prunes rows whose source file disappeared', function () {
 });
 
 test('syncProject refreshes a sync row when its file changes', function () {
-    $project = tempProject();
-    $directory = $project->path.'/docs/attachments';
+    $project = Project::factory()->create();
+    $directory = attachmentsDir($project);
     File::ensureDirectoryExists($directory);
     File::put($directory.'/a.txt', 'version one');
 

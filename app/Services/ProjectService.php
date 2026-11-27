@@ -70,6 +70,9 @@ class ProjectService
 
         return collect(scandir($base) ?: [])
             ->reject(fn (string $entry): bool => in_array($entry, ['.', '..'], true))
+            // The shared attachments folder lives beside the project directories
+            // but is not itself a project, so it must never be imported as one.
+            ->reject(fn (string $entry): bool => $entry === AttachmentService::ATTACHMENTS_DIR)
             ->filter(fn (string $entry): bool => is_dir($base.'/'.$entry))
             ->values();
     }

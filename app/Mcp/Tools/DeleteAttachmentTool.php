@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('delete-attachment')]
 #[Title('Csatolmány törlése')]
-#[Description('Végleg törli a csatolmányt: a fizikai fájlt és az adatbázis-sort is, a feladat- és levél-kötésekkel együtt. Figyelem: a docs/attachments mappából szinkronizált (source=sync) fájlt a következő sync újra létrehozza, ha a forrásfájl megmarad.')]
+#[Description('Végleg törli a csatolmányt: a fizikai fájlt és az adatbázis-sort is, a feladat- és levél-kötésekkel együtt. Figyelem: a csatolmány-mappából szinkronizált (source=sync) fájlt a következő sync újra létrehozza, ha a forrásfájl megmarad.')]
 class DeleteAttachmentTool extends Tool
 {
     use FormatsAttachments;

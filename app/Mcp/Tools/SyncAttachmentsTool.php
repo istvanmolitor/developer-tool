@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('sync-attachments')]
 #[Title('Csatolmányok betöltése a mappából')]
-#[Description('Betölti a projekt docs/attachments mappájának fájljait a csatolmány-táblába (a fájlokat a privát lemezre másolja, útvonal szerint upsertel, a törölt fájlok sorai eltűnnek). A docs/attachments mappa a szerkeszthető forrás; hívd ezt, miután oda fájlt tettél vagy módosítottál.')]
+#[Description('Betölti a projekt csatolmány-mappájának fájljait a csatolmány-táblába (a fájlokat a privát lemezre másolja, útvonal szerint upsertel, a törölt fájlok sorai eltűnnek). A csatolmány-mappa (a projektkönyvtárak melletti közös attachments mappa projekt-almappája) a szerkeszthető forrás; hívd ezt, miután oda fájlt tettél vagy módosítottál.')]
 class SyncAttachmentsTool extends Tool
 {
     use FormatsAttachments;
@@ -49,7 +49,7 @@ class SyncAttachmentsTool extends Tool
     {
         return [
             'project' => $schema->string()
-                ->description('A projekt neve (vagy azonosítója), amelynek a docs/attachments mappáját betöltjük. A nevekhez használd a list-projects eszközt.')
+                ->description('A projekt neve (vagy azonosítója), amelynek a csatolmány-mappáját betöltjük. A nevekhez használd a list-projects eszközt.')
                 ->required(),
         ];
     }

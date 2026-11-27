@@ -16,9 +16,10 @@ use Laravel\Mcp\Server\Tool;
 
 /**
  * Lets an agent store and reference attached files. A file becomes an attachment
- * either by syncing the project's `docs/attachments` folder, or by pointing at a
- * file on disk; attachments can then be bound to tasks so the agent can reference
- * them later. The attachment's stored absolute path is returned for that purpose.
+ * either by syncing the project's attachments folder (held centrally beside the
+ * project directories, not inside the project), or by pointing at a file on disk;
+ * attachments can then be bound to tasks so the agent can reference them later.
+ * The attachment's stored absolute path is returned for that purpose.
  *
  * Given to a prompt run only when the agent's tools opt into it (an
  * `mcp__attachments__*` entry), so ordinary agents do not get it.
@@ -31,9 +32,10 @@ use Laravel\Mcp\Server\Tool;
     tartalmazza a tárolt abszolút útvonalat (`path`), amelyre hivatkozni tudsz.
 
     Tipikus munkafolyamat:
-    1. Mappa-alapú: tegyél fájlokat a projekt `docs/attachments` mappájába, majd
-       hívd a `sync-attachments` eszközt — a fájlok a lemezre másolódnak és az
-       adatbázisba kerülnek (a törölt fájlok sorai eltűnnek).
+    1. Mappa-alapú: tegyél fájlokat a projekt csatolmány-mappájába (a projekt-
+       könyvtárak melletti közös `attachments` mappán belül, a projekt nevével),
+       majd hívd a `sync-attachments` eszközt — a fájlok a lemezre másolódnak és
+       az adatbázisba kerülnek (a törölt fájlok sorai eltűnnek).
     2. Egyedi fájl: a `create-attachment` eszközzel egy lemezen lévő fájlt
        csatolmányként elmentesz (visszakapod az azonosítót és az útvonalat).
     3. A `attach-to-task` eszközzel egy csatolmányt egy feladathoz kötsz, hogy a

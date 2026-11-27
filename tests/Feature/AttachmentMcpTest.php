@@ -20,17 +20,20 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Storage::fake('local');
     $this->projectsPath = sys_get_temp_dir().'/dev-tool-attach-mcp-'.uniqid();
-    $this->attachmentsPath = $this->projectsPath.'/docs/attachments';
+    config(['developer-tool.projects_path' => $this->projectsPath]);
+    // Attachments live in `<projects_path>/attachments/<name>`, beside the
+    // project directories rather than inside them.
+    $this->attachmentsPath = $this->projectsPath.'/attachments/alpha';
     mkdir($this->attachmentsPath, 0755, true);
 
-    $this->project = Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath]);
+    $this->project = Project::factory()->create(['name' => 'alpha', 'path' => $this->projectsPath.'/alpha']);
 });
 
 afterEach(function () {
     exec('rm -rf '.escapeshellarg($this->projectsPath));
 });
 
-test('sync-attachments loads the project docs/attachments folder', function () {
+test('sync-attachments loads the project attachments folder', function () {
     file_put_contents($this->attachmentsPath.'/diagram.txt', 'a diagram');
 
     AttachmentServer::tool(SyncAttachmentsTool::class, ['project' => 'alpha'])

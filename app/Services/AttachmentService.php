@@ -17,31 +17,39 @@ use RuntimeException;
 
 /**
  * Stores attached files for the application. Every file goes through {@see store()}.
- * A file belonging to a project is written into that project's own
- * `docs/attachments` folder (for the system project: under `storage`), so the
- * project physically holds all of its attachments; a project-less file (a mail
- * from a mailbox with no project) falls back to the private `local` disk. Files
- * arrive three ways: uploaded (task/web), synced from the folder, or saved from a
- * downloaded message. The stored file's absolute path is what an agent references.
+ * A file belonging to a project is written into a central attachments folder that
+ * sits next to the project directories (`<projects_path>/attachments/<name>`), so
+ * the bytes never land inside any project's own source tree or git repository; a
+ * project-less file (a mail from a mailbox with no project) falls back to the
+ * private `local` disk. Files arrive three ways: uploaded (task/web), synced from
+ * the folder, or saved from a downloaded message. The stored file's absolute path
+ * is what an agent references.
  */
 class AttachmentService
 {
     private const DISK = 'local';
 
-    public function __construct(private AttachmentRepository $attachments) {}
+    /**
+     * Name of the shared folder, a direct child of the projects directory, that
+     * holds every project's attachments (one subfolder per project). It is NOT a
+     * project itself — {@see ProjectService::scanDirectories()} skips it.
+     */
+    public const ATTACHMENTS_DIR = 'attachments';
+
+    public function __construct(
+        private AttachmentRepository $attachments,
+        private ProjectService $projects,
+    ) {}
 
     /**
-     * Absolute path to the project's attachments folder. The system project
-     * documents the developer tool itself, so its files live under `storage`
-     * rather than inside the application's own source tree.
+     * Absolute path to a project's attachments folder. All attachments live in a
+     * single `attachments` directory beside the project directories, each project
+     * keyed by its (filesystem-safe, unique) name, so the files stay out of every
+     * project's own tree — the system project included.
      */
     public function directoryFor(Project $project): string
     {
-        if ($project->is_system) {
-            return storage_path('attachments');
-        }
-
-        return rtrim($project->path, '/').'/docs/attachments';
+        return $this->projects->projectsPath().'/'.self::ATTACHMENTS_DIR.'/'.$project->name;
     }
 
     /**

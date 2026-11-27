@@ -128,8 +128,8 @@ class Project extends Model
     }
 
     /**
-     * Files stored for this project (uploaded, synced from docs/attachments, or
-     * saved from a message).
+     * Files stored for this project (uploaded, synced from the attachments
+     * folder, or saved from a message).
      *
      * @return HasMany<Attachment, $this>
      */

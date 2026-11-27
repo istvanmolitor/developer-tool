@@ -35,7 +35,7 @@ class AttachmentFactory extends Factory
     }
 
     /**
-     * A file synced from the project's docs/attachments folder.
+     * A file synced from the project's attachments folder.
      */
     public function synced(?string $relativePath = null): static
     {

@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * A stored file, scoped to a project. The bytes physically live inside the
- * project's own `docs/attachments` folder (for the system project: under
- * `storage`), recorded with `disk` = {@see PROJECT_DISK} and `path` relative to
+ * A stored file, scoped to a project. The bytes physically live in the central
+ * `attachments` folder beside the project directories, under the project's own
+ * subfolder, recorded with `disk` = {@see PROJECT_DISK} and `path` relative to
  * that folder; project-less files (e.g. a mail from a mailbox with no project)
  * fall back to the private `local` disk. Tasks and messages reference the file
  * through their pivot tables, so a single attachment can be shared by several of
