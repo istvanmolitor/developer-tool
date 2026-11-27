@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { InertiaForm } from "@inertiajs/vue3";
+import AgentSelect from "@/components/AgentSelect.vue";
 import InputError from "@/components/InputError.vue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/select";
 
 type Option = { value: string; label: string };
-type AgentOption = { id: number; name: string };
+type AgentOption = { id: number; name: string; avatar_url?: string | null };
 
 type TaskFormFields = {
     title: string;
@@ -45,15 +46,6 @@ const UNASSIGNED = "none";
 
 function labelFor(options: Option[], value: string): string | undefined {
     return options.find((option) => option.value === value)?.label;
-}
-
-function agentLabel(value: string): string {
-    if (value === "" || value === UNASSIGNED) return "Nincs hozzárendelve";
-
-    return (
-        props.agents.find((agent) => String(agent.id) === value)?.name ??
-        "Nincs hozzárendelve"
-    );
 }
 </script>
 
@@ -100,30 +92,19 @@ function agentLabel(value: string): string {
                 >Felelős agent
                 <span class="text-muted-foreground">(opcionális)</span>
             </Label>
-            <Select
+            <AgentSelect
+                id="agent"
                 :model-value="form.agent_id === '' ? UNASSIGNED : form.agent_id"
+                :agents="agents"
+                :none-value="UNASSIGNED"
+                none-label="Nincs hozzárendelve"
+                aria-label="Felelős agent"
+                trigger-class="w-full sm:max-w-xs"
                 @update:model-value="
                     (value) =>
-                        (form.agent_id =
-                            String(value) === UNASSIGNED ? '' : String(value))
+                        (form.agent_id = value === UNASSIGNED ? '' : value)
                 "
-            >
-                <SelectTrigger id="agent" class="w-full sm:max-w-xs">
-                    <SelectValue>{{ agentLabel(form.agent_id) }}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem :value="UNASSIGNED">
-                        Nincs hozzárendelve
-                    </SelectItem>
-                    <SelectItem
-                        v-for="agent in agents"
-                        :key="agent.id"
-                        :value="String(agent.id)"
-                    >
-                        {{ agent.name }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
+            />
             <InputError :message="form.errors.agent_id" />
         </div>
 
@@ -207,7 +188,7 @@ function agentLabel(value: string): string {
                 v-model="form.description"
                 rows="6"
                 placeholder="Részletek, elfogadási feltételek…"
-                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                class="w-full rounded-md border border-input bg-white text-neutral-900 px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-neutral-500 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
             <InputError :message="form.errors.description" />
         </div>

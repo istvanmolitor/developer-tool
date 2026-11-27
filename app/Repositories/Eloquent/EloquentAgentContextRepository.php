@@ -44,7 +44,7 @@ class EloquentAgentContextRepository extends EloquentRepository implements Agent
             ->where('user_id', $user->id)
             ->whereHas('project')
             ->whereHas('promptRuns')
-            ->with(['project:id,name', 'agent:id,name'])
+            ->with(['project:id,name', 'agent:id,name,avatar_path,updated_at'])
             ->withMax('promptRuns', 'id')
             ->withMax('promptRuns', 'created_at')
             ->addSelect(['title' => PromptRun::query()

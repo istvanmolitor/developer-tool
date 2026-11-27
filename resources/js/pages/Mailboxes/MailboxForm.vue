@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { InertiaForm } from "@inertiajs/vue3";
+import AgentSelect from "@/components/AgentSelect.vue";
 import InputError from "@/components/InputError.vue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,6 +16,7 @@ import {
 
 type Option = { value: string; label: string };
 type NamedOption = { id: number; name: string };
+type AgentOption = NamedOption & { avatar_url?: string | null };
 
 export type MailboxFormFields = {
     agent_id: string;
@@ -39,7 +41,7 @@ export type MailboxFormFields = {
 const props = defineProps<{
     form: InertiaForm<MailboxFormFields>;
     encryptions: Option[];
-    agents: NamedOption[];
+    agents: AgentOption[];
     projects: NamedOption[];
     submitLabel: string;
     cancelHref: string;
@@ -88,32 +90,18 @@ function encryptionLabel(value: string): string | undefined {
                 >Agent
                 <span class="text-muted-foreground">(opcionális)</span>
             </Label>
-            <Select
+            <AgentSelect
+                id="agent"
                 :model-value="form.agent_id === '' ? UNASSIGNED : form.agent_id"
+                :agents="agents"
+                :none-value="UNASSIGNED"
+                none-label="Nincs hozzárendelve"
+                trigger-class="w-full sm:max-w-xs"
                 @update:model-value="
                     (value) =>
-                        (form.agent_id =
-                            String(value) === UNASSIGNED ? '' : String(value))
+                        (form.agent_id = value === UNASSIGNED ? '' : value)
                 "
-            >
-                <SelectTrigger id="agent" class="w-full sm:max-w-xs">
-                    <SelectValue>{{
-                        optionLabel(agents, form.agent_id)
-                    }}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem :value="UNASSIGNED">
-                        Nincs hozzárendelve
-                    </SelectItem>
-                    <SelectItem
-                        v-for="agent in agents"
-                        :key="agent.id"
-                        :value="String(agent.id)"
-                    >
-                        {{ agent.name }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
+            />
             <p class="text-xs text-muted-foreground">
                 Az agent, amelyik ezen a postafiókon keresztül levelez.
             </p>

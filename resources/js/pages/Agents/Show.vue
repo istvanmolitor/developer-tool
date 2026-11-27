@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm, usePoll } from "@inertiajs/vue3";
-import { FolderGit2 } from "@lucide/vue";
+import { FolderGit2, MessageSquare } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 import ChatPanel from "@/components/ChatPanel.vue";
 import Heading from "@/components/Heading.vue";
 import InputError from "@/components/InputError.vue";
 import type { ChatPromptRun } from "@/components/PromptRunMessage.vue";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import {
     Select,
     SelectContent,
@@ -144,10 +150,15 @@ watch(hasActiveRun, (active) => (active ? start() : stop()), {
 
         <AgentNav :agent-id="agent.id" />
 
-        <div
-            class="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl border"
-        >
-            <ChatPanel
+        <Card class="min-h-[28rem] flex-1 gap-0 overflow-hidden py-0">
+            <CardHeader class="gap-0 border-b py-3 [.border-b]:pb-3">
+                <CardTitle class="flex items-center gap-2 text-base">
+                    <MessageSquare class="size-4" />
+                    Chat
+                </CardTitle>
+            </CardHeader>
+            <CardContent class="flex min-h-0 flex-1 flex-col p-0">
+                <ChatPanel
                 v-model="form.prompt"
                 :messages="messages"
                 :project="selectedProject || null"
@@ -220,7 +231,8 @@ watch(hasActiveRun, (active) => (active ? start() : stop()), {
                     <InputError :message="form.errors.prompt" />
                     <InputError :message="form.errors.agent_id" />
                 </template>
-            </ChatPanel>
-        </div>
+                </ChatPanel>
+            </CardContent>
+        </Card>
     </div>
 </template>

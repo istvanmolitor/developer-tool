@@ -316,7 +316,7 @@ function isSelected(name: string): boolean {
                         v-model="form.description"
                         rows="3"
                         placeholder="Mire való, mikor hívd ezt az agentet?"
-                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                        class="w-full rounded-md border border-input bg-white text-neutral-900 px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-neutral-500 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     />
                     <InputError :message="form.errors.description" />
                 </div>
@@ -329,7 +329,7 @@ function isSelected(name: string): boolean {
                     v-model="form.system_prompt"
                     rows="24"
                     placeholder="Az agent instrukciói — ez a lelke."
-                    class="w-full flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30 lg:min-h-[32rem]"
+                    class="w-full flex-1 resize-none rounded-md border border-input bg-white text-neutral-900 px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-neutral-500 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 lg:min-h-[32rem]"
                 />
                 <InputError :message="form.errors.system_prompt" />
             </div>

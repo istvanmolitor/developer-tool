@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/security';
 
@@ -33,13 +39,16 @@ defineOptions({
     <h1 class="sr-only">Biztonsági beállítások</h1>
 
     <div class="space-y-6">
-        <Heading
-            variant="small"
-            title="Jelszó frissítése"
-            description="A fiók biztonsága érdekében használj hosszú, véletlenszerű jelszót."
-        />
-
-        <Form
+        <Card>
+            <CardHeader>
+                <CardTitle>Jelszó frissítése</CardTitle>
+                <CardDescription>
+                    A fiók biztonsága érdekében használj hosszú, véletlenszerű
+                    jelszót.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form
             v-bind="SecurityController.update.form()"
             :options="{
                 preserveScroll: true,
@@ -99,6 +108,8 @@ defineOptions({
                     Mentés
                 </Button>
             </div>
-        </Form>
+                </Form>
+            </CardContent>
+        </Card>
     </div>
 </template>

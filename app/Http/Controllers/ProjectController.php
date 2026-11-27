@@ -76,8 +76,8 @@ class ProjectController extends Controller
     {
         return Inertia::render('Projects/Prompts', [
             'project' => $project,
-            'agents' => $this->agents->allOrderedByName(['id', 'name'])
-                ->map->only(['id', 'name'])->values(),
+            'agents' => $this->agents->allOrderedByName(['id', 'name', 'avatar_path', 'updated_at'])
+                ->map->only(['id', 'name', 'avatar_url'])->values(),
             'runs' => $project->promptRuns()
                 ->with('agent:id,name,avatar_path')
                 ->latest('prompt_runs.created_at')

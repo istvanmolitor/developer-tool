@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { router } from "@inertiajs/vue3";
-import { Bot, FolderGit2, History } from "@lucide/vue";
+import { FolderGit2, History } from "@lucide/vue";
+import AgentAvatar from "@/components/AgentAvatar.vue";
 import type { RecentContext } from "@/components/DashboardChat.vue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboard } from "@/routes";
@@ -31,7 +32,7 @@ function formatDate(value: string | null): string {
 
 <template>
     <Card class="gap-0 overflow-hidden py-0 xl:min-h-0">
-        <CardHeader class="border-b py-4">
+        <CardHeader class="gap-0 border-b py-3 [.border-b]:pb-3">
             <CardTitle class="flex items-center gap-2 text-base">
                 <History class="size-4" />
                 Beszélgetések
@@ -73,7 +74,11 @@ function formatDate(value: string | null): string {
                                 v-if="context.agent"
                                 class="inline-flex items-center gap-1"
                             >
-                                <Bot class="size-3" />
+                                <AgentAvatar
+                                    :name="context.agent"
+                                    :src="context.agent_avatar_url"
+                                    class="size-4 text-[0.5rem]"
+                                />
                                 {{ context.agent }}
                             </span>
                             <span class="inline-flex items-center gap-1">

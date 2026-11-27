@@ -2,7 +2,6 @@
 import { Form } from '@inertiajs/vue3';
 import { useTemplateRef } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
@@ -23,11 +22,6 @@ const passwordInput = useTemplateRef('passwordInput');
 
 <template>
     <div class="space-y-6">
-        <Heading
-            variant="small"
-            title="Fiók törlése"
-            description="A fiók és minden hozzá tartozó adat törlése."
-        />
         <div
             class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10"
         >

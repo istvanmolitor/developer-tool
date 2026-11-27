@@ -104,19 +104,19 @@ class DashboardController extends Controller
      *
      * @return array{
      *     projects: list<array{id: int, name: string}>,
-     *     agents: list<array{id: int, name: string}>,
+     *     agents: list<array{id: int, name: string, avatar_url: string|null}>,
      *     project: string|null,
      *     agent_id: int|null,
      *     context: array{id: int, session_id: string|null}|null,
      *     context_chosen: bool,
      *     runs: list<PromptRun>,
-     *     recent_contexts: list<array{id: int, project: string, agent: string|null, title: string|null, last_activity_at: string|null}>,
+     *     recent_contexts: list<array{id: int, project: string, agent: string|null, agent_avatar_url: string|null, title: string|null, last_activity_at: string|null}>,
      * }
      */
     private function chat(Request $request): array
     {
         $projects = $this->projects->allOrderedByName(['id', 'name', 'is_system']);
-        $agents = $this->agents->allOrderedByName(['id', 'name']);
+        $agents = $this->agents->allOrderedByName(['id', 'name', 'avatar_path', 'updated_at']);
 
         $chosenContext = $request->filled('context')
             ? $this->agentContexts->findForUser($request->user(), $request->integer('context'), ['id', 'project_id', 'agent_id', 'session_id'])
@@ -143,7 +143,7 @@ class DashboardController extends Controller
 
         return [
             'projects' => $projects->map->only(['id', 'name'])->values()->all(),
-            'agents' => $agents->map->only(['id', 'name'])->values()->all(),
+            'agents' => $agents->map->only(['id', 'name', 'avatar_url'])->values()->all(),
             'project' => $project?->name,
             'agent_id' => $agent?->id,
             'context' => $context?->only(['id', 'session_id']),
@@ -177,6 +177,7 @@ class DashboardController extends Controller
                     'id' => $context->id,
                     'project' => $context->project->name,
                     'agent' => $context->agent?->name,
+                    'agent_avatar_url' => $context->agent?->avatar_url,
                     'title' => is_string($title) ? $title : null,
                     'last_activity_at' => $lastActivityAt === null ? null : Carbon::parse($lastActivityAt)->toIso8601String(),
                 ];

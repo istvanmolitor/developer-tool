@@ -293,8 +293,13 @@ function formatDate(value: string | null): string {
             </div>
         </div>
 
-        <Card>
-            <CardHeader>
+        <div
+            class="grid min-h-0 gap-4 lg:h-[calc(100vh-10.5rem)] lg:grid-cols-[minmax(0,1fr)_24rem]"
+        >
+            <Card
+                class="order-2 gap-0 overflow-hidden py-0 lg:min-h-0 lg:overflow-y-auto"
+            >
+            <CardHeader class="gap-0 border-b py-3 [.border-b]:pb-3">
                 <CardTitle class="flex items-center gap-2 text-base">
                     Kapcsolat
                     <Badge
@@ -303,8 +308,8 @@ function formatDate(value: string | null): string {
                     >
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <dl class="grid gap-4 text-sm sm:grid-cols-3">
+            <CardContent class="py-4">
+                <dl class="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-1">
                     <div>
                         <dt class="text-xs font-medium text-muted-foreground">
                             Agent
@@ -399,8 +404,10 @@ function formatDate(value: string | null): string {
             </CardContent>
         </Card>
 
-        <Card>
-            <CardHeader>
+            <Card
+                class="order-1 flex flex-col gap-0 overflow-hidden py-0 lg:min-h-0"
+            >
+            <CardHeader class="border-b py-3 [.border-b]:pb-3">
                 <CardTitle class="text-base"
                     >Bejövő levelek
                     <span class="font-normal text-muted-foreground"
@@ -420,8 +427,8 @@ function formatDate(value: string | null): string {
                     >.
                 </p>
             </CardHeader>
-            <CardContent>
-                <div class="mb-3 flex flex-wrap items-center gap-2">
+            <CardContent class="flex min-h-0 flex-1 flex-col gap-3 py-4">
+                <div class="flex flex-wrap items-center gap-2">
                     <ListSearchInput
                         v-model="filters.q"
                         placeholder="Keresés a levelekben…"
@@ -434,8 +441,9 @@ function formatDate(value: string | null): string {
                     />
                 </div>
 
-                <SearchUnavailableAlert v-if="search_degraded" class="mb-3" />
+                <SearchUnavailableAlert v-if="search_degraded" />
 
+                <div class="min-h-0 flex-1 overflow-y-auto">
                 <div
                     v-if="incomingEmails.data.length === 0"
                     class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground"
@@ -710,13 +718,15 @@ function formatDate(value: string | null): string {
                         </div>
                     </li>
                 </ul>
+                </div>
 
                 <PaginationBar
                     :paginator="incomingEmails"
                     noun="levél"
-                    class="mt-3"
+                    class="shrink-0"
                 />
             </CardContent>
         </Card>
+        </div>
     </div>
 </template>

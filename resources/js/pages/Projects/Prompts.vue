@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm, usePoll } from "@inertiajs/vue3";
-import { Bot, Pencil, Trash2, TriangleAlert } from "@lucide/vue";
+import { Bot, MessageSquare, Pencil, Trash2, TriangleAlert } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
+import AgentSelect from "@/components/AgentSelect.vue";
 import ChatPanel from "@/components/ChatPanel.vue";
 import Heading from "@/components/Heading.vue";
 import InputError from "@/components/InputError.vue";
 import type { ChatPromptRun } from "@/components/PromptRunMessage.vue";
 import { Button } from "@/components/ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import agentContexts from "@/routes/agent-contexts";
 import projects from "@/routes/projects";
 import ProjectNav from "./ProjectNav.vue";
 
-type Agent = { id: number; name: string };
+type Agent = { id: number; name: string; avatar_url?: string | null };
 
 type Project = {
     id: number;
@@ -179,10 +179,15 @@ watch(hasActiveRun, (active) => (active ? start() : stop()), {
             létezik — a promptok hibára futnak, amíg létre nem jön.
         </div>
 
-        <div
-            class="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl border"
-        >
-            <ChatPanel
+        <Card class="min-h-[28rem] flex-1 gap-0 overflow-hidden py-0">
+            <CardHeader class="gap-0 border-b py-3 [.border-b]:pb-3">
+                <CardTitle class="flex items-center gap-2 text-base">
+                    <MessageSquare class="size-4" />
+                    Chat
+                </CardTitle>
+            </CardHeader>
+            <CardContent class="flex min-h-0 flex-1 flex-col p-0">
+                <ChatPanel
                 v-model="form.prompt"
                 :messages="messages"
                 :project="project.name"
@@ -219,31 +224,13 @@ watch(hasActiveRun, (active) => (active ? start() : stop()), {
                         >
                             Agent
                         </label>
-                        <Select v-model="selectedAgent">
-                            <SelectTrigger id="agent-select" class="w-full">
-                                <SelectValue>
-                                    <span class="flex items-center gap-2">
-                                        <Bot class="size-4" />
-                                        {{
-                                            selectedAgentName ??
-                                            "Nincs — sima claude"
-                                        }}
-                                    </span>
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="NO_AGENT">
-                                    Nincs — sima claude
-                                </SelectItem>
-                                <SelectItem
-                                    v-for="agent in agents"
-                                    :key="agent.id"
-                                    :value="String(agent.id)"
-                                >
-                                    {{ agent.name }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <AgentSelect
+                            id="agent-select"
+                            v-model="selectedAgent"
+                            :agents="agents"
+                            :none-value="NO_AGENT"
+                            none-label="Nincs — sima claude"
+                        />
                     </div>
                 </template>
 
@@ -251,7 +238,8 @@ watch(hasActiveRun, (active) => (active ? start() : stop()), {
                     <InputError :message="form.errors.prompt" />
                     <InputError :message="form.errors.agent_id" />
                 </template>
-            </ChatPanel>
-        </div>
+                </ChatPanel>
+            </CardContent>
+        </Card>
     </div>
 </template>

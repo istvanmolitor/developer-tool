@@ -158,14 +158,14 @@ class AllTasksController extends Controller
     /**
      * Assignable agents for the assignee filter.
      *
-     * @return list<array{id: int, name: string}>
+     * @return list<array{id: int, name: string, avatar_url: string|null}>
      */
     private function agentOptions(): array
     {
         $options = [];
 
-        foreach ($this->agents->allOrderedByName(['id', 'name']) as $agent) {
-            $options[] = ['id' => $agent->id, 'name' => $agent->name];
+        foreach ($this->agents->allOrderedByName(['id', 'name', 'avatar_path', 'updated_at']) as $agent) {
+            $options[] = ['id' => $agent->id, 'name' => $agent->name, 'avatar_url' => $agent->avatar_url];
         }
 
         return $options;

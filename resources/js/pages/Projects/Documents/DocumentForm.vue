@@ -68,7 +68,7 @@ const emit = defineEmits<{ submit: [] }>();
                 v-model="form.content"
                 rows="20"
                 placeholder="# Cím&#10;&#10;A dokumentum Markdown tartalma…"
-                class="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                class="w-full rounded-md border border-input bg-white text-neutral-900 px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-neutral-500 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
             <InputError :message="form.errors.content" />
         </div>

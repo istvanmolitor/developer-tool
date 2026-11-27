@@ -6,9 +6,15 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AgentAvatar from '@/components/AgentAvatar.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
@@ -77,13 +83,13 @@ onBeforeUnmount(releasePreview);
     <h1 class="sr-only">Profilbeállítások</h1>
 
     <div class="flex flex-col space-y-6">
-        <Heading
-            variant="small"
-            title="Profil"
-            description="A neved és az e-mail címed."
-        />
-
-        <Form
+        <Card>
+            <CardHeader>
+                <CardTitle>Profil</CardTitle>
+                <CardDescription>A neved és az e-mail címed.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form
             v-bind="ProfileController.update.form()"
             class="space-y-6"
             v-slot="{ errors, processing }"
@@ -195,8 +201,20 @@ onBeforeUnmount(releasePreview);
                     >Mentés</Button
                 >
             </div>
-        </Form>
-    </div>
+                </Form>
+            </CardContent>
+        </Card>
 
-    <DeleteUser />
+        <Card>
+            <CardHeader>
+                <CardTitle>Fiók törlése</CardTitle>
+                <CardDescription>
+                    A fiók és minden hozzá tartozó adat törlése.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <DeleteUser />
+            </CardContent>
+        </Card>
+    </div>
 </template>

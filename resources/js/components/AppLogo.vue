@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-
-const name = usePage().props.name;
+import AppLogoMark from '@/components/AppLogoMark.vue';
 </script>
 
 <template>
+    <AppLogoMark />
     <div
-        class="flex aspect-square size-8 items-center justify-center rounded-[6px] bg-sidebar-primary text-sidebar-primary-foreground"
+        class="ml-1 grid flex-1 text-left text-sm group-data-[collapsible=icon]:hidden"
     >
-        <AppLogoIcon class="size-5 fill-current text-white" />
-    </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{
-            name
-        }}</span>
+        <span class="truncate leading-tight font-semibold text-white">
+            DeveloperTool
+        </span>
     </div>
 </template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Link, router, useForm } from "@inertiajs/vue3";
-import { Bot, FolderGit2, MessageSquare } from "@lucide/vue";
+import { FolderGit2, MessageSquare } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
+import AgentSelect, { type AgentOption } from "@/components/AgentSelect.vue";
 import ChatPanel from "@/components/ChatPanel.vue";
 import InputError from "@/components/InputError.vue";
 import type { ChatPromptRun } from "@/components/PromptRunMessage.vue";
@@ -21,13 +22,14 @@ export type RecentContext = {
     id: number;
     project: string;
     agent: string | null;
+    agent_avatar_url: string | null;
     title: string | null;
     last_activity_at: string | null;
 };
 
 export type DashboardChatData = {
     projects: { id: number; name: string }[];
-    agents: { id: number; name: string }[];
+    agents: AgentOption[];
     project: string | null;
     agent_id: number | null;
     context: { id: number; session_id: string | null } | null;
@@ -146,17 +148,10 @@ function startNewContext(): void {
 
 <template>
     <Card class="gap-0 overflow-hidden py-0 xl:min-h-0">
-        <CardHeader class="border-b py-4">
+        <CardHeader class="gap-0 border-b py-3 [.border-b]:pb-3">
             <CardTitle class="flex items-center gap-2 text-base">
                 <MessageSquare class="size-4" />
                 Chat
-                <Link
-                    v-if="chat.project"
-                    :href="projectRoutes.prompts(chat.project).url"
-                    class="ml-auto text-xs font-normal text-muted-foreground hover:underline"
-                >
-                    Projekt megnyitása
-                </Link>
             </CardTitle>
         </CardHeader>
 
@@ -183,43 +178,20 @@ function startNewContext(): void {
             >
                 <template #selectors>
                     <div class="flex flex-col gap-2 sm:flex-row">
-                        <Select
+                        <AgentSelect
                             :model-value="selectedAgent"
+                            :agents="chat.agents"
+                            :none-value="NO_AGENT"
+                            none-label="Nincs — sima claude"
+                            trigger-class="w-full flex-1"
                             @update:model-value="onAgentChange"
-                        >
-                            <SelectTrigger
-                                class="w-full sm:w-56"
-                                aria-label="Agent"
-                            >
-                                <SelectValue>
-                                    <span class="flex items-center gap-2">
-                                        <Bot class="size-4" />
-                                        {{
-                                            selectedAgentName ??
-                                            "Nincs — sima claude"
-                                        }}
-                                    </span>
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="NO_AGENT">
-                                    Nincs — sima claude
-                                </SelectItem>
-                                <SelectItem
-                                    v-for="agent in chat.agents"
-                                    :key="agent.id"
-                                    :value="String(agent.id)"
-                                >
-                                    {{ agent.name }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                        />
                         <Select
                             :model-value="selectedProject"
                             @update:model-value="onProjectChange"
                         >
                             <SelectTrigger
-                                class="w-full sm:w-56"
+                                class="w-full flex-1"
                                 aria-label="Projekt"
                             >
                                 <SelectValue placeholder="Válassz projektet…">
