@@ -127,13 +127,6 @@ function formatDate(value: string | null): string {
 
         <ProjectNav :name="project.name" />
 
-        <p class="text-xs text-muted-foreground">
-            A <strong>Frissítés</strong> betölti a
-            <code class="font-mono">{{ documentations_path }}</code> mappa
-            <code class="font-mono">.md</code> fájljait az adatbázisba (a
-            meglévőket felülírja, a már törölt fájlok sorait eltávolítja).
-        </p>
-
         <ListSearchInput
             v-model="filters.q"
             placeholder="Keresés a dokumentációban…"

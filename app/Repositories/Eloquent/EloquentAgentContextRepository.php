@@ -69,6 +69,16 @@ class EloquentAgentContextRepository extends EloquentRepository implements Agent
             ->get(['id', 'project_id', 'session_id', 'created_at']);
     }
 
+    public function latestPerAgentForProjectUser(Project $project, User $user): Collection
+    {
+        return $this->newQuery()
+            ->whereIn('id', $project->agentContexts()
+                ->selectRaw('max(id)')
+                ->where('user_id', $user->id)
+                ->groupBy('agent_id'))
+            ->get(['id', 'agent_id', 'session_id', 'created_at']);
+    }
+
     public function findOwnedInProject(User $user, Project $project, int|string $id): AgentContext
     {
         return $this->newQuery()

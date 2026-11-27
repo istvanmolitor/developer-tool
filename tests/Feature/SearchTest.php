@@ -1,12 +1,10 @@
 <?php
 
-use App\Enums\PromptRunStatus;
 use App\Enums\TaskStatus;
 use App\Models\Agent;
 use App\Models\IncomingEmail;
 use App\Models\Mailbox;
 use App\Models\Project;
-use App\Models\PromptRun;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\User;
@@ -114,18 +112,6 @@ test('the mailbox mails can be filtered to the unread ones', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->has('incomingEmails.data', 1)
             ->where('incomingEmails.data.0.subject', 'Olvasatlan')
-        );
-});
-
-test('the prompt runs can be filtered by status', function () {
-    PromptRun::factory()->inContext(['project_id' => $this->project->id])->create(['status' => PromptRunStatus::Failed]);
-    PromptRun::factory()->inContext(['project_id' => $this->project->id])->create(['status' => PromptRunStatus::Completed]);
-
-    $this->actingAs(User::factory()->create())
-        ->get(route('projects.prompts', ['project' => 'alpha', 'status' => 'failed']))
-        ->assertInertia(fn (Assert $page) => $page
-            ->has('runs.data', 1)
-            ->where('runs.data.0.status', 'failed')
         );
 });
 

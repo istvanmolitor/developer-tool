@@ -54,6 +54,15 @@ interface AgentContextRepository extends Repository
     public function latestPerProjectForAgentUser(Agent $agent, User $user): Collection;
 
     /**
+     * The latest context per agent (including the agent-less plain claude
+     * conversation) for the given project and user — the conversations the
+     * project's chat continues once an agent is picked.
+     *
+     * @return Collection<int, AgentContext>
+     */
+    public function latestPerAgentForProjectUser(Project $project, User $user): Collection;
+
+    /**
      * A context owned by the user within the given project, or throw — a
      * chosen conversation a new prompt is queued into.
      */

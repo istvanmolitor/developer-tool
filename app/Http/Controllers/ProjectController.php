@@ -2,17 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PromptRunStatus;
-use App\Enums\SearchType;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
-use App\Models\PromptRun;
+use App\Repositories\Contracts\AgentContextRepository;
 use App\Repositories\Contracts\AgentRepository;
 use App\Repositories\Contracts\ProjectRepository;
 use App\Services\ProjectService;
-use App\Services\Search\SearchCriteria;
-use App\Services\Search\SearchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,6 +20,7 @@ class ProjectController extends Controller
         private ProjectService $projects,
         private ProjectRepository $projectRepository,
         private AgentRepository $agents,
+        private AgentContextRepository $agentContexts,
     ) {}
 
     public function index(): Response
@@ -66,36 +63,28 @@ class ProjectController extends Controller
      * The prompt form plus the project's prompt runs from the search index,
      * filterable by text (prompt and output), status and agent, and paginated.
      */
-    public function prompts(Request $request, Project $project, SearchService $search): Response
+    /**
+     * How many of the latest messages the project chat shows.
+     */
+    private const CHAT_MESSAGE_LIMIT = 30;
+
+    /**
+     * The project's chat: a live conversation (like the dashboard's), showing
+     * the project's latest messages across agents, with an agent picker that
+     * continues that agent's conversation on this project.
+     */
+    public function prompts(Request $request, Project $project): Response
     {
-        $filters = [
-            'q' => trim($request->string('q')->toString()),
-            'status' => PromptRunStatus::tryFrom($request->string('status')->toString())?->value,
-            'agent' => $request->integer('agent') ?: null,
-        ];
-
-        $results = $search->search(
-            SearchCriteria::for(SearchType::Prompt)
-                ->matching($filters['q'])
-                ->where('project_id', $project->id)
-                ->where('status', $filters['status'])
-                ->where('agent_ids', $filters['agent'])
-                ->orderBy('created_at', 'desc')
-                ->paginate($request->integer('page', 1), 20),
-        );
-
         return Inertia::render('Projects/Prompts', [
             'project' => $project,
-            'agents' => $this->agents->allOrderedByName(['id', 'name', 'description']),
-            // Hydration builder for the search-result paginator — the search
-            // index does the filtering/ordering, Eloquent only loads the rows.
-            'runs' => $results->paginate(PromptRun::query()->with('agent:id,name'), $request),
-            'filters' => $filters,
-            'search_degraded' => $results->degraded,
-            'statuses' => array_map(
-                fn (PromptRunStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
-                PromptRunStatus::cases(),
-            ),
+            'agents' => $this->agents->allOrderedByName(['id', 'name'])
+                ->map->only(['id', 'name'])->values(),
+            'runs' => $project->promptRuns()
+                ->with('agent:id,name')
+                ->latest('prompt_runs.created_at')
+                ->limit(self::CHAT_MESSAGE_LIMIT)
+                ->get(),
+            'contexts' => $this->agentContexts->latestPerAgentForProjectUser($project, $request->user()),
         ]);
     }
 

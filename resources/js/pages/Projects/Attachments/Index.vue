@@ -125,16 +125,6 @@ const sourceLabels: Record<string, string> = {
 
         <ProjectNav :name="project.name" />
 
-        <p class="text-xs text-muted-foreground">
-            A feltöltött fájlok a projekt
-            <code class="font-mono">{{ attachments_path }}</code> csatolmány-
-            mappájába kerülnek (a projektkönyvtárak melletti közös
-            <code class="font-mono">attachments</code> mappán belül, nem a projekt
-            fájljai közé). A <strong>Frissítés</strong> innen tölti be a fájlokat az
-            adatbázisba (a megváltozottakat felülírja, a már törölt fájlok sorait
-            eltávolítja). A levélből mentett csatolmányokat nem érinti.
-        </p>
-
         <Card>
             <CardHeader>
                 <CardTitle class="text-base">Új csatolmány feltöltése</CardTitle>

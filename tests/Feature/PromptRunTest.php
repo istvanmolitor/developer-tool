@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\PromptRun;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
+use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/dev-tool-'.uniqid();
@@ -20,6 +21,42 @@ beforeEach(function () {
 
 afterEach(function () {
     exec('rm -rf '.escapeshellarg($this->projectsPath));
+});
+
+test('the project chat shows the project messages and the user conversations per agent', function () {
+    $user = User::factory()->create();
+    $agent = Agent::factory()->create();
+
+    $plain = AgentContext::factory()->create([
+        'project_id' => $this->alpha->id,
+        'agent_id' => null,
+        'user_id' => $user->id,
+        'session_id' => 'plain-session',
+    ]);
+    $withAgent = AgentContext::factory()->create([
+        'project_id' => $this->alpha->id,
+        'agent_id' => $agent->id,
+        'user_id' => $user->id,
+    ]);
+
+    PromptRun::factory()->create(['agent_context_id' => $plain->id, 'prompt' => 'Első']);
+    PromptRun::factory()->create(['agent_context_id' => $withAgent->id, 'prompt' => 'Második']);
+
+    // Another user's conversation on the same project must not leak in.
+    AgentContext::factory()->create([
+        'project_id' => $this->alpha->id,
+        'user_id' => User::factory()->create()->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('projects.prompts', 'alpha'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Projects/Prompts')
+            ->where('project.name', 'alpha')
+            ->has('agents', 1)
+            ->has('runs', 2)
+            ->has('contexts', 2)
+        );
 });
 
 test('submitting a prompt queues a claude run', function () {

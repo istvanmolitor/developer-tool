@@ -7,7 +7,6 @@ import {
     LoaderCircle,
     Pencil,
     Plus,
-    Terminal,
     Trash2,
     TriangleAlert,
 } from '@lucide/vue';
@@ -148,16 +147,6 @@ function destroy(project: Project): void {
                 <CardContent
                     class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
                 >
-                    <Badge variant="secondary" class="gap-1">
-                        <Terminal class="size-3" />
-                        {{ project.runs_count }} futtatás
-                    </Badge>
-                    <Badge v-if="project.is_system" variant="outline"
-                        >rendszer</Badge
-                    >
-                    <Badge v-if="project.is_git_repository" variant="outline"
-                        >git</Badge
-                    >
                     <Badge
                         v-if="
                             project.provision_status === 'pending' ||

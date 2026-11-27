@@ -1,59 +1,24 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm, usePoll } from '@inertiajs/vue3';
-import {
-    CheckCircle2,
-    Clock,
-    Loader2,
-    Pencil,
-    Send,
-    Trash2,
-    TriangleAlert,
-    XCircle,
-} from '@lucide/vue';
-import { Bot } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
-import FilterSelect from '@/components/FilterSelect.vue';
-import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
-import ListSearchInput from '@/components/ListSearchInput.vue';
-import PaginationBar from '@/components/PaginationBar.vue';
-import type { Paginator } from '@/components/PaginationBar.vue';
-import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Head, Link, router, useForm, usePoll } from "@inertiajs/vue3";
+import { Bot, Pencil, Trash2, TriangleAlert } from "@lucide/vue";
+import { computed, ref, watch } from "vue";
+import ChatPanel from "@/components/ChatPanel.vue";
+import Heading from "@/components/Heading.vue";
+import InputError from "@/components/InputError.vue";
+import type { ChatPromptRun } from "@/components/PromptRunMessage.vue";
+import { Button } from "@/components/ui/button";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { useListFilters } from '@/composables/useListFilters';
-import projects from '@/routes/projects';
-import ProjectNav from './ProjectNav.vue';
+} from "@/components/ui/select";
+import agentContexts from "@/routes/agent-contexts";
+import projects from "@/routes/projects";
+import ProjectNav from "./ProjectNav.vue";
 
-type PromptRunStatus = 'pending' | 'running' | 'completed' | 'failed';
-
-type Agent = {
-    id: number;
-    name: string;
-    description: string | null;
-};
-
-type PromptRun = {
-    id: number;
-    prompt: string;
-    status: PromptRunStatus;
-    exit_code: number | null;
-    output: string | null;
-    error_output: string | null;
-    started_at: string | null;
-    finished_at: string | null;
-    created_at: string;
-    cost_usd: string | null;
-    agent: { id: number; name: string } | null;
-};
+type Agent = { id: number; name: string };
 
 type Project = {
     id: number;
@@ -62,48 +27,88 @@ type Project = {
     description: string | null;
     exists: boolean;
     is_git_repository: boolean;
-    last_modified_at: string | null;
+};
+
+type AgentContext = {
+    id: number;
+    agent_id: number | null;
+    session_id: string | null;
+    created_at: string;
+};
+
+type PromptRun = ChatPromptRun & {
+    agent: Agent | null;
 };
 
 const props = defineProps<{
     project: Project;
     agents: Agent[];
-    runs: Paginator & { data: PromptRun[] };
-    filters: { q: string; status: string | null; agent: number | null };
-    search_degraded: boolean;
-    statuses: { value: string; label: string }[];
+    runs: PromptRun[];
+    contexts: AgentContext[];
 }>();
-
-const { filters, reset, isFiltered } = useListFilters({ ...props.filters });
-
-const agentOptions = props.agents.map((agent) => ({
-    value: agent.id,
-    label: agent.name,
-}));
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
-const NO_AGENT = 'none';
+const NO_AGENT = "none";
 
-const form = useForm({ prompt: '', agent_id: null as number | null });
+/** The runs arrive newest first; a chat reads oldest to newest. */
+const messages = computed(() => [...props.runs].reverse());
 
-// reka-ui's Select works with string values; keep the chosen agent id as a
-// string locally and translate it onto the form (null = plain claude run).
 const selectedAgent = ref<string>(NO_AGENT);
-
-watch(selectedAgent, (value) => {
-    form.agent_id = value === NO_AGENT ? null : Number(value);
-});
 
 const selectedAgentName = computed(
     () =>
         props.agents.find((agent) => String(agent.id) === selectedAgent.value)
             ?.name ?? null,
 );
+
+const form = useForm({ prompt: "", agent_id: null as number | null });
+
+/** The context the chat continues for the selected agent, if it has one yet. */
+const currentContext = computed(() => {
+    const agentId = selectedAgent.value === NO_AGENT ? null : Number(selectedAgent.value);
+
+    return (
+        props.contexts.find((context) => context.agent_id === agentId) ?? null
+    );
+});
+
+const startingContext = ref(false);
+
+/** Start a new conversation (fresh claude session) from the current context. */
+function startNewContext(): void {
+    if (currentContext.value === null || startingContext.value) {
+        return;
+    }
+
+    router.post(
+        agentContexts.store(currentContext.value.id).url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (startingContext.value = true),
+            onFinish: () => (startingContext.value = false),
+        },
+    );
+}
+
+function submit(): void {
+    if (form.processing) {
+        return;
+    }
+
+    form.agent_id =
+        selectedAgent.value === NO_AGENT ? null : Number(selectedAgent.value);
+
+    form.post(projects.runs.store(props.project.name).url, {
+        preserveScroll: true,
+        onSuccess: () => form.reset("prompt"),
+    });
+}
 
 function destroy(): void {
     if (
@@ -117,63 +122,27 @@ function destroy(): void {
     router.delete(projects.destroy(props.project.name).url);
 }
 
-function submit(): void {
-    form.post(projects.runs.store(props.project.name).url, {
-        preserveScroll: true,
-        onSuccess: () => form.reset('prompt'),
-    });
-}
-
 const hasActiveRun = computed(() =>
-    props.runs.data.some(
-        (run) => run.status === 'pending' || run.status === 'running',
+    props.runs.some(
+        (run) => run.status === "pending" || run.status === "running",
     ),
 );
 
-const { start, stop } = usePoll(4000, { only: ['runs'] }, { autoStart: false });
+const { start, stop } = usePoll(
+    4000,
+    { only: ["runs", "contexts"] },
+    { autoStart: false },
+);
 
 watch(hasActiveRun, (active) => (active ? start() : stop()), {
     immediate: true,
 });
-
-const statusMeta: Record<
-    PromptRunStatus,
-    {
-        label: string;
-        variant: 'default' | 'secondary' | 'destructive' | 'outline';
-        icon: unknown;
-    }
-> = {
-    pending: { label: 'Függőben', variant: 'secondary', icon: Clock },
-    running: { label: 'Fut', variant: 'default', icon: Loader2 },
-    completed: { label: 'Kész', variant: 'default', icon: CheckCircle2 },
-    failed: { label: 'Sikertelen', variant: 'destructive', icon: XCircle },
-};
-
-function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString('hu-HU') : '—';
-}
-
-function formatCost(value: string | null): string | null {
-    if (value === null) {
-        return null;
-    }
-
-    const amount = Number(value);
-
-    return Number.isFinite(amount)
-        ? `$${amount.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 4,
-          })}`
-        : null;
-}
 </script>
 
 <template>
     <Head :title="`Chat — ${project.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading :title="project.name" :description="project.path" />
             <div class="flex shrink-0 items-center gap-1">
@@ -206,13 +175,40 @@ function formatCost(value: string | null): string | null {
             létezik — a promptok hibára futnak, amíg létre nem jön.
         </div>
 
-        <Card>
-            <CardHeader>
-                <CardTitle class="text-base">Claude prompt futtatása</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <form class="flex flex-col gap-3" @submit.prevent="submit">
-                    <div class="flex flex-col gap-1.5">
+        <div
+            class="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl border"
+        >
+            <ChatPanel
+                v-model="form.prompt"
+                :messages="messages"
+                :project="project.name"
+                :context="currentContext"
+                :processing="form.processing"
+                :starting-context="startingContext"
+                show-context-dividers
+                empty-title="Ezen a projekten még nem futott egyetlen prompt sem."
+                empty-hint="Válassz agentet (vagy hagyd sima claude-on), és írj lent."
+                :placeholder="
+                    selectedAgentName
+                        ? 'Üzenet az agentnek… (üresen az agent leírása indítja; Enter: küldés)'
+                        : 'Írd le, mit változtasson a claude ezen a projekten… (Enter: küldés, Shift+Enter: új sor)'
+                "
+                list-class="max-h-[calc(100vh-24rem)] min-h-0 flex-1"
+                @submit="submit"
+                @start-new-context="startNewContext"
+            >
+                <template #message-meta="{ run }">
+                    <span
+                        v-if="(run as PromptRun).agent"
+                        class="inline-flex items-center gap-1"
+                    >
+                        <Bot class="size-3" />
+                        {{ (run as PromptRun).agent!.name }}
+                    </span>
+                </template>
+
+                <template #selectors>
+                    <div class="flex flex-col gap-1 sm:w-64">
                         <label
                             class="text-xs font-medium text-muted-foreground"
                             for="agent-select"
@@ -221,21 +217,19 @@ function formatCost(value: string | null): string | null {
                         </label>
                         <Select v-model="selectedAgent">
                             <SelectTrigger id="agent-select" class="w-full">
-                                <SelectValue
-                                    placeholder="Nincs — sima claude futtatás"
-                                >
+                                <SelectValue>
                                     <span class="flex items-center gap-2">
                                         <Bot class="size-4" />
                                         {{
                                             selectedAgentName ??
-                                            'Nincs — sima claude futtatás'
+                                            "Nincs — sima claude"
                                         }}
                                     </span>
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem :value="NO_AGENT">
-                                    Nincs — sima claude futtatás
+                                    Nincs — sima claude
                                 </SelectItem>
                                 <SelectItem
                                     v-for="agent in agents"
@@ -246,151 +240,14 @@ function formatCost(value: string | null): string | null {
                                 </SelectItem>
                             </SelectContent>
                         </Select>
-                        <InputError :message="form.errors.agent_id" />
                     </div>
+                </template>
 
-                    <textarea
-                        v-model="form.prompt"
-                        rows="4"
-                        :placeholder="
-                            selectedAgentName
-                                ? 'Feladat az agentnek (opcionális — üresen hagyva az agent leírása indítja)…'
-                                : 'Írd le, mit változtasson a claude ezen a projekten…'
-                        "
-                        class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
-                    />
+                <template #errors>
                     <InputError :message="form.errors.prompt" />
-                    <div class="flex items-center justify-between">
-                        <p class="text-xs text-muted-foreground">
-                            A <code>claude -p</code> parancsot futtatja a
-                            projekt könyvtárában.
-                        </p>
-                        <Button type="submit" :disabled="form.processing">
-                            <Send class="size-4" />
-                            {{
-                                form.processing
-                                    ? 'Sorba állítás…'
-                                    : 'Prompt futtatása'
-                            }}
-                        </Button>
-                    </div>
-                </form>
-            </CardContent>
-        </Card>
-
-        <div class="flex flex-col gap-3">
-            <h2 class="text-sm font-medium text-muted-foreground">
-                Előzmények
-                <span
-                    v-if="hasActiveRun"
-                    class="ml-1 inline-flex items-center gap-1"
-                >
-                    <Loader2 class="size-3 animate-spin" /> élő
-                </span>
-            </h2>
-
-            <div class="flex flex-wrap items-center gap-2">
-                <ListSearchInput
-                    v-model="filters.q"
-                    placeholder="Keresés a promptokban és kimenetekben…"
-                />
-                <FilterSelect
-                    v-model="filters.status"
-                    :options="statuses"
-                    all-label="Minden státusz"
-                    label="Státusz"
-                />
-                <FilterSelect
-                    v-model="filters.agent"
-                    :options="agentOptions"
-                    all-label="Minden agent"
-                    label="Agent"
-                />
-                <Button
-                    v-if="isFiltered()"
-                    variant="ghost"
-                    size="sm"
-                    @click="reset"
-                >
-                    Szűrők törlése
-                </Button>
-            </div>
-
-            <SearchUnavailableAlert v-if="search_degraded" />
-
-            <p
-                v-if="runs.data.length === 0"
-                class="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground"
-            >
-                {{
-                    isFiltered()
-                        ? 'Nincs a szűrésnek megfelelő futtatás.'
-                        : 'Ezen a projekten még nem futott egyetlen prompt sem.'
-                }}
-            </p>
-
-            <Card v-for="run in runs.data" :key="run.id">
-                <CardHeader>
-                    <div
-                        class="flex flex-wrap items-start justify-between gap-2"
-                    >
-                        <p
-                            class="min-w-0 flex-1 text-sm font-medium break-words whitespace-pre-wrap"
-                        >
-                            {{ run.prompt }}
-                        </p>
-                        <Badge
-                            :variant="statusMeta[run.status].variant"
-                            class="gap-1"
-                        >
-                            <component
-                                :is="statusMeta[run.status].icon"
-                                class="size-3"
-                                :class="
-                                    run.status === 'running'
-                                        ? 'animate-spin'
-                                        : ''
-                                "
-                            />
-                            {{ statusMeta[run.status].label }}
-                        </Badge>
-                    </div>
-                    <p
-                        class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
-                    >
-                        <span>{{ formatDate(run.created_at) }}</span>
-                        <Badge
-                            v-if="run.agent"
-                            variant="outline"
-                            class="gap-1 font-normal"
-                        >
-                            <Bot class="size-3" />
-                            {{ run.agent.name }}
-                        </Badge>
-                        <span v-if="run.exit_code !== null">
-                            · kilépési kód {{ run.exit_code }}</span
-                        >
-                        <span v-if="formatCost(run.cost_usd)">
-                            · {{ formatCost(run.cost_usd) }} kredit</span
-                        >
-                    </p>
-                </CardHeader>
-                <CardContent
-                    v-if="run.output || run.error_output"
-                    class="flex flex-col gap-2"
-                >
-                    <pre
-                        v-if="run.output"
-                        class="max-h-80 overflow-auto rounded-md bg-muted p-3 text-xs break-words whitespace-pre-wrap"
-                        >{{ run.output }}</pre>
-                    <pre
-                        v-if="run.error_output"
-                        class="max-h-80 overflow-auto rounded-md bg-destructive/10 p-3 text-xs break-words whitespace-pre-wrap text-destructive"
-                        >{{ run.error_output }}</pre>
-                </CardContent>
-            </Card>
-
-            <PaginationBar :paginator="runs" noun="futtatás" />
+                    <InputError :message="form.errors.agent_id" />
+                </template>
+            </ChatPanel>
         </div>
     </div>
 </template>
