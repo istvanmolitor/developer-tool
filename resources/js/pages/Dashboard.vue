@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, usePoll } from "@inertiajs/vue3";
-import { Bot, Clock, ListOrdered, Loader2 } from "@lucide/vue";
-import { onBeforeUnmount, onMounted, ref } from "vue";
-import DashboardChat from "@/components/DashboardChat.vue";
-import type { DashboardChatData } from "@/components/DashboardChat.vue";
-import DashboardChatContexts from "@/components/DashboardChatContexts.vue";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dashboard } from "@/routes";
-import projects from "@/routes/projects";
+import { Head, Link, usePoll } from '@inertiajs/vue3';
+import { Bot, Clock, ListOrdered, Loader2 } from '@lucide/vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import DashboardChat from '@/components/DashboardChat.vue';
+import type { DashboardChatData } from '@/components/DashboardChat.vue';
+import DashboardChatContexts from '@/components/DashboardChatContexts.vue';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { dashboard } from '@/routes';
+import projects from '@/routes/projects';
 
 type QueuedRun = {
     id: number;
@@ -32,14 +32,14 @@ defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: "Vezérlőpult",
+                title: 'Vezérlőpult',
                 href: dashboard(),
             },
         ],
     },
 });
 
-usePoll(4000, { only: ["promptQueue", "chat"] });
+usePoll(4000, { only: ['promptQueue', 'chat'] });
 
 // Ticks every second so the elapsed time of a running prompt counts up live.
 const now = ref(Date.now());
@@ -53,7 +53,7 @@ onBeforeUnmount(() => clearInterval(ticker));
 
 function elapsed(since: string | null): string {
     if (since === null) {
-        return "—";
+        return '—';
     }
 
     const seconds = Math.max(
@@ -66,7 +66,7 @@ function elapsed(since: string | null): string {
 }
 
 function formatDate(value: string): string {
-    return new Date(value).toLocaleString("hu-HU");
+    return new Date(value).toLocaleString('hu-HU');
 }
 </script>
 
@@ -93,7 +93,7 @@ function formatDate(value: string): string {
                             class="size-4"
                             :class="
                                 promptQueue.running.length > 0
-                                    ? 'animate-spin'
+                                    ? 'animate-spin text-ai-foreground'
                                     : 'text-muted-foreground'
                             "
                         />
@@ -111,7 +111,7 @@ function formatDate(value: string): string {
                     <div
                         v-for="run in promptQueue.running"
                         :key="run.id"
-                        class="flex flex-col gap-1.5 rounded-lg border p-3"
+                        class="flex flex-col gap-1.5 rounded-lg border border-l-2 border-l-ai-foreground bg-ai/15 p-3"
                     >
                         <p
                             class="line-clamp-3 text-sm font-medium break-words whitespace-pre-wrap"
@@ -130,7 +130,7 @@ function formatDate(value: string): string {
                             </Link>
                             <Badge
                                 v-if="run.agent"
-                                variant="outline"
+                                variant="ai"
                                 class="gap-1 font-normal"
                             >
                                 <Bot class="size-3" />

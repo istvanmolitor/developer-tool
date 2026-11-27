@@ -16,6 +16,18 @@ export const badgeVariants = cva(
          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        todo:
+          "border-transparent bg-status-todo text-status-todo-foreground",
+        progress:
+          "border-transparent bg-status-progress text-status-progress-foreground",
+        review:
+          "border-transparent bg-status-review text-status-review-foreground",
+        done:
+          "border-transparent bg-status-done text-status-done-foreground",
+        blocked:
+          "border-transparent bg-status-blocked text-status-blocked-foreground",
+        ai:
+          "border-transparent bg-ai text-ai-foreground",
       },
     },
     defaultVariants: {

@@ -9,9 +9,11 @@
 
 @theme inline {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono:
+        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        'Liberation Mono', 'Courier New', monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -59,77 +61,129 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Szemantikus feladat-státusz és "AI/agent" jelző színpárok (Taskwave). */
+    --color-status-todo: var(--status-todo);
+    --color-status-todo-foreground: var(--status-todo-foreground);
+    --color-status-progress: var(--status-progress);
+    --color-status-progress-foreground: var(--status-progress-foreground);
+    --color-status-review: var(--status-review);
+    --color-status-review-foreground: var(--status-review-foreground);
+    --color-status-done: var(--status-done);
+    --color-status-done-foreground: var(--status-done-foreground);
+    --color-status-blocked: var(--status-blocked);
+    --color-status-blocked-foreground: var(--status-blocked-foreground);
+    --color-ai: var(--ai);
+    --color-ai-foreground: var(--ai-foreground);
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    /* Taskwave — világos téma (alap/fő téma). */
+    --background: #f5f8fd;
+    --foreground: #0f1b2d;
+    --card: #ffffff;
+    --card-foreground: #0f1b2d;
+    --popover: #ffffff;
+    --popover-foreground: #0f1b2d;
+    --primary: #1f63e6;
+    --primary-foreground: #ffffff;
+    --secondary: #eaf0fa;
+    --secondary-foreground: #0f1b2d;
+    --muted: #eaf0fa;
+    --muted-foreground: #51607a;
+    --accent: #e3ecff;
+    --accent-foreground: #1550c4;
+    --destructive: #c9372c;
+    --destructive-foreground: #ffffff;
+    --border: #d5deec;
+    --input: #d5deec;
+    --ring: #1f63e6;
+    --chart-1: #1f63e6;
+    --chart-2: #0b6e93;
+    --chart-3: #a04a00;
+    --chart-4: #1a7550;
+    --chart-5: #c9372c;
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+
+    /* A sidebar mindig sötét navy — nem követi az app világos/sötét témáját. */
+    --sidebar: #0a2257;
+    --sidebar-foreground: #dbe6ff;
+    --sidebar-primary: #1f63e6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1a3a80;
+    --sidebar-accent-foreground: #dbe6ff;
+    --sidebar-border: #16305e;
+    --sidebar-ring: #4c86f5;
+
+    /* Feladat-státusz badge színpárok. */
+    --status-todo: #e9edf3;
+    --status-todo-foreground: #44546f;
+    --status-progress: #e3ecff;
+    --status-progress-foreground: #1550c4;
+    --status-review: #fff1dc;
+    --status-review-foreground: #a04a00;
+    --status-done: #e3f6ec;
+    --status-done-foreground: #1a7550;
+    --status-blocked: #ffebe9;
+    --status-blocked-foreground: #c9372c;
+
+    /* "AI becsült / AI javaslat" jelző (agent-vezérelt elemek). */
+    --ai: #e0f4fb;
+    --ai-foreground: #0b6e93;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    /* Taskwave — sötét téma: navy hangulat, konzisztens a sidebar navy-jával.
+       A pontos árnyalatok a mockupban nem szerepeltek, ezek dizájn-döntések. */
+    --background: #0d1b36;
+    --foreground: #dbe6ff;
+    --card: #142547;
+    --card-foreground: #dbe6ff;
+    --popover: #142547;
+    --popover-foreground: #dbe6ff;
+    --primary: #1f63e6;
+    --primary-foreground: #ffffff;
+    --secondary: #1b2f54;
+    --secondary-foreground: #dbe6ff;
+    --muted: #16294a;
+    --muted-foreground: #8fa6d6;
+    --accent: #1a3a80;
+    --accent-foreground: #cfe0ff;
+    --destructive: #c9372c;
+    --destructive-foreground: #ffffff;
+    --border: #29406e;
+    --input: #29406e;
+    --ring: #4c86f5;
+    --chart-1: #4c86f5;
+    --chart-2: #22a6d1;
+    --chart-3: #d98a33;
+    --chart-4: #2fb673;
+    --chart-5: #e2615a;
+
+    /* A sidebar sötét módban is ugyanaz a navy, mint világos módban. */
+    --sidebar: #0a2257;
+    --sidebar-foreground: #dbe6ff;
+    --sidebar-primary: #1f63e6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1a3a80;
+    --sidebar-accent-foreground: #dbe6ff;
+    --sidebar-border: #16305e;
+    --sidebar-ring: #4c86f5;
+
+    /* Feladat-státusz badge színpárok — sötétített/világosított megfelelők. */
+    --status-todo: #27344c;
+    --status-todo-foreground: #b7c3db;
+    --status-progress: #1d3a7a;
+    --status-progress-foreground: #bcd2ff;
+    --status-review: #4a3418;
+    --status-review-foreground: #ffcf8a;
+    --status-done: #163f2d;
+    --status-done-foreground: #7be3b2;
+    --status-blocked: #4a1f1c;
+    --status-blocked-foreground: #ff9f97;
+
+    --ai: #113a46;
+    --ai-foreground: #7fd4ec;
 }
 
 @layer base {

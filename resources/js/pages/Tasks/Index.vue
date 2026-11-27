@@ -126,11 +126,9 @@ function isCompleted(status: string): boolean {
     return status === 'done' || status === 'closed';
 }
 
-function priorityVariant(
-    priority: string,
-): 'destructive' | 'default' | 'outline' {
-    if (priority === 'high') return 'destructive';
-    if (priority === 'medium') return 'default';
+function priorityVariant(priority: string): 'blocked' | 'review' | 'outline' {
+    if (priority === 'high') return 'blocked';
+    if (priority === 'medium') return 'review';
     return 'outline';
 }
 
@@ -336,11 +334,7 @@ function formatDate(value: string | null): string {
                                 <Zap class="size-3" />
                                 Automatikus
                             </Badge>
-                            <Badge
-                                v-if="task.agent"
-                                variant="secondary"
-                                class="gap-1"
-                            >
+                            <Badge v-if="task.agent" variant="ai" class="gap-1">
                                 <Bot class="size-3" />
                                 {{ task.agent.name }}
                             </Badge>
