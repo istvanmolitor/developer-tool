@@ -63,7 +63,7 @@ function submit(): void {
 <template>
     <Head :title="`${mailbox.name} szerkesztése`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <Heading
             :title="`${mailbox.name} szerkesztése`"
             description="A jelszó mezőt üresen hagyva a tárolt jelszó megmarad."

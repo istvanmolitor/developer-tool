@@ -9,7 +9,9 @@ use App\Repositories\Contracts\AgentContextRepository;
 use App\Repositories\Contracts\AgentRepository;
 use App\Repositories\Contracts\ProjectRepository;
 use App\Repositories\Contracts\PromptRunRepository;
+use App\Repositories\Contracts\SettingRepository;
 use App\Repositories\Contracts\TaskRepository;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -38,6 +40,7 @@ class DashboardController extends Controller
         private AgentRepository $agents,
         private AgentContextRepository $agentContexts,
         private TaskRepository $tasks,
+        private SettingRepository $settings,
     ) {}
 
     /**
@@ -55,7 +58,41 @@ class DashboardController extends Controller
             ],
             'chat' => fn (): array => $this->chat($request),
             'taskStats' => fn (): array => $this->tasks->dashboardCounts(),
+            'costStats' => fn (): array => $this->costStats(),
         ]);
+    }
+
+    /**
+     * What the prompts have cost today and this week, with the number of runs
+     * behind each figure and the limits they are measured against.
+     *
+     * @return array{
+     *     daily: array{cost: float, runs: int, limit: float|null},
+     *     weekly: array{cost: float, runs: int, limit: float|null},
+     * }
+     */
+    private function costStats(): array
+    {
+        return [
+            'daily' => [
+                ...$this->promptRuns->usageSince(CarbonImmutable::now()->startOfDay()),
+                'limit' => $this->costLimit('daily_cost_limit_usd'),
+            ],
+            'weekly' => [
+                ...$this->promptRuns->usageSince(CarbonImmutable::now()->startOfWeek()),
+                'limit' => $this->costLimit('weekly_cost_limit_usd'),
+            ],
+        ];
+    }
+
+    /**
+     * A spending limit from the settings, or null when none is set.
+     */
+    private function costLimit(string $key): ?float
+    {
+        $value = $this->settings->get($key);
+
+        return $value === null || $value === '' ? null : (float) $value;
     }
 
     /**
@@ -112,6 +149,7 @@ class DashboardController extends Controller
             'context' => $context?->only(['id', 'session_id']),
             'context_chosen' => $chosenContext !== null,
             'runs' => $context === null ? [] : $context->promptRuns()
+                ->with('agent:id,name,avatar_path')
                 ->latest('id')
                 ->limit(self::CHAT_MESSAGE_LIMIT)
                 ->get(['id', 'agent_context_id', 'prompt', 'status', 'exit_code', 'output', 'error_output', 'created_at'])

@@ -5,16 +5,16 @@ namespace App\Models;
 use App\Enums\SearchType;
 use App\Services\Search\IndexedInSearch;
 use App\Services\Search\Searchable;
-use Database\Factories\DocumentationFactory;
+use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-class Documentation extends Model implements Searchable
+class Document extends Model implements Searchable
 {
-    /** @use HasFactory<DocumentationFactory> */
+    /** @use HasFactory<DocumentFactory> */
     use HasFactory;
 
     use IndexedInSearch;
@@ -27,7 +27,7 @@ class Documentation extends Model implements Searchable
     ];
 
     /**
-     * The project whose docs/documentations folder this file was imported from.
+     * The project whose docs folder this file was imported from.
      *
      * @return BelongsTo<Project, $this>
      */
@@ -54,7 +54,7 @@ class Documentation extends Model implements Searchable
 
     public static function searchType(): SearchType
     {
-        return SearchType::Documentation;
+        return SearchType::Document;
     }
 
     /**

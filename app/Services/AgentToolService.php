@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Mcp\Servers\AgentServer;
 use App\Mcp\Servers\AttachmentServer;
-use App\Mcp\Servers\DocumentationServer;
+use App\Mcp\Servers\DocumentServer;
 use App\Mcp\Servers\MailServer;
 use App\Mcp\Servers\MessageServer;
 use App\Mcp\Servers\ProjectServer;
@@ -120,9 +120,9 @@ class AgentToolService
             'kind' => self::KIND_MAILBOX,
         ],
         'docs' => [
-            'label' => 'Dokumentáció',
-            'description' => 'A megírt dokumentáció betöltése az adatbázisba.',
-            'server' => DocumentationServer::class,
+            'label' => 'Dokumentumok',
+            'description' => 'A projekt docs mappájának betöltése a dokumentumok táblába.',
+            'server' => DocumentServer::class,
         ],
         'attachments' => [
             'label' => 'Csatolmányok',

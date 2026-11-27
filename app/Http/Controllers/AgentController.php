@@ -14,6 +14,7 @@ use App\Repositories\Contracts\AgentContextRepository;
 use App\Repositories\Contracts\AgentMessageRepository;
 use App\Repositories\Contracts\AgentRepository;
 use App\Repositories\Contracts\ProjectRepository;
+use App\Services\AgentAvatarService;
 use App\Services\AgentSyncService;
 use App\Services\AgentToolService;
 use App\Services\Search\SearchCriteria;
@@ -23,6 +24,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgentController extends Controller
 {
@@ -32,6 +34,7 @@ class AgentController extends Controller
         private ProjectRepository $projects,
         private AgentContextRepository $agentContexts,
         private AgentMessageRepository $messages,
+        private AgentAvatarService $avatars,
     ) {}
 
     public function index(): Response
@@ -50,7 +53,9 @@ class AgentController extends Controller
 
     public function store(StoreAgentRequest $request, AgentSyncService $agentSync): RedirectResponse
     {
-        $agent = $this->agents->create($request->validated());
+        $agent = $this->agents->create($request->safe()->except(['avatar', 'remove_avatar']));
+
+        $this->applyAvatar($request, $agent);
 
         $this->writeDefinition($agentSync, $agent);
 
@@ -70,11 +75,28 @@ class AgentController extends Controller
             'projects' => $this->projects->allOrderedByName(['id', 'name'])
                 ->map->only(['id', 'name']),
             'runs' => $agent->promptRuns()
-                ->with('project:id,name,path')
+                ->with(['project:id,name,path', 'agent:id,name,avatar_path'])
                 ->latest('prompt_runs.created_at')
                 ->limit(20)
                 ->get(),
             'contexts' => $this->agentContexts->latestPerProjectForAgentUser($agent, $request->user()),
+        ]);
+    }
+
+    /**
+     * The agent's profile picture, streamed from the private disk. Only raster
+     * images are ever stored, so serving it inline is safe.
+     */
+    public function avatar(Agent $agent): StreamedResponse
+    {
+        $disk = $this->avatars->disk();
+
+        abort_if($agent->avatar_path === null || ! $disk->exists($agent->avatar_path), 404);
+
+        return $disk->response($agent->avatar_path, null, [
+            'Content-Type' => $disk->mimeType($agent->avatar_path) ?: 'image/png',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=3600',
         ]);
     }
 
@@ -209,7 +231,9 @@ class AgentController extends Controller
     {
         $previousSlug = $agent->slug;
 
-        $this->agents->update($agent, $request->validated());
+        $this->agents->update($agent, $request->safe()->except(['avatar', 'remove_avatar']));
+
+        $this->applyAvatar($request, $agent);
 
         $this->writeDefinition($agentSync, $agent, $previousSlug);
 
@@ -233,6 +257,24 @@ class AgentController extends Controller
         return redirect()
             ->route('agents.index')
             ->with('status', 'Agent eltávolítva.');
+    }
+
+    /**
+     * Store the uploaded profile picture, or drop the current one when the form
+     * asked for its removal. The picture is not part of the `*.md` definition:
+     * it lives only in the database and on the private disk.
+     */
+    private function applyAvatar(StoreAgentRequest|UpdateAgentRequest $request, Agent $agent): void
+    {
+        if ($request->hasFile('avatar')) {
+            $this->avatars->store($agent, $request->file('avatar'));
+
+            return;
+        }
+
+        if ($request->boolean('remove_avatar')) {
+            $this->avatars->remove($agent);
+        }
     }
 
     /**

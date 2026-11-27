@@ -69,16 +69,16 @@ function formatDate(value: string | null): string {
                         <span
                             class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground"
                         >
-                            <span class="inline-flex items-center gap-1">
-                                <FolderGit2 class="size-3" />
-                                {{ context.project }}
-                            </span>
                             <span
                                 v-if="context.agent"
                                 class="inline-flex items-center gap-1"
                             >
                                 <Bot class="size-3" />
                                 {{ context.agent }}
+                            </span>
+                            <span class="inline-flex items-center gap-1">
+                                <FolderGit2 class="size-3" />
+                                {{ context.project }}
                             </span>
                         </span>
                         <span class="text-xs text-muted-foreground">

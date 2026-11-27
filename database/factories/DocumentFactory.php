@@ -2,16 +2,16 @@
 
 namespace Database\Factories;
 
-use App\Models\Documentation;
+use App\Models\Document;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Documentation>
+ * @extends Factory<Document>
  */
-class DocumentationFactory extends Factory
+class DocumentFactory extends Factory
 {
-    protected $model = Documentation::class;
+    protected $model = Document::class;
 
     /**
      * @return array<string, mixed>

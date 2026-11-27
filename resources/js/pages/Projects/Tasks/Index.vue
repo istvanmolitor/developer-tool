@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Bot,
     CalendarClock,
@@ -11,26 +11,26 @@ import {
     Plus,
     Trash2,
     Zap,
-} from '@lucide/vue';
-import FilterSelect from '@/components/FilterSelect.vue';
-import Heading from '@/components/Heading.vue';
-import ListSearchInput from '@/components/ListSearchInput.vue';
-import PaginationBar from '@/components/PaginationBar.vue';
-import type { Paginator } from '@/components/PaginationBar.vue';
-import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@lucide/vue";
+import FilterSelect from "@/components/FilterSelect.vue";
+import Heading from "@/components/Heading.vue";
+import ListSearchInput from "@/components/ListSearchInput.vue";
+import PaginationBar from "@/components/PaginationBar.vue";
+import type { Paginator } from "@/components/PaginationBar.vue";
+import SearchUnavailableAlert from "@/components/SearchUnavailableAlert.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { useListFilters } from '@/composables/useListFilters';
-import projects from '@/routes/projects';
-import ProjectNav from '../ProjectNav.vue';
+} from "@/components/ui/select";
+import { useListFilters } from "@/composables/useListFilters";
+import projects from "@/routes/projects";
+import ProjectNav from "../ProjectNav.vue";
 
 type Option = { value: string; label: string };
 
@@ -69,7 +69,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
@@ -94,24 +94,24 @@ function typeLabel(value: string): string {
     return props.types.find((o) => o.value === value)?.label ?? value;
 }
 
-function statusVariant(status: string): 'secondary' | 'default' | 'outline' {
-    if (status === 'done' || status === 'closed') return 'secondary';
-    if (status === 'in_progress') return 'default';
-    return 'outline';
+function statusVariant(status: string): "secondary" | "default" | "outline" {
+    if (status === "done" || status === "closed") return "secondary";
+    if (status === "in_progress") return "default";
+    return "outline";
 }
 
 // A befejezett (kész vagy lezárt) feladatok terminálisak: halványítva,
 // áthúzva jelennek meg, és nem indíthatók újra.
 function isCompleted(status: string): boolean {
-    return status === 'done' || status === 'closed';
+    return status === "done" || status === "closed";
 }
 
 function priorityVariant(
     priority: string,
-): 'destructive' | 'default' | 'outline' {
-    if (priority === 'high') return 'destructive';
-    if (priority === 'medium') return 'default';
-    return 'outline';
+): "destructive" | "default" | "outline" {
+    if (priority === "high") return "destructive";
+    if (priority === "medium") return "default";
+    return "outline";
 }
 
 function changeStatus(task: Task, status: string): void {
@@ -148,16 +148,16 @@ function destroy(task: Task): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleDateString('hu-HU') : '';
+    return value ? new Date(value).toLocaleDateString("hu-HU") : "";
 }
 </script>
 
 <template>
     <Head :title="`Feladatok — ${project.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
-            <Heading :title="project.name" :description="project.path" />
+            <Heading :title="project.name" description="A projekt feladatai." />
             <div class="flex shrink-0 items-center gap-1">
                 <Button variant="outline" size="sm" as-child>
                     <Link :href="projects.taskChanges.index(project.name).url">

@@ -6,6 +6,7 @@ use App\Models\Attachment;
 use App\Models\IncomingEmail;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\User;
 use App\Repositories\Contracts\AttachmentRepository;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
@@ -79,6 +80,7 @@ class AttachmentService
         ?string $mimeType = null,
         string $source = 'upload',
         ?string $relativePath = null,
+        ?User $uploadedBy = null,
     ): Attachment {
         if ($project !== null) {
             $disk = $this->diskFor($project);
@@ -99,6 +101,7 @@ class AttachmentService
                 'size' => strlen($contents),
                 'checksum' => hash('sha256', $contents),
                 'source' => $source,
+                'uploaded_by_user_id' => $uploadedBy?->id,
                 // Every project file is tracked by its path within the folder, so
                 // a later sync recognises it and never creates a duplicate row.
                 'relative_path' => $path,
@@ -120,14 +123,16 @@ class AttachmentService
             'size' => strlen($contents),
             'checksum' => hash('sha256', $contents),
             'source' => $source,
+            'uploaded_by_user_id' => $uploadedBy?->id,
             'relative_path' => null,
         ]);
     }
 
     /**
-     * Store an uploaded file (web form or MCP) for a project.
+     * Store an uploaded file (web form or MCP) for a project, recording who
+     * uploaded it when the upload came from a signed-in user.
      */
-    public function storeUploadedFile(?Project $project, UploadedFile $file, string $source = 'upload'): Attachment
+    public function storeUploadedFile(?Project $project, UploadedFile $file, string $source = 'upload', ?User $uploadedBy = null): Attachment
     {
         return $this->store(
             $project,
@@ -135,6 +140,8 @@ class AttachmentService
             $file->getClientOriginalName() ?: $file->hashName(),
             $file->getClientMimeType(),
             $source,
+            null,
+            $uploadedBy,
         );
     }
 

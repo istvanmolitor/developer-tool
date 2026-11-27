@@ -30,7 +30,7 @@ import mailboxes from '@/routes/mailboxes';
 import { index as promptRuns } from '@/routes/prompt-runs';
 import projects from '@/routes/projects';
 import tasks from '@/routes/tasks';
-import documentations from '@/routes/projects/documentations';
+import documents from '@/routes/projects/documents';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -73,8 +73,8 @@ const footerNavItems: NavItem[] = [
         icon: Settings,
     },
     {
-        title: 'Dokumentáció',
-        href: documentations.index('developer-tool'),
+        title: 'Dokumentumok',
+        href: documents.index('developer-tool'),
         icon: BookOpen,
     },
 ];

@@ -25,7 +25,7 @@ defineOptions({
         <Heading
             variant="small"
             title="Megjelenési beállítások"
-            description="A fiók megjelenési beállításainak módosítása"
+            description="Világos, sötét vagy a rendszer szerinti téma."
         />
         <AppearanceTabs />
     </div>

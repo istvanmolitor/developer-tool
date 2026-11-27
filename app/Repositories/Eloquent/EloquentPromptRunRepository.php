@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Enums\PromptRunStatus;
 use App\Models\PromptRun;
 use App\Repositories\Contracts\PromptRunRepository;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -53,6 +54,19 @@ class EloquentPromptRunRepository extends EloquentRepository implements PromptRu
             ->orderBy('id')
             ->limit($limit)
             ->get();
+    }
+
+    public function usageSince(CarbonInterface $since): array
+    {
+        $usage = $this->newQuery()
+            ->where('created_at', '>=', $since)
+            ->selectRaw('COALESCE(SUM(cost_usd), 0) as total_cost, COUNT(*) as run_count')
+            ->first();
+
+        return [
+            'cost' => (float) ($usage?->getAttribute('total_cost') ?? 0),
+            'runs' => (int) ($usage?->getAttribute('run_count') ?? 0),
+        ];
     }
 
     public function findForStatusView(int|string $id): ?PromptRun

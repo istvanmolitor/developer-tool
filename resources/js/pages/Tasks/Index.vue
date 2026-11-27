@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Bot,
     CalendarClock,
@@ -10,27 +10,27 @@ import {
     Play,
     Trash2,
     Zap,
-} from '@lucide/vue';
-import { computed } from 'vue';
-import FilterSelect from '@/components/FilterSelect.vue';
-import Heading from '@/components/Heading.vue';
-import ListSearchInput from '@/components/ListSearchInput.vue';
-import PaginationBar from '@/components/PaginationBar.vue';
-import type { Paginator } from '@/components/PaginationBar.vue';
-import SearchUnavailableAlert from '@/components/SearchUnavailableAlert.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@lucide/vue";
+import { computed } from "vue";
+import FilterSelect from "@/components/FilterSelect.vue";
+import Heading from "@/components/Heading.vue";
+import ListSearchInput from "@/components/ListSearchInput.vue";
+import PaginationBar from "@/components/PaginationBar.vue";
+import type { Paginator } from "@/components/PaginationBar.vue";
+import SearchUnavailableAlert from "@/components/SearchUnavailableAlert.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { useListFilters } from '@/composables/useListFilters';
-import projects from '@/routes/projects';
-import taskRoutes from '@/routes/tasks';
+} from "@/components/ui/select";
+import { useListFilters } from "@/composables/useListFilters";
+import projects from "@/routes/projects";
+import taskRoutes from "@/routes/tasks";
 
 type Option = { value: string; label: string };
 
@@ -71,7 +71,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Feladatok', href: taskRoutes.index().url }],
+        breadcrumbs: [{ title: "Feladatok", href: taskRoutes.index().url }],
     },
 });
 
@@ -91,7 +91,7 @@ const projectOptions = props.projects.map((project) => ({
 
 const hasFilters = computed(
     () =>
-        filters.q !== '' ||
+        filters.q !== "" ||
         filters.project !== null ||
         filters.status !== null ||
         filters.priority !== null ||
@@ -100,7 +100,7 @@ const hasFilters = computed(
 );
 
 function clearFilters(): void {
-    filters.q = '';
+    filters.q = "";
     filters.project = null;
     filters.status = null;
     filters.priority = null;
@@ -123,13 +123,13 @@ function typeLabel(value: string): string {
 // A befejezett (kész vagy lezárt) feladatok terminálisak: halványítva,
 // áthúzva jelennek meg, és nem indíthatók újra.
 function isCompleted(status: string): boolean {
-    return status === 'done' || status === 'closed';
+    return status === "done" || status === "closed";
 }
 
-function priorityVariant(priority: string): 'blocked' | 'review' | 'outline' {
-    if (priority === 'high') return 'blocked';
-    if (priority === 'medium') return 'review';
-    return 'outline';
+function priorityVariant(priority: string): "blocked" | "review" | "outline" {
+    if (priority === "high") return "blocked";
+    if (priority === "medium") return "review";
+    return "outline";
 }
 
 function changeStatus(task: Task, status: string): void {
@@ -166,14 +166,14 @@ function destroy(task: Task): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleDateString('hu-HU') : '';
+    return value ? new Date(value).toLocaleDateString("hu-HU") : "";
 }
 </script>
 
 <template>
     <Head title="Feladatok" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <Heading
             title="Feladatok"
             description="Az összes projekt feladata egy helyen."
@@ -183,6 +183,12 @@ function formatDate(value: string | null): string {
             <ListSearchInput
                 v-model="filters.q"
                 placeholder="Keresés a feladatokban…"
+            />
+            <FilterSelect
+                v-model="filters.agent"
+                :options="agentOptions"
+                all-label="Minden felelős"
+                label="Felelős"
             />
             <FilterSelect
                 v-model="filters.project"
@@ -207,12 +213,6 @@ function formatDate(value: string | null): string {
                 :options="types"
                 all-label="Minden típus"
                 label="Típus"
-            />
-            <FilterSelect
-                v-model="filters.agent"
-                :options="agentOptions"
-                all-label="Minden felelős"
-                label="Felelős"
             />
             <Select v-model="filters.sort">
                 <SelectTrigger
@@ -299,6 +299,10 @@ function formatDate(value: string | null): string {
                         <div
                             class="mt-1.5 flex flex-wrap items-center gap-2 text-xs"
                         >
+                            <Badge v-if="task.agent" variant="ai" class="gap-1">
+                                <Bot class="size-3" />
+                                {{ task.agent.name }}
+                            </Badge>
                             <Link
                                 :href="
                                     projects.tasks.index(task.project.name).url
@@ -333,10 +337,6 @@ function formatDate(value: string | null): string {
                             >
                                 <Zap class="size-3" />
                                 Automatikus
-                            </Badge>
-                            <Badge v-if="task.agent" variant="ai" class="gap-1">
-                                <Bot class="size-3" />
-                                {{ task.agent.name }}
                             </Badge>
                             <Badge
                                 v-if="task.due_date"

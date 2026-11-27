@@ -29,8 +29,21 @@ class ProjectAttachmentController extends Controller
         return Inertia::render('Projects/Attachments/Index', [
             'project' => $project->only(['id', 'name', 'path']),
             'attachments' => $project->attachments()
+                ->with('uploadedBy:id,name')
                 ->orderByDesc('created_at')
-                ->get(['id', 'filename', 'mime_type', 'size', 'source', 'relative_path', 'created_at']),
+                ->get(['id', 'filename', 'mime_type', 'size', 'source', 'uploaded_by_user_id', 'relative_path', 'created_at'])
+                ->map(fn (Attachment $attachment): array => [
+                    'id' => $attachment->id,
+                    'filename' => $attachment->filename,
+                    'mime_type' => $attachment->mime_type,
+                    'size' => $attachment->size,
+                    'source' => $attachment->source,
+                    'relative_path' => $attachment->relative_path,
+                    // Who put the file here: shown in the file's details, not
+                    // in the icon list itself.
+                    'uploaded_by' => $attachment->uploadedBy?->name,
+                    'created_at' => $attachment->created_at?->toIso8601String(),
+                ]),
             'attachments_path' => $this->attachments->directoryFor($project),
         ]);
     }
@@ -41,7 +54,7 @@ class ProjectAttachmentController extends Controller
      */
     public function store(StoreProjectAttachmentRequest $request, Project $project): RedirectResponse
     {
-        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'));
+        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'), 'upload', $request->user());
 
         return redirect()
             ->route('projects.attachments.index', $project)
@@ -70,7 +83,7 @@ class ProjectAttachmentController extends Controller
      */
     public function pickerUpload(StoreProjectAttachmentRequest $request, Project $project): JsonResponse
     {
-        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'));
+        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'), 'upload', $request->user());
 
         return response()->json([
             'attachment' => $this->pickerPayload($attachment),

@@ -41,8 +41,8 @@ test('the projects index lists every registered project', function () {
         );
 });
 
-test('a project can be viewed with its run history', function () {
-    PromptRun::factory()->count(3)->inContext(['project_id' => $this->alpha->id])->create();
+test('a project can be viewed with the time of its last run', function () {
+    $run = PromptRun::factory()->inContext(['project_id' => $this->alpha->id])->create();
     PromptRun::factory()->inContext(['project_id' => $this->beta->id])->create();
 
     $this->actingAs(User::factory()->create())
@@ -51,7 +51,8 @@ test('a project can be viewed with its run history', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Projects/Show')
             ->where('project.name', 'alpha')
-            ->where('runs_count', 3)
+            ->where('last_run_at', fn ($value) => $value !== null
+                && $run->created_at->equalTo($value))
         );
 });
 

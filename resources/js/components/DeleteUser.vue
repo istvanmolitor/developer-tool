@@ -26,7 +26,7 @@ const passwordInput = useTemplateRef('passwordInput');
         <Heading
             variant="small"
             title="Fiók törlése"
-            description="A fiók és minden hozzá tartozó adat törlése"
+            description="A fiók és minden hozzá tartozó adat törlése."
         />
         <div
             class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10"

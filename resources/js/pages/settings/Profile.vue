@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Upload, Trash2 } from '@lucide/vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import AgentAvatar from '@/components/AgentAvatar.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -25,6 +27,48 @@ defineOptions({
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+
+/** Preview of the picture just chosen, until the form is submitted. */
+const pickedAvatar = ref<string | null>(null);
+const removeAvatar = ref(false);
+
+const avatarPreview = computed<string | null>(() => {
+    if (pickedAvatar.value !== null) {
+        return pickedAvatar.value;
+    }
+
+    return removeAvatar.value ? null : user.value.avatar_url;
+});
+
+function onAvatarChange(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+
+    releasePreview();
+
+    removeAvatar.value = false;
+    pickedAvatar.value = file === null ? null : URL.createObjectURL(file);
+}
+
+function onRemoveAvatar(): void {
+    releasePreview();
+
+    removeAvatar.value = true;
+}
+
+/** Drop the previews once the save landed; the fresh picture comes from props. */
+function onSubmitted(): void {
+    releasePreview();
+    removeAvatar.value = false;
+}
+
+function releasePreview(): void {
+    if (pickedAvatar.value !== null) {
+        URL.revokeObjectURL(pickedAvatar.value);
+        pickedAvatar.value = null;
+    }
+}
+
+onBeforeUnmount(releasePreview);
 </script>
 
 <template>
@@ -36,14 +80,67 @@ const user = computed(() => page.props.auth.user);
         <Heading
             variant="small"
             title="Profil"
-            description="Frissítsd a neved és e-mail címed"
+            description="A neved és az e-mail címed."
         />
 
         <Form
             v-bind="ProfileController.update.form()"
             class="space-y-6"
             v-slot="{ errors, processing }"
+            @success="onSubmitted"
         >
+            <div class="grid gap-2">
+                <Label>Profilkép</Label>
+                <div class="flex items-center gap-3">
+                    <AgentAvatar
+                        :name="user.name || '?'"
+                        :src="avatarPreview"
+                        class="size-16"
+                    />
+                    <div class="flex flex-col items-start gap-1">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            as-child
+                        >
+                            <label for="avatar" class="cursor-pointer">
+                                <Upload class="size-4" />
+                                Kép feltöltése
+                            </label>
+                        </Button>
+                        <Button
+                            v-if="avatarPreview"
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            class="text-destructive hover:text-destructive"
+                            @click="onRemoveAvatar"
+                        >
+                            <Trash2 class="size-3.5" />
+                            Kép törlése
+                        </Button>
+                    </div>
+                    <input
+                        id="avatar"
+                        type="file"
+                        name="avatar"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="sr-only"
+                        @change="onAvatarChange"
+                    />
+                    <input
+                        type="hidden"
+                        name="remove_avatar"
+                        :value="removeAvatar ? '1' : ''"
+                    />
+                </div>
+                <p class="text-xs text-muted-foreground">
+                    JPG, PNG vagy WebP, legfeljebb 2 MB.
+                </p>
+                <InputError class="mt-2" :message="errors.avatar" />
+            </div>
+
             <div class="grid gap-2">
                 <Label for="name">Név</Label>
                 <Input

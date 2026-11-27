@@ -41,7 +41,7 @@ function submit(): void {
 <template>
     <Head :title="`${project.name} szerkesztése`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <Heading
             :title="`${project.name} szerkesztése`"
             description="A projekt adatainak módosítása."

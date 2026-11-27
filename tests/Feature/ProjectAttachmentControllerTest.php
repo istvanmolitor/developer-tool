@@ -40,6 +40,40 @@ function projectAttachmentsDir(Project $project): string
     return config('developer-tool.projects_path').'/attachments/'.$project->name;
 }
 
+test('an uploaded file records who uploaded it, and the index shows it', function () {
+    $user = User::factory()->create(['name' => 'Kovács Anna']);
+    $project = attachmentProject();
+
+    $this->actingAs($user)
+        ->post(route('projects.attachments.store', $project), [
+            'file' => UploadedFile::fake()->create('terv.txt', 2, 'text/plain'),
+        ])
+        ->assertRedirect(route('projects.attachments.index', $project));
+
+    $attachment = Attachment::sole();
+
+    expect($attachment->uploadedBy?->name)->toBe('Kovács Anna');
+
+    $this->actingAs($user)
+        ->get(route('projects.attachments.index', $project))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Projects/Attachments/Index')
+            ->where('attachments.0.uploaded_by', 'Kovács Anna'),
+        );
+});
+
+test('a file imported from the folder has no uploader', function () {
+    $project = attachmentProject();
+    File::ensureDirectoryExists(projectAttachmentsDir($project));
+    File::put(projectAttachmentsDir($project).'/jegyzet.txt', 'tartalom');
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('projects.attachments.sync', $project));
+
+    expect(Attachment::sole()->uploaded_by_user_id)->toBeNull();
+});
+
 test('the attachments index lists the project files', function () {
     $project = Project::factory()->create();
     $attachment = Attachment::factory()->for($project)->create(['filename' => 'terv.txt']);

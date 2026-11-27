@@ -267,7 +267,7 @@ function formatDate(value: string | null): string {
 <template>
     <Head :title="`${mailbox.name} — Postafiókok`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <Heading :title="mailbox.name" :description="mailbox.email" />
             <div class="flex shrink-0 flex-wrap items-center gap-1">

@@ -108,13 +108,13 @@ class Project extends Model
     }
 
     /**
-     * Documentation files imported from this project's docs/documentations folder.
+     * Document files imported from this project's docs folder.
      *
-     * @return HasMany<Documentation, $this>
+     * @return HasMany<Document, $this>
      */
-    public function documentations(): HasMany
+    public function documents(): HasMany
     {
-        return $this->hasMany(Documentation::class);
+        return $this->hasMany(Document::class);
     }
 
     /**

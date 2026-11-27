@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ProjectSeeder::class,
             AgentSeeder::class,
+            AgentAvatarSeeder::class,
             MailboxSeeder::class,
         ]);
     }

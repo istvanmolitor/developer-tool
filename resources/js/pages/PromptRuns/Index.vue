@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3';
-import { Info, PauseCircle, Trash2 } from '@lucide/vue';
-import { ref } from 'vue';
-import Heading from '@/components/Heading.vue';
-import PaginationBar from '@/components/PaginationBar.vue';
-import type { Paginator } from '@/components/PaginationBar.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Head, router, usePoll } from "@inertiajs/vue3";
+import { Info, PauseCircle, Trash2 } from "@lucide/vue";
+import { ref } from "vue";
+import Heading from "@/components/Heading.vue";
+import PaginationBar from "@/components/PaginationBar.vue";
+import type { Paginator } from "@/components/PaginationBar.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogClose,
@@ -17,9 +17,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { clear, index, pause } from '@/routes/prompt-runs';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { clear, index, pause } from "@/routes/prompt-runs";
 
 type PromptRun = {
     id: number;
@@ -37,7 +37,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Prompt sor', href: index().url }],
+        breadcrumbs: [{ title: "Prompt sor", href: index().url }],
     },
 });
 
@@ -46,7 +46,7 @@ usePoll(5000);
 
 const selected = ref<PromptRun | null>(null);
 
-function togglePause(value: boolean | 'indeterminate'): void {
+function togglePause(value: boolean | "indeterminate"): void {
     router.patch(
         pause().url,
         { paused: value === true },
@@ -59,11 +59,11 @@ function clearPending(): void {
 }
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString('hu-HU') : '—';
+    return value ? new Date(value).toLocaleString("hu-HU") : "—";
 }
 
 function preview(prompt: string): string {
-    const squished = prompt.replace(/\s+/g, ' ').trim();
+    const squished = prompt.replace(/\s+/g, " ").trim();
     return squished.length > 120 ? `${squished.slice(0, 120)}…` : squished;
 }
 </script>
@@ -74,7 +74,7 @@ function preview(prompt: string): string {
     <div class="px-4 py-6">
         <Heading
             title="Prompt sor"
-            description="A sorban álló, még le nem futott prompt futtatások"
+            description="A sorban álló, még le nem futott promptok."
         />
 
         <div
@@ -87,7 +87,10 @@ function preview(prompt: string): string {
                     @update:model-value="togglePause"
                 />
                 <div class="flex flex-col gap-0.5">
-                    <Label for="pause_prompt_runs" class="flex items-center gap-1.5">
+                    <Label
+                        for="pause_prompt_runs"
+                        class="flex items-center gap-1.5"
+                    >
                         <PauseCircle class="size-4" />
                         Következő futtatások megállítása
                     </Label>
@@ -110,9 +113,7 @@ function preview(prompt: string): string {
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle
-                            >Biztosan kiüríted a sort?</DialogTitle
-                        >
+                        <DialogTitle>Biztosan kiüríted a sort?</DialogTitle>
                         <DialogDescription>
                             Minden sorban álló, még le nem futott prompt
                             véglegesen törlődik. Ez nem vonható vissza.
@@ -141,8 +142,8 @@ function preview(prompt: string): string {
                 <thead class="bg-muted/50 text-left text-muted-foreground">
                     <tr>
                         <th class="px-3 py-2 font-medium">#</th>
-                        <th class="px-3 py-2 font-medium">Projekt</th>
                         <th class="px-3 py-2 font-medium">Agent</th>
+                        <th class="px-3 py-2 font-medium">Projekt</th>
                         <th class="px-3 py-2 font-medium">Prompt</th>
                         <th class="px-3 py-2 font-medium">Létrehozva</th>
                         <th class="px-3 py-2"></th>
@@ -157,12 +158,16 @@ function preview(prompt: string): string {
                         <td class="px-3 py-2 text-muted-foreground">
                             {{ run.id }}
                         </td>
-                        <td class="px-3 py-2">{{ run.project?.name ?? '—' }}</td>
-                        <td class="px-3 py-2">{{ run.agent?.name ?? '—' }}</td>
+                        <td class="px-3 py-2">{{ run.agent?.name ?? "—" }}</td>
+                        <td class="px-3 py-2">
+                            {{ run.project?.name ?? "—" }}
+                        </td>
                         <td class="max-w-md truncate px-3 py-2">
                             {{ preview(run.prompt) }}
                         </td>
-                        <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                        <td
+                            class="px-3 py-2 whitespace-nowrap text-muted-foreground"
+                        >
                             {{ formatDate(run.created_at) }}
                         </td>
                         <td class="px-3 py-2 text-right">
@@ -201,15 +206,14 @@ function preview(prompt: string): string {
             <DialogHeader>
                 <DialogTitle>Prompt futtatás #{{ selected?.id }}</DialogTitle>
                 <DialogDescription>
-                    {{ selected?.project?.name ?? '—' }} ·
-                    {{ selected?.agent?.name ?? 'nincs agent' }} ·
+                    {{ selected?.agent?.name ?? "nincs agent" }} ·
+                    {{ selected?.project?.name ?? "—" }} ·
                     {{ formatDate(selected?.created_at ?? null) }}
                 </DialogDescription>
             </DialogHeader>
             <pre
                 class="rounded-md bg-muted p-3 text-xs break-words whitespace-pre-wrap"
-                >{{ selected?.prompt }}</pre
-            >
+                >{{ selected?.prompt }}</pre>
         </DialogContent>
     </Dialog>
 </template>

@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <title>{{ $project->name }} — dokumentáció</title>
+    <title>{{ $project->name }} — dokumentumok</title>
     <style>
         @page {
             margin: 28mm 18mm;
@@ -140,24 +140,24 @@
         <h1>{{ $project->name }}</h1>
         <div class="path">{{ $project->path }}</div>
         <div class="meta">
-            Dokumentáció · {{ $documentations->count() }} fájl<br>
+            Dokumentumok · {{ $documents->count() }} fájl<br>
             Generálva: {{ $generatedAt->format('Y-m-d H:i') }}
         </div>
     </div>
 
-    @forelse ($documentations as $documentation)
+    @forelse ($documents as $document)
         <div class="doc">
             <div class="doc-header">
-                <h2>{{ $documentation->title ?? $documentation->path }}</h2>
-                <div class="path">{{ $documentation->path }}</div>
+                <h2>{{ $document->title ?? $document->path }}</h2>
+                <div class="path">{{ $document->path }}</div>
             </div>
             <div class="content">
-                {!! $documentation->content_html !!}
+                {!! $document->content_html !!}
             </div>
         </div>
     @empty
         <div class="doc">
-            <p class="empty">Ehhez a projekthez még nincs dokumentáció.</p>
+            <p class="empty">Ehhez a projekthez még nincs dokumentum.</p>
         </div>
     @endforelse
 </body>

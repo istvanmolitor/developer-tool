@@ -2,20 +2,20 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Documentation;
-use App\Repositories\Contracts\DocumentationRepository;
+use App\Models\Document;
+use App\Repositories\Contracts\DocumentRepository;
 
 /**
- * @extends EloquentRepository<Documentation>
+ * @extends EloquentRepository<Document>
  */
-class EloquentDocumentationRepository extends EloquentRepository implements DocumentationRepository
+class EloquentDocumentRepository extends EloquentRepository implements DocumentRepository
 {
     protected function model(): string
     {
-        return Documentation::class;
+        return Document::class;
     }
 
-    public function upsertForProjectPath(int $projectId, string $path, array $attributes): Documentation
+    public function upsertForProjectPath(int $projectId, string $path, array $attributes): Document
     {
         return $this->newQuery()->updateOrCreate(
             ['project_id' => $projectId, 'path' => $path],

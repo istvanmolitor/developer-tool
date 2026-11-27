@@ -23,6 +23,10 @@ return new class extends Migration
             $table->json('tools')->nullable();
             // The agent's instructions — the Markdown body of its definition.
             $table->longText('system_prompt');
+            // Profile picture: the file's path on the private `local` disk
+            // (see AgentAvatarService). Null = no picture, the UI falls back to
+            // the agent's initials.
+            $table->string('avatar_path')->nullable();
             // Where a seeded agent was loaded from, for traceability. Null when
             // the agent was created through the UI rather than imported.
             $table->string('source_path')->nullable();

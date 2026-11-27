@@ -41,7 +41,7 @@ test('every server is opt-in through the agents own tools list', function () {
         'tasks' => 'mcp__tasks__next-task',
         'agents' => 'mcp__agents__run-agent',
         'messages' => 'mcp__messages__send-message',
-        'docs' => 'mcp__docs__sync-documentation',
+        'docs' => 'mcp__docs__sync-documents',
         'attachments' => 'mcp__attachments__list-attachments',
         'projects' => 'mcp__projects__create-project',
     ];
@@ -57,7 +57,7 @@ test('the tasks and messages servers are bound to the run, the others are not', 
     $agent = Agent::factory()->create(['tools' => [
         'mcp__tasks__next-task',
         'mcp__messages__send-message',
-        'mcp__docs__sync-documentation',
+        'mcp__docs__sync-documents',
     ]]);
 
     $run = runFor($agent);

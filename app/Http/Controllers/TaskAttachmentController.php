@@ -23,7 +23,7 @@ class TaskAttachmentController extends Controller
      */
     public function store(StoreTaskAttachmentRequest $request, Project $project, Task $task): RedirectResponse
     {
-        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'));
+        $attachment = $this->attachments->storeUploadedFile($project, $request->file('file'), 'upload', $request->user());
         $this->attachments->attachToTask($attachment, $task);
 
         return back()->with('status', "Csatolmány feltöltve: {$attachment->filename}.");

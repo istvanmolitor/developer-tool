@@ -21,6 +21,8 @@ class SettingController extends Controller
             'settings' => [
                 'auto_start_tasks' => $this->settings->flag('auto_start_tasks'),
                 'pause_prompt_runs' => $this->settings->flag('pause_prompt_runs'),
+                'daily_cost_limit_usd' => $this->settings->get('daily_cost_limit_usd'),
+                'weekly_cost_limit_usd' => $this->settings->get('weekly_cost_limit_usd'),
             ],
         ]);
     }
@@ -32,6 +34,13 @@ class SettingController extends Controller
     {
         $this->settings->setFlag('auto_start_tasks', $request->boolean('auto_start_tasks'));
         $this->settings->setFlag('pause_prompt_runs', $request->boolean('pause_prompt_runs'));
+
+        foreach (['daily_cost_limit_usd', 'weekly_cost_limit_usd'] as $limit) {
+            $value = $request->input($limit);
+
+            // An empty field means "no limit", stored as a missing value.
+            $this->settings->set($limit, $value === null || $value === '' ? null : (string) (float) $value);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Beállítások mentve.')]);
 

@@ -2,14 +2,14 @@
 
 namespace App\Repositories\Contracts;
 
-use App\Models\Documentation;
+use App\Models\Document;
 
 /**
- * Data access for {@see Documentation} rows.
+ * Data access for {@see Document} rows.
  *
- * @extends Repository<Documentation>
+ * @extends Repository<Document>
  */
-interface DocumentationRepository extends Repository
+interface DocumentRepository extends Repository
 {
     /**
      * Update the row for the given project and path, or create it when it does
@@ -17,7 +17,7 @@ interface DocumentationRepository extends Repository
      *
      * @param  array<string, mixed>  $attributes
      */
-    public function upsertForProjectPath(int $projectId, string $path, array $attributes): Documentation;
+    public function upsertForProjectPath(int $projectId, string $path, array $attributes): Document;
 
     /**
      * Delete every row for the project whose id is not in the given set — used

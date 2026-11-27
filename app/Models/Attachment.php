@@ -31,6 +31,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property int $size
  * @property string|null $checksum
  * @property string $source
+ * @property int|null $uploaded_by_user_id
  * @property string|null $relative_path
  */
 class Attachment extends Model
@@ -54,6 +55,7 @@ class Attachment extends Model
         'size',
         'checksum',
         'source',
+        'uploaded_by_user_id',
         'relative_path',
     ];
 
@@ -103,6 +105,16 @@ class Attachment extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * The user who uploaded the file, when it came in through the UI.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function uploadedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uploaded_by_user_id');
     }
 
     /**

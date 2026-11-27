@@ -25,20 +25,22 @@ const form = useForm({
     model: '',
     tools: [] as string[],
     system_prompt: '',
+    avatar: null as File | null,
+    remove_avatar: false,
 });
 
 function submit(): void {
-    form.post(agents.store().url);
+    form.post(agents.store().url, { forceFormData: true });
 }
 </script>
 
 <template>
     <Head title="Új agent" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <Heading
             title="Új agent"
-            description="Definiálj egy szerepkört: név, leírás, modell, eszközök és a system prompt."
+            description="Új szerepkör: profilkép, név, modell, eszközök és system prompt."
         />
 
         <AgentForm

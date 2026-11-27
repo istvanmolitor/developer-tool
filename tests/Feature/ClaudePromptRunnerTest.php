@@ -113,7 +113,7 @@ test('an agent allowed agent tools gets the agents mcp server', function () {
 });
 
 test('an agent allowed docs tools gets the docs mcp server', function () {
-    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__docs__sync-documentation']]);
+    $agent = Agent::factory()->create(['tools' => ['Read', 'mcp__docs__sync-documents']]);
 
     $command = app(ClaudePromptRunner::class)->command('Töltsd be', $agent);
 

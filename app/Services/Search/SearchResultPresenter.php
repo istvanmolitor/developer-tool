@@ -49,8 +49,8 @@ class SearchResultPresenter
         return match ($hit->type) {
             SearchType::Task => $projectName === null ? null
                 : route('projects.tasks.show', [$projectName, $hit->modelId], false),
-            SearchType::Documentation => $projectName === null ? null
-                : route('projects.documentations.show', [$projectName, $hit->modelId], false),
+            SearchType::Document => $projectName === null ? null
+                : route('projects.documents.show', [$projectName, $hit->modelId], false),
             SearchType::Prompt => $projectName === null ? null
                 : route('projects.prompts', ['project' => $projectName, 'q' => mb_substr((string) ($document['title'] ?? ''), 0, 60)], false),
             SearchType::Comment => $projectName === null || empty($document['task_id']) ? null

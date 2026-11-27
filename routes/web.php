@@ -4,7 +4,7 @@ use App\Http\Controllers\AgentContextController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AllTasksController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\IncomingEmailController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\OutgoingEmailController;
@@ -48,6 +48,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Refresh the agents from their definition files on disk.
     Route::post('agents/sync', [AgentController::class, 'sync'])->name('agents.sync');
     Route::get('agents/{agent}/profile', [AgentController::class, 'profile'])->name('agents.profile');
+    // The agent's profile picture, served from the private disk.
+    Route::get('agents/{agent}/avatar', [AgentController::class, 'avatar'])->name('agents.avatar');
     Route::get('agents/{agent}/tasks', [AgentController::class, 'tasks'])->name('agents.tasks');
     Route::get('agents/{agent}/messages', [AgentController::class, 'messages'])->name('agents.messages');
     Route::resource('agents', AgentController::class);
@@ -80,13 +82,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Start a new chat context (fresh claude session) from an existing one.
     Route::post('agent-contexts/{agentContext}/new', [AgentContextController::class, 'store'])->name('agent-contexts.store');
 
-    // Reload the project's docs/documentations folder into the database.
-    Route::post('projects/{project}/documentations/sync', [DocumentationController::class, 'sync'])
-        ->name('projects.documentations.sync');
-    // Download the project's full documentation as a single PDF.
-    Route::get('projects/{project}/documentations/pdf', [DocumentationController::class, 'pdf'])
-        ->name('projects.documentations.pdf');
-    Route::resource('projects.documentations', DocumentationController::class)->scoped();
+    // Reload the project's docs folder into the database.
+    Route::post('projects/{project}/documents/sync', [DocumentController::class, 'sync'])
+        ->name('projects.documents.sync');
+    // Download the project's full document as a single PDF.
+    Route::get('projects/{project}/documents/pdf', [DocumentController::class, 'pdf'])
+        ->name('projects.documents.pdf');
+    Route::resource('projects.documents', DocumentController::class)->scoped();
 
     // Files stored for the project, and reloading its attachments folder.
     Route::get('projects/{project}/attachments', [ProjectAttachmentController::class, 'index'])

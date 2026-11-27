@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\AgentFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,6 +22,23 @@ class Agent extends Model
         'tools',
         'system_prompt',
         'source_path',
+        'avatar_path',
+    ];
+
+    /**
+     * The stored path never leaves the server; the UI uses `avatar_url`.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'avatar_path',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'avatar_url',
     ];
 
     /**
@@ -31,6 +49,20 @@ class Agent extends Model
         return [
             'tools' => 'array',
         ];
+    }
+
+    /**
+     * URL the agent's profile picture is served from, or null when it has
+     * none. The agent's `updated_at` is appended so a replaced picture is not
+     * served from the browser cache.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->avatar_path === null
+            ? null
+            : route('agents.avatar', ['agent' => $this->id, 'v' => $this->updated_at?->timestamp], false));
     }
 
     /**

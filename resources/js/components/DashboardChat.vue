@@ -184,31 +184,6 @@ function startNewContext(): void {
                 <template #selectors>
                     <div class="flex flex-col gap-2 sm:flex-row">
                         <Select
-                            :model-value="selectedProject"
-                            @update:model-value="onProjectChange"
-                        >
-                            <SelectTrigger
-                                class="w-full sm:w-56"
-                                aria-label="Projekt"
-                            >
-                                <SelectValue placeholder="Válassz projektet…">
-                                    <span class="flex items-center gap-2">
-                                        <FolderGit2 class="size-4" />
-                                        {{ selectedProject }}
-                                    </span>
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    v-for="project in chat.projects"
-                                    :key="project.id"
-                                    :value="project.name"
-                                >
-                                    {{ project.name }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select
                             :model-value="selectedAgent"
                             @update:model-value="onAgentChange"
                         >
@@ -236,6 +211,31 @@ function startNewContext(): void {
                                     :value="String(agent.id)"
                                 >
                                     {{ agent.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select
+                            :model-value="selectedProject"
+                            @update:model-value="onProjectChange"
+                        >
+                            <SelectTrigger
+                                class="w-full sm:w-56"
+                                aria-label="Projekt"
+                            >
+                                <SelectValue placeholder="Válassz projektet…">
+                                    <span class="flex items-center gap-2">
+                                        <FolderGit2 class="size-4" />
+                                        {{ selectedProject }}
+                                    </span>
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="project in chat.projects"
+                                    :key="project.id"
+                                    :value="project.name"
+                                >
+                                    {{ project.name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>

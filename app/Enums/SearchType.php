@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 use App\Models\AgentMessage;
-use App\Models\Documentation;
+use App\Models\Document;
 use App\Models\IncomingEmail;
 use App\Models\OutgoingEmail;
 use App\Models\PromptRun;
@@ -16,7 +16,7 @@ enum SearchType: string
 {
     case Task = 'task';
 
-    case Documentation = 'documentation';
+    case Document = 'document';
 
     case Prompt = 'prompt';
 
@@ -30,7 +30,7 @@ enum SearchType: string
     {
         return match ($this) {
             self::Task => 'Feladat',
-            self::Documentation => 'Dokumentáció',
+            self::Document => 'Dokumentum',
             self::Prompt => 'Prompt',
             self::Message => 'Üzenet',
             self::Mail => 'Levél',
@@ -47,7 +47,7 @@ enum SearchType: string
     {
         return match ($this) {
             self::Task => [Task::class],
-            self::Documentation => [Documentation::class],
+            self::Document => [Document::class],
             self::Prompt => [PromptRun::class],
             self::Message => [AgentMessage::class],
             self::Mail => [IncomingEmail::class, OutgoingEmail::class],

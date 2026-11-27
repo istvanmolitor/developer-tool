@@ -3,14 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Project;
-use App\Services\DocumentationService;
+use App\Services\DocumentService;
 use App\Services\ProjectService;
 use Illuminate\Database\Seeder;
 
 class ProjectSeeder extends Seeder
 {
     /**
-     * Seed the projects and their documentation.
+     * Seed the projects and their document.
      *
      * First the system project: the developer tool's own codebase. This is not
      * one of the projects living under the configured projects directory — it
@@ -19,11 +19,11 @@ class ProjectSeeder extends Seeder
      * therefore cannot be deleted.
      *
      * Then every directory under the configured projects directory is imported
-     * as a project, and each project's `docs/documentations` folder is loaded
-     * into the documentations table, so a fresh migration reflects what is
+     * as a project, and each project's `docs` folder is loaded
+     * into the documents table, so a fresh migration reflects what is
      * already on disk.
      */
-    public function run(ProjectService $projects, DocumentationService $documentation): void
+    public function run(ProjectService $projects, DocumentService $document): void
     {
         $system = Project::updateOrCreate(
             ['name' => Project::SYSTEM_NAME],
@@ -43,9 +43,9 @@ class ProjectSeeder extends Seeder
             $this->command?->info("Projekt importálva: {$name}");
         }
 
-        // Load each project's documentation folder into the database.
-        Project::query()->each(function (Project $project) use ($documentation): void {
-            $documentation->syncProject($project);
+        // Load each project's document folder into the database.
+        Project::query()->each(function (Project $project) use ($document): void {
+            $document->syncProject($project);
         });
     }
 }

@@ -69,7 +69,7 @@ const rightNavItems: NavItem[] = [
         icon: Folder,
     },
     {
-        title: 'Dokumentáció',
+        title: 'Dokumentumok',
         href: 'https://laravel.com/docs/starter-kits#vue',
         icon: BookOpen,
     },

@@ -6,6 +6,7 @@ use App\Models\Agent;
 use App\Models\AgentContext;
 use App\Models\Project;
 use App\Models\PromptRun;
+use App\Models\Setting;
 use App\Models\Task;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -201,5 +202,47 @@ test('the dashboard chat ignores another user\'s conversation', function () {
             ->where('chat.context', null)
             ->where('chat.context_chosen', false)
             ->has('chat.runs', 0)
+        );
+});
+
+test('the dashboard shows the daily and weekly spending with the prompt counts', function () {
+    $this->actingAs(User::factory()->create());
+
+    Setting::set('daily_cost_limit_usd', '10');
+    Setting::set('weekly_cost_limit_usd', '50');
+
+    // Today: two runs; earlier this week: one more; last week: not counted.
+    PromptRun::factory()->count(2)->create(['cost_usd' => 1.25]);
+    PromptRun::factory()->create([
+        'cost_usd' => 2,
+        'created_at' => now()->startOfWeek()->addMinute(),
+    ]);
+    PromptRun::factory()->create([
+        'cost_usd' => 99,
+        'created_at' => now()->startOfWeek()->subDay(),
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('costStats.daily.cost', fn ($cost) => (float) $cost === 2.5)
+            ->where('costStats.daily.runs', 2)
+            ->where('costStats.daily.limit', fn ($limit) => (float) $limit === 10.0)
+            ->where('costStats.weekly.cost', fn ($cost) => (float) $cost === 4.5)
+            ->where('costStats.weekly.runs', 3)
+            ->where('costStats.weekly.limit', fn ($limit) => (float) $limit === 50.0),
+        );
+});
+
+test('without a limit the dashboard still reports what was spent', function () {
+    $this->actingAs(User::factory()->create());
+
+    PromptRun::factory()->create(['cost_usd' => 3]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('costStats.daily.cost', fn ($cost) => (float) $cost === 3.0)
+            ->where('costStats.daily.limit', null),
         );
 });

@@ -87,10 +87,10 @@ function formatDate(value: string | null): string {
 <template>
     <Head :title="filters.q ? `Keresés: ${filters.q}` : 'Keresés'" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <Heading
             title="Keresés"
-            description="Feladatok, dokumentációk, promptok, üzenetek, levelek és kommentek."
+            description="Feladatok, dokumentumok, promptok, üzenetek, levelek és kommentek."
         />
 
         <ListSearchInput

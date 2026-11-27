@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('documentations', function (Blueprint $table) {
+        Schema::create('documents', function (Blueprint $table) {
             $table->id();
-            // The documentation files live under a project's docs/documentations
+            // The document files live under a project's docs
             // folder; a row is the imported content of one Markdown file. When
             // the project goes, its imported docs go with it.
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
-            // Path of the file relative to docs/documentations (e.g. `README.md`
+            // Path of the file relative to docs (e.g. `README.md`
             // or `guides/setup.md`), unique within a project.
             $table->string('path');
             $table->string('title')->nullable();
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('documentations');
+        Schema::dropIfExists('documents');
     }
 };

@@ -54,7 +54,7 @@ nem kell kézzel is átírni a `.md`-t.
 Vesszővel elválasztott lista (a fájlban és a formon is). Kétféle elem:
 - **Beépített eszközök:** `Read, Grep, Glob, Bash, Write, Edit, TodoWrite, Agent`.
 - **MCP eszközök:** `mcp__<szerver>__<tool>` alakban, pl. `mcp__tasks__create-task`,
-  `mcp__agents__run-agent`, `mcp__docs__sync-documentation`.
+  `mcp__agents__run-agent`, `mcp__docs__sync-documents`.
 
 A prompt run **csak azokat az MCP szervereket kapja meg**, amelyeket a `tools`
 lista beenged (`ClaudePromptRunner::command()`):
@@ -63,7 +63,7 @@ lista beenged (`ClaudePromptRunner::command()`):
 - `mcp__agents__*` → `agents` szerver (`run-agent` — más agentek futtatása).
   **Csak az orchestrátor (project-manager) kapja meg**, hogy egy agent ne tudjon
   korlátlanul újabb futásokat indítani.
-- `mcp__docs__*` → `docs` szerver (`sync-documentation` — a megírt dokumentáció
+- `mcp__docs__*` → `docs` szerver (`sync-documents` — a megírt dokumentáció
   betöltése a DB-be).
 - **Minden agent-futás megkapja** a `tasks` szervert (a futáshoz kötve) és vele
   a `next-task`, `update-task`, `add-task-comment` eszközt (`TASK_TOOLS`), hogy

@@ -29,7 +29,7 @@ test('it loads an agent definition from a markdown file', function () {
         tools: Read, Grep, Edit, Write
         ---
 
-        You write documentation.
+        You write document.
         MD);
 
     $this->seed(AgentSeeder::class);
@@ -40,7 +40,7 @@ test('it loads an agent definition from a markdown file', function () {
         ->and($agent->description)->toBe('Writes docs from the current code.')
         ->and($agent->model)->toBe('claude-sonnet-5')
         ->and($agent->tools)->toBe(['Read', 'Grep', 'Edit', 'Write'])
-        ->and($agent->system_prompt)->toBe('You write documentation.')
+        ->and($agent->system_prompt)->toBe('You write document.')
         ->and($agent->source_path)->toBe($this->agentsPath.'/documentarian.md');
 });
 

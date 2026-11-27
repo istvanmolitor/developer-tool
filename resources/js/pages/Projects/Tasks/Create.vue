@@ -49,7 +49,7 @@ function submit(): void {
 <template>
     <Head :title="`Új feladat — ${project.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <Heading
             title="Új feladat"
             :description="`Feladat a(z) „${project.name}” projekthez.`"

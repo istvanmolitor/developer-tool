@@ -106,7 +106,7 @@ function run(): void {
 <template>
     <Head :title="`${task.title} — ${project.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading :title="task.title" :description="project.name" />
             <div class="flex shrink-0 items-center gap-1">

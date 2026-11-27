@@ -1,21 +1,28 @@
 <script setup lang="ts">
-import { Head, Link, usePoll } from '@inertiajs/vue3';
-import { Clock, Info, ListTodo, Loader2 } from '@lucide/vue';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import DashboardChat from '@/components/DashboardChat.vue';
-import type { DashboardChatData } from '@/components/DashboardChat.vue';
-import DashboardChatContexts from '@/components/DashboardChatContexts.vue';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Head, Link, usePoll } from "@inertiajs/vue3";
+import { Clock, Info, ListTodo, Loader2, Wallet } from "@lucide/vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import DashboardChat from "@/components/DashboardChat.vue";
+import type { DashboardChatData } from "@/components/DashboardChat.vue";
+import DashboardChatContexts from "@/components/DashboardChatContexts.vue";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog';
-import { dashboard } from '@/routes';
-import tasks from '@/routes/tasks';
+} from "@/components/ui/dialog";
+import { dashboard } from "@/routes";
+import { edit as appSettings } from "@/routes/app-settings";
+import tasks from "@/routes/tasks";
+
+type CostWindow = {
+    cost: number;
+    runs: number;
+    limit: number | null;
+};
 
 type QueuedRun = {
     id: number;
@@ -26,7 +33,7 @@ type QueuedRun = {
     agent: { id: number; name: string } | null;
 };
 
-defineProps<{
+const props = defineProps<{
     promptQueue: {
         running: QueuedRun[];
         queued: QueuedRun[];
@@ -37,7 +44,29 @@ defineProps<{
         total: number;
         in_progress: number;
     };
+    costStats: {
+        daily: CostWindow;
+        weekly: CostWindow;
+    };
 }>();
+
+const costWindows = computed(() => [
+    { key: "daily", label: "Ma", window: props.costStats.daily },
+    { key: "weekly", label: "Ezen a héten", window: props.costStats.weekly },
+]);
+
+/** How full the limit is, capped at 100% so the bar never overflows. */
+function usedPercent(window: CostWindow): number {
+    if (window.limit === null || window.limit <= 0) {
+        return 0;
+    }
+
+    return Math.min(100, (window.cost / window.limit) * 100);
+}
+
+function formatUsd(value: number): string {
+    return `$${value.toFixed(2)}`;
+}
 
 const selectedRun = ref<QueuedRun | null>(null);
 
@@ -45,14 +74,14 @@ defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'Vezérlőpult',
+                title: "Vezérlőpult",
                 href: dashboard(),
             },
         ],
     },
 });
 
-usePoll(4000, { only: ['promptQueue', 'chat'] });
+usePoll(4000, { only: ["promptQueue", "chat", "costStats"] });
 
 // Ticks every second so the elapsed time of a running prompt counts up live.
 const now = ref(Date.now());
@@ -66,7 +95,7 @@ onBeforeUnmount(() => clearInterval(ticker));
 
 function elapsed(since: string | null): string {
     if (since === null) {
-        return '—';
+        return "—";
     }
 
     const seconds = Math.max(
@@ -140,6 +169,72 @@ function elapsed(since: string | null): string {
             <Card>
                 <CardHeader>
                     <CardTitle class="flex items-center gap-2 text-base">
+                        <Wallet class="size-4" />
+                        <Link :href="appSettings().url" class="hover:underline">
+                            Költés
+                        </Link>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent class="flex flex-col gap-4">
+                    <div
+                        v-for="item in costWindows"
+                        :key="item.key"
+                        class="flex flex-col gap-1"
+                    >
+                        <div class="flex items-baseline justify-between gap-2">
+                            <span class="text-xs text-muted-foreground">
+                                {{ item.label }}
+                            </span>
+                            <span class="text-xs text-muted-foreground">
+                                {{ item.window.runs }} prompt
+                            </span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-2">
+                            <span class="text-xl leading-none font-bold">
+                                {{ formatUsd(item.window.cost) }}
+                            </span>
+                            <span
+                                v-if="item.window.limit !== null"
+                                class="text-xs text-muted-foreground"
+                            >
+                                limit {{ formatUsd(item.window.limit) }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="item.window.limit !== null"
+                            class="h-2 w-full overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            :aria-valuenow="
+                                Math.round(usedPercent(item.window))
+                            "
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            :aria-label="`${item.label} költés a limithez képest`"
+                        >
+                            <div
+                                class="h-full rounded-full transition-all"
+                                :class="
+                                    usedPercent(item.window) >= 100
+                                        ? 'bg-destructive'
+                                        : usedPercent(item.window) >= 80
+                                          ? 'bg-amber-500'
+                                          : 'bg-primary'
+                                "
+                                :style="{
+                                    width: `${usedPercent(item.window)}%`,
+                                }"
+                            />
+                        </div>
+                        <p v-else class="text-xs text-muted-foreground">
+                            Nincs limit beállítva.
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle class="flex items-center gap-2 text-base">
                         <ListTodo class="size-4" />
                         <Link :href="tasks.index().url" class="hover:underline">
                             Feladatok
@@ -178,8 +273,8 @@ function elapsed(since: string | null): string {
             <DialogHeader>
                 <DialogTitle>Futó prompt</DialogTitle>
                 <DialogDescription>
-                    {{ selectedRun?.project?.name ?? '—' }} ·
-                    {{ selectedRun?.agent?.name ?? 'nincs agent' }} ·
+                    {{ selectedRun?.agent?.name ?? "nincs agent" }} ·
+                    {{ selectedRun?.project?.name ?? "—" }} ·
                     {{ elapsed(selectedRun?.started_at ?? null) }}
                 </DialogDescription>
             </DialogHeader>

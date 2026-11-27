@@ -6,7 +6,7 @@ use App\Repositories\Contracts\AgentContextRepository;
 use App\Repositories\Contracts\AgentMessageRepository;
 use App\Repositories\Contracts\AgentRepository;
 use App\Repositories\Contracts\AttachmentRepository;
-use App\Repositories\Contracts\DocumentationRepository;
+use App\Repositories\Contracts\DocumentRepository;
 use App\Repositories\Contracts\IncomingEmailRepository;
 use App\Repositories\Contracts\MailboxRepository;
 use App\Repositories\Contracts\OutgoingEmailRepository;
@@ -19,7 +19,7 @@ use App\Repositories\Eloquent\EloquentAgentContextRepository;
 use App\Repositories\Eloquent\EloquentAgentMessageRepository;
 use App\Repositories\Eloquent\EloquentAgentRepository;
 use App\Repositories\Eloquent\EloquentAttachmentRepository;
-use App\Repositories\Eloquent\EloquentDocumentationRepository;
+use App\Repositories\Eloquent\EloquentDocumentRepository;
 use App\Repositories\Eloquent\EloquentIncomingEmailRepository;
 use App\Repositories\Eloquent\EloquentMailboxRepository;
 use App\Repositories\Eloquent\EloquentOutgoingEmailRepository;
@@ -54,7 +54,7 @@ class RepositoryServiceProvider extends ServiceProvider
         IncomingEmailRepository::class => EloquentIncomingEmailRepository::class,
         OutgoingEmailRepository::class => EloquentOutgoingEmailRepository::class,
         AttachmentRepository::class => EloquentAttachmentRepository::class,
-        DocumentationRepository::class => EloquentDocumentationRepository::class,
+        DocumentRepository::class => EloquentDocumentRepository::class,
         SettingRepository::class => EloquentSettingRepository::class,
     ];
 }

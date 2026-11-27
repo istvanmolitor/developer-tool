@@ -33,6 +33,9 @@ return new class extends Migration
             $table->string('checksum')->nullable();
             // Where the file came from: upload | sync | mail.
             $table->string('source')->default('upload');
+            // Who uploaded it through the UI. Null for files that arrived by
+            // folder sync, by mail, or from an agent.
+            $table->foreignId('uploaded_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             // For source=sync: the path relative to the project's attachments
             // folder. The sync upserts on (project_id, relative_path).
             $table->string('relative_path')->nullable();

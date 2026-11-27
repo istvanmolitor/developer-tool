@@ -125,7 +125,7 @@ test('an agent can be created with comma-separated tools', function () {
             'description' => 'Writes docs.',
             'model' => 'claude-sonnet-5',
             'tools' => 'Read, Grep, Edit',
-            'system_prompt' => 'You write documentation.',
+            'system_prompt' => 'You write document.',
         ])
         ->assertRedirect(route('agents.index'));
 
@@ -134,7 +134,7 @@ test('an agent can be created with comma-separated tools', function () {
     expect($agent->name)->toBe('Dokumentáció-író')
         ->and($agent->tools)->toBe(['Read', 'Grep', 'Edit'])
         ->and($agent->model)->toBe('claude-sonnet-5')
-        ->and($agent->system_prompt)->toBe('You write documentation.');
+        ->and($agent->system_prompt)->toBe('You write document.');
 });
 
 test('an agent can be created with the tools selected on the form', function () {
@@ -267,7 +267,7 @@ test('creating an agent writes its definition file', function () {
             'description' => 'Writes docs.',
             'model' => 'claude-sonnet-5',
             'tools' => 'Read, Grep, Edit',
-            'system_prompt' => 'You write documentation.',
+            'system_prompt' => 'You write document.',
         ])
         ->assertRedirect(route('agents.index'));
 
@@ -284,7 +284,7 @@ test('creating an agent writes its definition file', function () {
         ->description->toBe('Writes docs.')
         ->model->toBe('claude-sonnet-5')
         ->tools->toBe(['Read', 'Grep', 'Edit'])
-        ->system_prompt->toBe('You write documentation.');
+        ->system_prompt->toBe('You write document.');
 });
 
 test('updating an agent rewrites its definition file', function () {

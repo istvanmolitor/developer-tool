@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Documentation;
+use App\Models\Document;
 use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateDocumentationRequest extends FormRequest
+class UpdateDocumentRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -21,8 +21,8 @@ class UpdateDocumentationRequest extends FormRequest
     {
         /** @var Project $project */
         $project = $this->route('project');
-        /** @var Documentation $documentation */
-        $documentation = $this->route('documentation');
+        /** @var Document $document */
+        $document = $this->route('document');
 
         return [
             'path' => [
@@ -30,9 +30,9 @@ class UpdateDocumentationRequest extends FormRequest
                 'string',
                 'max:255',
                 'regex:/^(?![\/\\\\]).+\.md$/i',
-                Rule::unique('documentations', 'path')
+                Rule::unique('documents', 'path')
                     ->where('project_id', $project->id)
-                    ->ignore($documentation->id),
+                    ->ignore($document->id),
             ],
             'title' => ['nullable', 'string', 'max:255'],
             'content' => ['nullable', 'string'],
@@ -46,7 +46,7 @@ class UpdateDocumentationRequest extends FormRequest
     {
         return [
             'path.regex' => 'Az útvonalnak relatív .md fájlnak kell lennie (pl. README.md vagy guides/setup.md).',
-            'path.unique' => 'Ezen a projekten már van ilyen útvonalú dokumentáció.',
+            'path.unique' => 'Ezen a projekten már van ilyen útvonalú dokumentum.',
         ];
     }
 }

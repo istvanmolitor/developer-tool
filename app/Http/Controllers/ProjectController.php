@@ -54,7 +54,6 @@ class ProjectController extends Controller
     {
         return Inertia::render('Projects/Show', [
             'project' => $project,
-            'runs_count' => $project->promptRuns()->count(),
             'last_run_at' => $project->promptRuns()->max('prompt_runs.created_at'),
         ]);
     }
@@ -80,7 +79,7 @@ class ProjectController extends Controller
             'agents' => $this->agents->allOrderedByName(['id', 'name'])
                 ->map->only(['id', 'name'])->values(),
             'runs' => $project->promptRuns()
-                ->with('agent:id,name')
+                ->with('agent:id,name,avatar_path')
                 ->latest('prompt_runs.created_at')
                 ->limit(self::CHAT_MESSAGE_LIMIT)
                 ->get(),

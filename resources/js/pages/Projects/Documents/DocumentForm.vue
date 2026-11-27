@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import type { InertiaForm } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import type { InertiaForm } from "@inertiajs/vue3";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-type DocumentationForm = {
+type DocumentForm = {
     path: string;
     title: string;
     content: string;
 };
 
 defineProps<{
-    form: InertiaForm<DocumentationForm>;
+    form: InertiaForm<DocumentForm>;
     submitLabel: string;
     cancelHref: string;
 }>();
@@ -37,7 +37,7 @@ const emit = defineEmits<{ submit: [] }>();
                     class="font-mono"
                 />
                 <p class="text-xs text-muted-foreground">
-                    Relatív .md útvonal a <code>docs/documentations</code>
+                    Relatív .md útvonal a <code>docs</code>
                     mappán belül.
                 </p>
                 <InputError :message="form.errors.path" />
@@ -67,8 +67,8 @@ const emit = defineEmits<{ submit: [] }>();
                 id="content"
                 v-model="form.content"
                 rows="20"
-                placeholder="# Cím&#10;&#10;A dokumentáció Markdown tartalma…"
-                class="w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                placeholder="# Cím&#10;&#10;A dokumentum Markdown tartalma…"
+                class="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
             />
             <InputError :message="form.errors.content" />
         </div>

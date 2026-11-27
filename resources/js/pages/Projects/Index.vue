@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from "@inertiajs/vue3";
 import {
     ChevronRight,
     Folder,
     FolderGit2,
     LoaderCircle,
+    MessageSquare,
     Pencil,
     Plus,
-    Trash2,
     TriangleAlert,
-} from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import projectRoutes from '@/routes/projects';
+} from "@lucide/vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import projectRoutes from "@/routes/projects";
 
 type Project = {
     id: number;
@@ -24,7 +24,7 @@ type Project = {
     exists: boolean;
     is_git_repository: boolean;
     is_system: boolean;
-    provision_status: 'ready' | 'pending' | 'provisioning' | 'failed';
+    provision_status: "ready" | "pending" | "provisioning" | "failed";
     provision_error: string | null;
     last_modified_at: string | null;
     runs_count: number;
@@ -38,37 +38,23 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projectRoutes.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projectRoutes.index().url }],
     },
 });
 
 function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString('hu-HU') : '—';
-}
-
-function destroy(project: Project): void {
-    if (
-        !window.confirm(
-            `Eltávolítod a(z) „${project.name}” projektet a listáról? A lemezen lévő fájlok megmaradnak.`,
-        )
-    ) {
-        return;
-    }
-
-    router.delete(projectRoutes.destroy(project.name).url, {
-        preserveScroll: true,
-    });
+    return value ? new Date(value).toLocaleString("hu-HU") : "—";
 }
 </script>
 
 <template>
     <Head title="Projektek" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading
                 title="Projektek"
-                :description="`Claude promptok futtatása a regisztrált projektjeiden (import gyökér: ${projects_path})`"
+                :description="`A regisztrált projektjeid (import gyökér: ${projects_path})`"
             />
             <Button as-child>
                 <Link :href="projectRoutes.create().url">
@@ -134,9 +120,6 @@ function destroy(project: Project): void {
                             </Link>
                         </CardTitle>
                     </div>
-                    <p class="text-sm break-all text-muted-foreground">
-                        {{ project.path }}
-                    </p>
                     <p
                         v-if="project.description"
                         class="line-clamp-2 text-sm text-muted-foreground"
@@ -182,21 +165,23 @@ function destroy(project: Project): void {
                     <div
                         class="flex w-full items-center justify-end gap-1 pt-1"
                     >
-                        <Button variant="ghost" size="sm" as-child>
-                            <Link :href="projectRoutes.edit(project.name).url">
-                                <Pencil class="size-3.5" />
-                                Szerkesztés
+                        <Button variant="ghost" size="icon-sm" as-child>
+                            <Link
+                                :href="projectRoutes.prompts(project.name).url"
+                                :title="`Chat a(z) ${project.name} projekten`"
+                                :aria-label="`Chat a(z) ${project.name} projekten`"
+                            >
+                                <MessageSquare class="size-4" />
                             </Link>
                         </Button>
-                        <Button
-                            v-if="!project.is_system"
-                            variant="ghost"
-                            size="sm"
-                            class="text-destructive hover:text-destructive"
-                            @click="destroy(project)"
-                        >
-                            <Trash2 class="size-3.5" />
-                            Törlés
+                        <Button variant="ghost" size="icon-sm" as-child>
+                            <Link
+                                :href="projectRoutes.edit(project.name).url"
+                                :title="`${project.name} szerkesztése`"
+                                :aria-label="`${project.name} szerkesztése`"
+                            >
+                                <Pencil class="size-4" />
+                            </Link>
                         </Button>
                     </div>
                 </CardContent>

@@ -3,6 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use App\Models\PromptRun;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -46,6 +47,14 @@ interface PromptRunRepository extends Repository
      * @return Collection<int, PromptRun>
      */
     public function queued(int $limit): Collection;
+
+    /**
+     * What the runs started since the given moment have cost (the USD reported
+     * by `claude -p`) and how many there were — the dashboard's spending box.
+     *
+     * @return array{cost: float, runs: int}
+     */
+    public function usageSince(CarbonInterface $since): array;
 
     /**
      * A single run with its agent and project (including path), for the

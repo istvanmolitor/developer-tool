@@ -55,11 +55,11 @@ function formatDate(value: string | null): string {
 <template>
     <Head title="Postafiókok" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading
                 title="Postafiókok"
-                description="E-mail fiókok, amelyekről leveleket töltünk le (IMAP) és amelyekről leveleket küldünk (SMTP)."
+                description="Levelek letöltése (IMAP) és küldése (SMTP)."
             />
             <Button as-child>
                 <Link :href="mailboxRoutes.create().url">

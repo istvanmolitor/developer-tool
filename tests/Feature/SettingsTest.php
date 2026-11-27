@@ -71,3 +71,37 @@ test('create always overrides a caller-supplied auto_run with the system default
 
     expect($task->auto_run)->toBeFalse();
 });
+
+test('the spending limits are saved in dollars and shown on the settings page', function () {
+    $this->patch(route('app-settings.update'), [
+        'daily_cost_limit_usd' => '12.5',
+        'weekly_cost_limit_usd' => '60',
+    ])->assertRedirect(route('app-settings.edit'));
+
+    expect(Setting::get('daily_cost_limit_usd'))->toBe('12.5')
+        ->and(Setting::get('weekly_cost_limit_usd'))->toBe('60');
+
+    $this->get(route('app-settings.edit'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('settings.daily_cost_limit_usd', '12.5')
+            ->where('settings.weekly_cost_limit_usd', '60'),
+        );
+});
+
+test('an empty limit field means no limit', function () {
+    Setting::set('daily_cost_limit_usd', '12.5');
+
+    $this->patch(route('app-settings.update'), ['daily_cost_limit_usd' => ''])
+        ->assertRedirect(route('app-settings.edit'));
+
+    expect(Setting::get('daily_cost_limit_usd'))->toBeNull();
+});
+
+test('a limit must be a non-negative number', function () {
+    $this->patch(route('app-settings.update'), ['daily_cost_limit_usd' => '-3'])
+        ->assertSessionHasErrors('daily_cost_limit_usd');
+
+    $this->patch(route('app-settings.update'), ['weekly_cost_limit_usd' => 'sok'])
+        ->assertSessionHasErrors('weekly_cost_limit_usd');
+});

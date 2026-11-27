@@ -2,19 +2,18 @@
 import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Bot,
-    ChevronRight,
     MessageSquare,
     Pencil,
     Plus,
     RefreshCw,
     Search,
-    Trash2,
 } from "@lucide/vue";
 import { computed, ref } from "vue";
+import AgentAvatar from "@/components/AgentAvatar.vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import agentRoutes from "@/routes/agents";
 
@@ -25,6 +24,7 @@ type Agent = {
     description: string | null;
     model: string | null;
     source_path: string | null;
+    avatar_url: string | null;
 };
 
 const props = defineProps<{
@@ -64,30 +64,16 @@ function syncAgents(): void {
         },
     );
 }
-
-function destroy(agent: Agent): void {
-    if (
-        !window.confirm(
-            `Törlöd a(z) „${agent.name}” agentet? Ez a művelet nem vonható vissza.`,
-        )
-    ) {
-        return;
-    }
-
-    router.delete(agentRoutes.destroy(agent.id).url, {
-        preserveScroll: true,
-    });
-}
 </script>
 
 <template>
     <Head title="Agentek" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading
                 title="Agentek"
-                description="Szerepkörök, amelyeket a Claude futtat — mindegyiknek saját system promptja, modellje és eszközei vannak."
+                description="A szerepkörök, amelyekkel a promptok futnak."
             />
             <div class="flex shrink-0 items-center gap-2">
                 <Button
@@ -152,14 +138,16 @@ function destroy(agent: Agent): void {
 
             <div
                 v-else
-                class="grid auto-rows-min gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                class="grid auto-rows-min gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
             >
                 <Card
                     v-for="agent in filteredAgents"
                     :key="agent.id"
-                    class="relative flex h-full flex-col transition-colors hover:border-primary/50"
+                    class="group relative flex h-full flex-col items-center gap-3 p-4 text-center transition-colors hover:border-primary/50"
                 >
-                    <div class="absolute top-2 right-2 flex items-center">
+                    <div
+                        class="absolute top-1 right-1 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                    >
                         <Button variant="ghost" size="icon-sm" as-child>
                             <Link
                                 :href="agentRoutes.show(agent.id).url"
@@ -178,42 +166,31 @@ function destroy(agent: Agent): void {
                                 <Pencil class="size-3.5" />
                             </Link>
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            class="text-destructive hover:text-destructive"
-                            :title="`${agent.name} törlése`"
-                            :aria-label="`${agent.name} törlése`"
-                            @click="destroy(agent)"
-                        >
-                            <Trash2 class="size-3.5" />
-                        </Button>
                     </div>
-                    <CardHeader class="pr-28">
-                        <CardTitle class="min-w-0">
-                            <Link
-                                :href="agentRoutes.profile(agent.id).url"
-                                :title="agent.name"
-                                class="flex min-w-0 items-center gap-2 outline-none hover:underline focus-visible:underline"
-                            >
-                                <Bot
-                                    class="size-4 shrink-0 text-muted-foreground"
-                                />
-                                <span class="truncate">{{ agent.name }}</span>
-                                <ChevronRight
-                                    class="size-4 shrink-0 text-muted-foreground"
-                                />
-                            </Link>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent
-                        class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+
+                    <Link
+                        :href="agentRoutes.profile(agent.id).url"
+                        class="flex w-full flex-col items-center gap-2 outline-none"
                     >
-                        <code class="font-mono">{{ agent.slug }}</code>
-                        <Badge v-if="agent.model" variant="secondary">{{
-                            agent.model
-                        }}</Badge>
-                    </CardContent>
+                        <AgentAvatar
+                            :name="agent.name"
+                            :src="agent.avatar_url"
+                            class="size-20"
+                        />
+                        <span
+                            class="w-full text-sm leading-tight font-medium break-words hyphens-auto group-hover:underline"
+                        >
+                            {{ agent.name }}
+                        </span>
+                    </Link>
+
+                    <Badge
+                        v-if="agent.model"
+                        variant="secondary"
+                        class="mt-auto"
+                    >
+                        {{ agent.model }}
+                    </Badge>
                 </Card>
             </div>
         </template>

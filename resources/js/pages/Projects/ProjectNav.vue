@@ -18,6 +18,12 @@ const page = usePage();
 
 const items = computed(() => [
     {
+        title: "Áttekintés",
+        icon: LayoutDashboard,
+        href: projects.show(props.name).url,
+        component: "Projects/Show",
+    },
+    {
         title: "Chat",
         icon: MessageSquare,
         href: projects.prompts(props.name).url,
@@ -32,18 +38,12 @@ const items = computed(() => [
         also: ["Projects/TaskChanges"],
     },
     {
-        title: "Áttekintés",
-        icon: LayoutDashboard,
-        href: projects.show(props.name).url,
-        component: "Projects/Show",
-    },
-    {
-        title: "Dokumentáció",
+        title: "Dokumentumok",
         icon: BookText,
-        href: projects.documentations.index(props.name).url,
-        // The documentation section spans several pages (index, form, show),
+        href: projects.documents.index(props.name).url,
+        // The document section spans several pages (index, form, show),
         // so match on the folder prefix to keep the tab active throughout.
-        component: "Projects/Documentations",
+        component: "Projects/Documents",
     },
     {
         title: "Csatolmányok",

@@ -28,6 +28,23 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        return [
+            ...$this->profileRules($this->user()->id),
+            // Profile picture; raster images only, so it can be served inline.
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_avatar' => ['nullable', 'boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'avatar.image' => 'A profilkép csak kép lehet (JPG, PNG vagy WebP).',
+            'avatar.mimes' => 'A profilkép csak kép lehet (JPG, PNG vagy WebP).',
+            'avatar.max' => 'A profilkép legfeljebb 2 MB lehet.',
+        ];
     }
 }

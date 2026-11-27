@@ -32,9 +32,12 @@ defineOptions({
 <template>
     <Head :title="`Változásnapló — ${project.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
-            <Heading :title="project.name" :description="project.path" />
+            <Heading
+                :title="project.name"
+                description="A feladatok változásnaplója."
+            />
             <Button variant="outline" size="sm" as-child>
                 <Link :href="projects.tasks.index(project.name).url">
                     <ArrowLeft class="size-4" />

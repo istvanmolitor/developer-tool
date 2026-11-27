@@ -10,6 +10,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    // The authenticated user's profile picture, served from the private disk.
+    Route::get('settings/profile/avatar', [ProfileController::class, 'avatar'])->name('profile.avatar');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

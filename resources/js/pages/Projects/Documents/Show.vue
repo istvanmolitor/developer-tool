@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, Pencil, Trash2 } from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import MarkdownView from '@/components/MarkdownView.vue';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import projects from '@/routes/projects';
+import { Head, Link, router } from "@inertiajs/vue3";
+import { ArrowLeft, Pencil, Trash2 } from "@lucide/vue";
+import Heading from "@/components/Heading.vue";
+import MarkdownView from "@/components/MarkdownView.vue";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import projects from "@/routes/projects";
 
 type Project = {
     id: number;
@@ -13,7 +13,7 @@ type Project = {
     path: string;
 };
 
-type Documentation = {
+type Document = {
     id: number;
     path: string;
     title: string | null;
@@ -23,49 +23,45 @@ type Documentation = {
 
 const props = defineProps<{
     project: Project;
-    documentation: Documentation;
+    document: Document;
 }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Projektek', href: projects.index().url }],
+        breadcrumbs: [{ title: "Projektek", href: projects.index().url }],
     },
 });
 
 function destroy(): void {
     if (
         !window.confirm(
-            `Törlöd a(z) „${props.documentation.path}” dokumentációt az adatbázisból? A lemezen lévő fájl megmarad.`,
+            `Törlöd a(z) „${props.document.path}” dokumentumot az adatbázisból? A lemezen lévő fájl megmarad.`,
         )
     ) {
         return;
     }
 
     router.delete(
-        projects.documentations.destroy({
+        projects.documents.destroy({
             project: props.project.name,
-            documentation: props.documentation.id,
+            document: props.document.id,
         }).url,
     );
 }
 </script>
 
 <template>
-    <Head
-        :title="`${documentation.title ?? documentation.path} — ${project.name}`"
-    />
+    <Head :title="`${document.title ?? document.path} — ${project.name}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
             <Heading
-                :title="documentation.title ?? documentation.path"
-                :description="documentation.path"
+                :title="document.title ?? document.path"
+                :description="document.path"
             />
             <div class="flex shrink-0 items-center gap-1">
                 <Button variant="outline" size="sm" as-child>
-                    <Link
-                        :href="projects.documentations.index(project.name).url"
-                    >
+                    <Link :href="projects.documents.index(project.name).url">
                         <ArrowLeft class="size-4" />
                         Vissza
                     </Link>
@@ -73,9 +69,9 @@ function destroy(): void {
                 <Button variant="outline" size="sm" as-child>
                     <Link
                         :href="
-                            projects.documentations.edit({
+                            projects.documents.edit({
                                 project: project.name,
-                                documentation: documentation.id,
+                                document: document.id,
                             }).url
                         "
                     >
@@ -98,11 +94,11 @@ function destroy(): void {
         <Card>
             <CardContent class="pt-6">
                 <MarkdownView
-                    v-if="documentation.content"
-                    :html="documentation.content_html"
+                    v-if="document.content"
+                    :html="document.content_html"
                 />
                 <p v-else class="text-sm text-muted-foreground">
-                    Ez a dokumentáció üres.
+                    Ez a dokumentum üres.
                 </p>
             </CardContent>
         </Card>

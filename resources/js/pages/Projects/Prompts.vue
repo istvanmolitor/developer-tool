@@ -70,7 +70,8 @@ const form = useForm({ prompt: "", agent_id: null as number | null });
 
 /** The context the chat continues for the selected agent, if it has one yet. */
 const currentContext = computed(() => {
-    const agentId = selectedAgent.value === NO_AGENT ? null : Number(selectedAgent.value);
+    const agentId =
+        selectedAgent.value === NO_AGENT ? null : Number(selectedAgent.value);
 
     return (
         props.contexts.find((context) => context.agent_id === agentId) ?? null
@@ -144,7 +145,10 @@ watch(hasActiveRun, (active) => (active ? start() : stop()), {
 
     <div class="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
         <div class="flex items-start justify-between gap-4">
-            <Heading :title="project.name" :description="project.path" />
+            <Heading
+                :title="project.name"
+                description="Promptok futtatása a projekten."
+            />
             <div class="flex shrink-0 items-center gap-1">
                 <Button variant="outline" size="sm" as-child>
                     <Link :href="projects.edit(project.name).url">
