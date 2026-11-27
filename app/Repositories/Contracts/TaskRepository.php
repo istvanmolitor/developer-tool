@@ -31,4 +31,12 @@ interface TaskRepository extends Repository
      * MCP tool (project, agent, comments, changes and attachments with authors).
      */
     public function findWithDetails(int|string $id): ?Task;
+
+    /**
+     * How many tasks exist in total, and how many are in progress — the
+     * dashboard's task stat box.
+     *
+     * @return array{total: int, in_progress: int}
+     */
+    public function dashboardCounts(): array;
 }

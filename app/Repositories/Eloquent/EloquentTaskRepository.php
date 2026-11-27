@@ -51,4 +51,12 @@ class EloquentTaskRepository extends EloquentRepository implements TaskRepositor
             ->whereKey($id)
             ->first();
     }
+
+    public function dashboardCounts(): array
+    {
+        return [
+            'total' => $this->newQuery()->count(),
+            'in_progress' => $this->newQuery()->where('status', TaskStatus::InProgress)->count(),
+        ];
+    }
 }

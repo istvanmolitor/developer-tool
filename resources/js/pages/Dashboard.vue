@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { Head, Link, usePoll } from '@inertiajs/vue3';
-import { Bot, Clock, ListOrdered, Loader2 } from '@lucide/vue';
+import { Clock, Info, ListTodo, Loader2 } from '@lucide/vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import DashboardChat from '@/components/DashboardChat.vue';
 import type { DashboardChatData } from '@/components/DashboardChat.vue';
 import DashboardChatContexts from '@/components/DashboardChatContexts.vue';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { dashboard } from '@/routes';
-import projects from '@/routes/projects';
+import tasks from '@/routes/tasks';
 
 type QueuedRun = {
     id: number;
@@ -26,7 +33,13 @@ defineProps<{
         queued_count: number;
     };
     chat: DashboardChatData;
+    taskStats: {
+        total: number;
+        in_progress: number;
+    };
 }>();
+
+const selectedRun = ref<QueuedRun | null>(null);
 
 defineOptions({
     layout: {
@@ -64,10 +77,6 @@ function elapsed(since: string | null): string {
 
     return minutes > 0 ? `${minutes} perc ${seconds % 60} mp` : `${seconds} mp`;
 }
-
-function formatDate(value: string): string {
-    return new Date(value).toLocaleString('hu-HU');
-}
 </script>
 
 <template>
@@ -87,60 +96,43 @@ function formatDate(value: string): string {
             class="flex min-w-0 flex-col gap-4 lg:col-span-2 xl:col-span-1 xl:min-h-0 xl:overflow-y-auto"
         >
             <Card>
-                <CardHeader>
-                    <CardTitle class="flex items-center gap-2 text-base">
-                        <Loader2
-                            class="size-4"
-                            :class="
-                                promptQueue.running.length > 0
-                                    ? 'animate-spin text-ai-foreground'
-                                    : 'text-muted-foreground'
-                            "
-                        />
-                        Éppen futó prompt
-                    </CardTitle>
-                </CardHeader>
-                <CardContent class="flex flex-col gap-3">
-                    <p
+                <CardContent class="flex flex-col gap-2">
+                    <div
                         v-if="promptQueue.running.length === 0"
-                        class="text-sm text-muted-foreground"
+                        class="flex items-center gap-2 text-sm text-muted-foreground"
                     >
+                        <Loader2 class="size-4 shrink-0" />
                         Jelenleg nem fut prompt.
-                    </p>
+                    </div>
 
                     <div
                         v-for="run in promptQueue.running"
                         :key="run.id"
-                        class="flex flex-col gap-1.5 rounded-lg border border-l-2 border-l-ai-foreground bg-ai/15 p-3"
+                        class="flex items-center gap-2"
                     >
-                        <p
-                            class="line-clamp-3 text-sm font-medium break-words whitespace-pre-wrap"
+                        <Loader2
+                            class="size-4 shrink-0 animate-spin text-ai-foreground"
+                        />
+                        <span
+                            class="min-w-0 flex-1 truncate text-sm font-medium"
                         >
                             {{ run.prompt }}
-                        </p>
-                        <p
-                            class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
+                        </span>
+                        <span
+                            class="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
                         >
-                            <Link
-                                v-if="run.project"
-                                :href="projects.prompts(run.project.name).url"
-                                class="font-medium text-foreground hover:underline"
-                            >
-                                {{ run.project.name }}
-                            </Link>
-                            <Badge
-                                v-if="run.agent"
-                                variant="ai"
-                                class="gap-1 font-normal"
-                            >
-                                <Bot class="size-3" />
-                                {{ run.agent.name }}
-                            </Badge>
-                            <span class="inline-flex items-center gap-1">
-                                <Clock class="size-3" />
-                                {{ elapsed(run.started_at) }}
-                            </span>
-                        </p>
+                            <Clock class="size-3" />
+                            {{ elapsed(run.started_at) }}
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            class="shrink-0"
+                            title="Prompt részletei"
+                            @click="selectedRun = run"
+                        >
+                            <Info class="size-4" />
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -148,75 +140,52 @@ function formatDate(value: string): string {
             <Card>
                 <CardHeader>
                     <CardTitle class="flex items-center gap-2 text-base">
-                        <ListOrdered class="size-4" />
-                        Hátralévő promptok
-                        <Badge variant="secondary">
-                            {{ promptQueue.queued_count }}
-                        </Badge>
+                        <ListTodo class="size-4" />
+                        <Link :href="tasks.index().url" class="hover:underline">
+                            Feladatok
+                        </Link>
                     </CardTitle>
                 </CardHeader>
-                <CardContent class="flex flex-col gap-2">
-                    <p
-                        v-if="promptQueue.queued_count === 0"
-                        class="text-sm text-muted-foreground"
-                    >
-                        A sor üres.
-                    </p>
-
-                    <ol v-else class="flex flex-col gap-2">
-                        <li
-                            v-for="(run, index) in promptQueue.queued"
-                            :key="run.id"
-                            class="flex items-start gap-3 rounded-lg border p-3"
+                <CardContent class="flex gap-6">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs text-muted-foreground">
+                            Összes
+                        </span>
+                        <span class="text-2xl leading-none font-bold">
+                            {{ taskStats.total }}
+                        </span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs text-muted-foreground">
+                            Folyamatban
+                        </span>
+                        <span
+                            class="text-2xl leading-none font-bold text-ai-foreground"
                         >
-                            <span
-                                class="w-5 shrink-0 text-right text-xs font-medium text-muted-foreground"
-                            >
-                                {{ index + 1 }}.
-                            </span>
-                            <div class="flex min-w-0 flex-1 flex-col gap-1">
-                                <p class="truncate text-sm">
-                                    {{ run.prompt }}
-                                </p>
-                                <p
-                                    class="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground"
-                                >
-                                    <Link
-                                        v-if="run.project"
-                                        :href="
-                                            projects.prompts(run.project.name)
-                                                .url
-                                        "
-                                        class="hover:underline"
-                                    >
-                                        {{ run.project.name }}
-                                    </Link>
-                                    <span v-if="run.agent">
-                                        · {{ run.agent.name }}
-                                    </span>
-                                    <span
-                                        >·
-                                        {{ formatDate(run.created_at) }}</span
-                                    >
-                                </p>
-                            </div>
-                        </li>
-                    </ol>
-
-                    <p
-                        v-if="
-                            promptQueue.queued_count > promptQueue.queued.length
-                        "
-                        class="text-xs text-muted-foreground"
-                    >
-                        …és még
-                        {{
-                            promptQueue.queued_count - promptQueue.queued.length
-                        }}
-                        prompt.
-                    </p>
+                            {{ taskStats.in_progress }}
+                        </span>
+                    </div>
                 </CardContent>
             </Card>
         </div>
     </div>
+
+    <Dialog
+        :open="selectedRun !== null"
+        @update:open="(open) => !open && (selectedRun = null)"
+    >
+        <DialogContent class="max-h-[85vh] max-w-2xl overflow-y-auto">
+            <DialogHeader>
+                <DialogTitle>Futó prompt</DialogTitle>
+                <DialogDescription>
+                    {{ selectedRun?.project?.name ?? '—' }} ·
+                    {{ selectedRun?.agent?.name ?? 'nincs agent' }} ·
+                    {{ elapsed(selectedRun?.started_at ?? null) }}
+                </DialogDescription>
+            </DialogHeader>
+            <pre
+                class="rounded-md bg-muted p-3 text-xs break-words whitespace-pre-wrap"
+                >{{ selectedRun?.prompt }}</pre>
+        </DialogContent>
+    </Dialog>
 </template>

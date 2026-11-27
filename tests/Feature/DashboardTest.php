@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\PromptRunStatus;
+use App\Enums\TaskStatus;
 use App\Models\Agent;
 use App\Models\AgentContext;
 use App\Models\Project;
 use App\Models\PromptRun;
+use App\Models\Task;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -53,6 +55,21 @@ test('the dashboard lists only the first queued prompts but counts all of them',
         ->assertInertia(fn (Assert $page) => $page
             ->has('promptQueue.queued', 10)
             ->where('promptQueue.queued_count', 12)
+        );
+});
+
+test('the dashboard shows how many tasks exist in total and how many are in progress', function () {
+    $this->actingAs(User::factory()->create());
+
+    Task::factory()->create(['status' => TaskStatus::InProgress]);
+    Task::factory()->create(['status' => TaskStatus::InProgress]);
+    Task::factory()->create(['status' => TaskStatus::Todo]);
+    Task::factory()->create(['status' => TaskStatus::Done]);
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('taskStats.total', 4)
+            ->where('taskStats.in_progress', 2)
         );
 });
 

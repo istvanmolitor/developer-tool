@@ -9,6 +9,7 @@ use App\Repositories\Contracts\AgentContextRepository;
 use App\Repositories\Contracts\AgentRepository;
 use App\Repositories\Contracts\ProjectRepository;
 use App\Repositories\Contracts\PromptRunRepository;
+use App\Repositories\Contracts\TaskRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -36,6 +37,7 @@ class DashboardController extends Controller
         private ProjectRepository $projects,
         private AgentRepository $agents,
         private AgentContextRepository $agentContexts,
+        private TaskRepository $tasks,
     ) {}
 
     /**
@@ -52,6 +54,7 @@ class DashboardController extends Controller
                 'queued_count' => $this->promptRuns->pendingCount(),
             ],
             'chat' => fn (): array => $this->chat($request),
+            'taskStats' => fn (): array => $this->tasks->dashboardCounts(),
         ]);
     }
 
