@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\SearchType;
+use App\Observers\IncomingEmailObserver;
 use App\Services\Search\IndexedInSearch;
 use App\Services\Search\Searchable;
 use Carbon\CarbonImmutable;
 use Database\Factories\IncomingEmailFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,11 +17,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
+ * @property string|null $from_address
+ * @property string|null $from_name
+ * @property list<string>|null $to
+ * @property list<string>|null $cc
  * @property CarbonImmutable|null $received_at
  * @property CarbonImmutable|null $read_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
+#[ObservedBy(IncomingEmailObserver::class)]
 class IncomingEmail extends Model implements Searchable
 {
     /** @use HasFactory<IncomingEmailFactory> */

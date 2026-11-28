@@ -263,6 +263,47 @@ class MailboxService
     }
 
     /**
+     * Compose a new message from the mailbox: a free-standing outgoing mail (not a
+     * reply) with its recipients, subject, body and attached files. With
+     * {@see $autoSend} on it is sent right away through the mailbox's SMTP account;
+     * otherwise it waits as a draft for approval.
+     *
+     * @param  list<string>  $to
+     * @param  list<int>  $attachmentIds  Ids of existing attachments to send with the message.
+     */
+    public function compose(
+        Mailbox $mailbox,
+        array $to,
+        string $subject,
+        string $body,
+        array $attachmentIds = [],
+        ?PromptRun $promptRun = null,
+        bool $autoSend = false,
+    ): OutgoingEmail {
+        $outgoing = DB::transaction(function () use ($mailbox, $to, $subject, $body, $attachmentIds, $promptRun): OutgoingEmail {
+            $outgoing = $mailbox->outgoingEmails()->create([
+                'prompt_run_id' => $promptRun?->id,
+                'to' => $to,
+                'subject' => $subject,
+                'body_text' => $body,
+                'status' => OutgoingEmailStatus::Draft,
+            ]);
+
+            if ($attachmentIds !== []) {
+                $outgoing->attachments()->sync(array_values(array_unique($attachmentIds)));
+            }
+
+            return $outgoing;
+        });
+
+        if ($autoSend) {
+            $this->sendOutgoing($outgoing);
+        }
+
+        return $outgoing;
+    }
+
+    /**
      * Send a draft (or retry a failed) message through its mailbox's SMTP account.
      * A failed send is recorded on the message instead of being thrown.
      *
@@ -283,7 +324,13 @@ class MailboxService
             try {
                 Mail::mailer($this->registerMailer($mailbox))
                     ->to($locked->to)
-                    ->send(new MailboxMessage($mailbox, $locked->subject, $locked->body_text, inReplyTo: $locked->in_reply_to));
+                    ->send(new MailboxMessage(
+                        $mailbox,
+                        $locked->subject,
+                        $locked->body_text,
+                        inReplyTo: $locked->in_reply_to,
+                        files: array_values($locked->attachments()->get()->all()),
+                    ));
 
                 $locked->forceFill(['status' => OutgoingEmailStatus::Sent, 'sent_at' => now(), 'error' => null]);
                 $this->outgoingEmails->save($locked);

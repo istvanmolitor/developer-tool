@@ -115,7 +115,7 @@ class AgentToolService
         ],
         'mail' => [
             'label' => 'Levelezés',
-            'description' => 'Válasz a postafiókba érkezett levélre. A hozzárendelt postafiók adja, nem az eszközlista.',
+            'description' => 'Válasz a beérkezett levélre és új levél küldése. A hozzárendelt postafiók adja, nem az eszközlista.',
             'server' => MailServer::class,
             'kind' => self::KIND_MAILBOX,
         ],

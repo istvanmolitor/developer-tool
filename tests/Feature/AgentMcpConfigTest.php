@@ -84,7 +84,7 @@ test('an agent a mailbox is assigned to gets the mail server and the reply tool 
 
     expect(array_keys($config->servers()))->toBe(['mail']);
     expect($config->servers()['mail']['env'])->toBe(['DEVELOPER_TOOL_PROMPT_RUN_ID' => (string) $run->id]);
-    expect($config->sharedTools())->toBe([AgentMcpConfig::REPLY_EMAIL_TOOL]);
+    expect($config->sharedTools())->toBe([AgentMcpConfig::REPLY_EMAIL_TOOL, AgentMcpConfig::SEND_EMAIL_TOOL]);
 });
 
 test('an agent without a mailbox gets no mail server and no reply tool', function () {

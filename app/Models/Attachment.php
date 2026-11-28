@@ -138,6 +138,16 @@ class Attachment extends Model
     }
 
     /**
+     * The outgoing messages this file is sent with.
+     *
+     * @return BelongsToMany<OutgoingEmail, $this>
+     */
+    public function outgoingEmails(): BelongsToMany
+    {
+        return $this->belongsToMany(OutgoingEmail::class)->withTimestamps();
+    }
+
+    /**
      * Absolute filesystem path to the stored file. This is the stable path an
      * agent references when it needs to read the attachment.
      */

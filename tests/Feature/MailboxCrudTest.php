@@ -56,7 +56,7 @@ test('the mailboxes index lists every mailbox without exposing passwords', funct
         );
 });
 
-test('a mailbox can be viewed with its incoming emails', function () {
+test('a mailbox connection page shows its details and counts', function () {
     $mailbox = Mailbox::factory()->create();
     IncomingEmail::factory()->count(3)->for($mailbox)->create();
 
@@ -67,6 +67,19 @@ test('a mailbox can be viewed with its incoming emails', function () {
             ->component('Mailboxes/Show')
             ->where('mailbox.id', $mailbox->id)
             ->missing('mailbox.password')
+            ->where('incomingEmailsCount', 3)
+        );
+});
+
+test('the incoming page lists the received emails', function () {
+    $mailbox = Mailbox::factory()->create();
+    IncomingEmail::factory()->count(3)->for($mailbox)->create();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('mailboxes.incoming', $mailbox))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Mailboxes/Incoming')
             ->has('incomingEmails.data', 3)
             ->where('incomingEmailsCount', 3)
         );
@@ -326,6 +339,11 @@ test('the mailbox pages report the unread email counts', function () {
     $this->actingAs($user)
         ->get(route('mailboxes.show', $mailbox))
         ->assertInertia(fn (Assert $page) => $page
+            ->where('unreadEmailsCount', 2));
+
+    $this->actingAs($user)
+        ->get(route('mailboxes.incoming', $mailbox))
+        ->assertInertia(fn (Assert $page) => $page
             ->where('unreadEmailsCount', 2)
             ->has('incomingEmails.data.0.read_at'));
 });
@@ -410,18 +428,18 @@ test('deleting a mailbox removes the attachment files of its emails', function (
     Storage::disk('local')->assertMissing($attachment->path);
 });
 
-test('the mailbox page lists the attachments of each email', function () {
+test('the incoming page lists the attachments of each email', function () {
     $email = IncomingEmail::factory()->create();
     $email->attachments()->attach(Attachment::factory()->create(['filename' => 'terv.docx'])->id);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('mailboxes.show', $email->mailbox))
+        ->get(route('mailboxes.incoming', $email->mailbox))
         ->assertInertia(fn (Assert $page) => $page
             ->where('incomingEmails.data.0.attachments.0.filename', 'terv.docx')
             ->missing('incomingEmails.data.0.attachments.0.path'));
 });
 
-test('the mailbox page lists the agent replies of each email', function () {
+test('the incoming page lists the agent replies of each email', function () {
     $email = IncomingEmail::factory()->create();
     OutgoingEmail::factory()->create([
         'mailbox_id' => $email->mailbox_id,
@@ -430,7 +448,7 @@ test('the mailbox page lists the agent replies of each email', function () {
     ]);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('mailboxes.show', $email->mailbox))
+        ->get(route('mailboxes.incoming', $email->mailbox))
         ->assertInertia(fn (Assert $page) => $page
             ->where('incomingEmails.data.0.replies.0.body_text', 'Javítottuk.')
             ->where('incomingEmails.data.0.replies.0.status', 'draft'));

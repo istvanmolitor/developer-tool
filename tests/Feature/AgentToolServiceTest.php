@@ -91,7 +91,7 @@ test('the mail tools are mailbox-driven, so the agent form offers no checkbox fo
     ));
 
     expect($mail)->toHaveCount(1);
-    expect(array_column($mail[0]['tools'], 'name'))->toBe(['mcp__mail__reply-email']);
+    expect(array_column($mail[0]['tools'], 'name'))->toBe(['mcp__mail__reply-email', 'mcp__mail__send-email']);
 });
 
 test('only the built-in groups hold tools that are not mcp tools', function () {

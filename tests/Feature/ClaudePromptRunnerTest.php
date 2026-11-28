@@ -159,6 +159,7 @@ test('an agent with a mailbox gives the run the mail mcp server and the reply to
                 'Read',
                 'mcp__tasks__create-task',
                 'mcp__mail__reply-email',
+                'mcp__mail__send-email',
             ];
     });
 });

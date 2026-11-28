@@ -17,7 +17,7 @@ test('approving a draft reply sends it from the mailbox', function () {
 
     $this->actingAs($this->user)
         ->post(route('mailboxes.replies.send', [$reply->mailbox, $reply]))
-        ->assertRedirect(route('mailboxes.show', $reply->mailbox));
+        ->assertRedirect(route('mailboxes.outgoing', $reply->mailbox));
 
     expect($reply->fresh()->status)->toBe(OutgoingEmailStatus::Sent);
     Mail::assertSent(MailboxMessage::class, fn (MailboxMessage $mail) => $mail->hasTo('customer@example.test'));
@@ -39,7 +39,7 @@ test('a sent reply is not sent again', function () {
 
     $this->actingAs($this->user)
         ->post(route('mailboxes.replies.send', [$reply->mailbox, $reply]))
-        ->assertRedirect(route('mailboxes.show', $reply->mailbox));
+        ->assertRedirect(route('mailboxes.outgoing', $reply->mailbox));
 
     Mail::assertNothingSent();
 });
@@ -49,7 +49,7 @@ test('a draft reply can be discarded', function () {
 
     $this->actingAs($this->user)
         ->delete(route('mailboxes.replies.destroy', [$reply->mailbox, $reply]))
-        ->assertRedirect(route('mailboxes.show', $reply->mailbox));
+        ->assertRedirect(route('mailboxes.outgoing', $reply->mailbox));
 
     expect(OutgoingEmail::count())->toBe(0);
 });

@@ -108,7 +108,7 @@ test('the mailbox mails can be filtered to the unread ones', function () {
     IncomingEmail::factory()->for($mailbox)->create(['subject' => 'Olvasatlan', 'read_at' => null]);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('mailboxes.show', ['mailbox' => $mailbox, 'read' => 'unread']))
+        ->get(route('mailboxes.incoming', ['mailbox' => $mailbox, 'read' => 'unread']))
         ->assertInertia(fn (Assert $page) => $page
             ->has('incomingEmails.data', 1)
             ->where('incomingEmails.data.0.subject', 'Olvasatlan')

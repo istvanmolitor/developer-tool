@@ -4,14 +4,17 @@ namespace App\Models;
 
 use App\Enums\OutgoingEmailStatus;
 use App\Enums\SearchType;
+use App\Observers\OutgoingEmailObserver;
 use App\Services\Search\IndexedInSearch;
 use App\Services\Search\Searchable;
 use Carbon\CarbonImmutable;
 use Database\Factories\OutgoingEmailFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * A message written by a mailbox's agent, sent through the mailbox's SMTP account.
@@ -22,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
+#[ObservedBy(OutgoingEmailObserver::class)]
 class OutgoingEmail extends Model implements Searchable
 {
     /** @use HasFactory<OutgoingEmailFactory> */
@@ -80,6 +84,17 @@ class OutgoingEmail extends Model implements Searchable
     public function promptRun(): BelongsTo
     {
         return $this->belongsTo(PromptRun::class);
+    }
+
+    /**
+     * The files sent with the message. These are project attachments, so they
+     * stay with the project when the message is deleted (only the link is cut).
+     *
+     * @return BelongsToMany<Attachment, $this>
+     */
+    public function attachments(): BelongsToMany
+    {
+        return $this->belongsToMany(Attachment::class)->withTimestamps();
     }
 
     public static function searchType(): SearchType

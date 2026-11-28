@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
+    AtSign,
     BookOpen,
     Bot,
     FolderKanban,
@@ -26,6 +27,7 @@ import {
 import agents from '@/routes/agents';
 import { edit as appSettings } from '@/routes/app-settings';
 import { dashboard } from '@/routes';
+import mailAddresses from '@/routes/mail-addresses';
 import mailboxes from '@/routes/mailboxes';
 import { index as promptRuns } from '@/routes/prompt-runs';
 import projects from '@/routes/projects';
@@ -58,6 +60,11 @@ const mainNavItems: NavItem[] = [
         title: 'Postafiókok',
         href: mailboxes.index(),
         icon: Mail,
+    },
+    {
+        title: 'E-mail címek',
+        href: mailAddresses.index(),
+        icon: AtSign,
     },
     {
         title: 'Prompt sor',

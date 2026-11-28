@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
-import { Bot, ChevronRight, Mail, Pencil, Plus, Trash2 } from "@lucide/vue";
+import { Head, Link } from "@inertiajs/vue3";
+import {
+    ChevronRight,
+    FolderGit2,
+    Inbox,
+    Mail,
+    Plus,
+    SendHorizontal,
+} from "@lucide/vue";
+import AgentAvatar from "@/components/AgentAvatar.vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +25,7 @@ type Mailbox = {
     last_fetched_at: string | null;
     incoming_emails_count: number;
     unread_emails_count: number;
-    agent: { id: number; name: string } | null;
+    agent: { id: number; name: string; avatar_url: string | null } | null;
     project: { id: number; name: string } | null;
 };
 
@@ -32,20 +40,6 @@ defineOptions({
         ],
     },
 });
-
-function destroy(mailbox: Mailbox): void {
-    if (
-        !window.confirm(
-            `Törlöd a(z) „${mailbox.name}” postafiókot és a letöltött leveleit? Ez a művelet nem vonható vissza.`,
-        )
-    ) {
-        return;
-    }
-
-    router.delete(mailboxRoutes.destroy(mailbox.id).url, {
-        preserveScroll: true,
-    });
-}
 
 function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleString("hu-HU") : "még soha";
@@ -95,72 +89,98 @@ function formatDate(value: string | null): string {
                 :key="mailbox.id"
                 class="flex h-full flex-col transition-colors hover:border-primary/50"
             >
-                <CardHeader>
-                    <CardTitle class="min-w-0">
-                        <Link
-                            :href="mailboxRoutes.show(mailbox.id).url"
-                            class="flex items-center gap-2 break-all outline-none hover:underline focus-visible:underline"
-                        >
-                            <Mail
-                                class="size-4 shrink-0 text-muted-foreground"
-                            />
-                            {{ mailbox.name }}
-                            <ChevronRight
-                                class="size-4 shrink-0 text-muted-foreground"
-                            />
-                        </Link>
-                    </CardTitle>
-                    <p class="text-sm break-all text-muted-foreground">
-                        {{ mailbox.email }}
-                    </p>
-                    <p
+                <CardHeader class="grid-cols-[auto_1fr] grid-rows-1 items-center gap-3">
+                    <AgentAvatar
                         v-if="mailbox.agent"
-                        class="flex items-center gap-1.5 text-sm text-muted-foreground"
+                        :name="mailbox.agent.name"
+                        :src="mailbox.agent.avatar_url"
+                        class="size-11 shrink-0"
+                    />
+                    <span
+                        v-else
+                        class="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted"
+                        aria-hidden="true"
                     >
-                        <Bot class="size-3.5 shrink-0" aria-hidden="true" />
-                        <span class="sr-only">Agent:</span>
-                        {{ mailbox.agent.name }}
-                        <template v-if="mailbox.project">
-                            <span aria-hidden="true">·</span>
-                            <span class="sr-only">projekt:</span>
-                            {{ mailbox.project.name }}
-                        </template>
-                    </p>
+                        <Mail class="size-5 text-muted-foreground" />
+                    </span>
+                    <div class="min-w-0">
+                        <CardTitle class="min-w-0">
+                            <Link
+                                :href="mailboxRoutes.show(mailbox.id).url"
+                                class="flex items-center gap-1 outline-none hover:underline focus-visible:underline"
+                            >
+                                <span class="truncate">
+                                    {{ mailbox.agent?.name ?? mailbox.name }}
+                                </span>
+                                <ChevronRight
+                                    class="size-4 shrink-0 text-muted-foreground"
+                                />
+                            </Link>
+                        </CardTitle>
+                        <p class="text-sm break-all text-muted-foreground">
+                            {{ mailbox.email }}
+                        </p>
+                    </div>
                 </CardHeader>
                 <CardContent
-                    class="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                    class="mt-auto flex flex-col gap-2 text-xs text-muted-foreground"
                 >
-                    <Badge
-                        :variant="mailbox.is_active ? 'secondary' : 'outline'"
-                        >{{ mailbox.is_active ? "Aktív" : "Inaktív" }}</Badge
-                    >
-                    <Badge variant="outline"
-                        >{{ mailbox.incoming_emails_count }} levél</Badge
-                    >
-                    <Badge v-if="mailbox.unread_emails_count > 0"
-                        >{{ mailbox.unread_emails_count }} olvasatlan</Badge
-                    >
-                    <span
-                        >Utolsó letöltés:
-                        {{ formatDate(mailbox.last_fetched_at) }}</span
-                    >
-                    <div
-                        class="flex w-full items-center justify-end gap-1 pt-1"
-                    >
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="flex min-w-0 items-center gap-1.5">
+                            <Mail class="size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="sr-only">Postafiók:</span>
+                            <span class="truncate">{{ mailbox.name }}</span>
+                        </span>
+                        <span
+                            v-if="mailbox.project"
+                            class="flex min-w-0 items-center gap-1.5"
+                        >
+                            <FolderGit2
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <span class="sr-only">Workspace:</span>
+                            <span class="truncate">{{
+                                mailbox.project.name
+                            }}</span>
+                        </span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <Badge
+                            :variant="
+                                mailbox.is_active ? 'secondary' : 'outline'
+                            "
+                            >{{ mailbox.is_active ? "Aktív" : "Inaktív" }}</Badge
+                        >
+                        <Badge variant="outline"
+                            >{{ mailbox.incoming_emails_count }} levél</Badge
+                        >
+                        <Badge v-if="mailbox.unread_emails_count > 0"
+                            >{{ mailbox.unread_emails_count }} olvasatlan</Badge
+                        >
+                        <span
+                            >Utolsó letöltés:
+                            {{ formatDate(mailbox.last_fetched_at) }}</span
+                        >
+                    </div>
+                    <div class="flex items-center justify-end gap-1 pt-1">
                         <Button variant="ghost" size="sm" as-child>
-                            <Link :href="mailboxRoutes.edit(mailbox.id).url">
-                                <Pencil class="size-3.5" />
-                                Szerkesztés
+                            <Link
+                                :href="mailboxRoutes.incoming(mailbox.id).url"
+                                :title="`${mailbox.name} bejövő levelei`"
+                            >
+                                <Inbox class="size-3.5" />
+                                Bejövő
                             </Link>
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            class="text-destructive hover:text-destructive"
-                            @click="destroy(mailbox)"
-                        >
-                            <Trash2 class="size-3.5" />
-                            Törlés
+                        <Button variant="ghost" size="sm" as-child>
+                            <Link
+                                :href="mailboxRoutes.outgoing(mailbox.id).url"
+                                :title="`${mailbox.name} kimenő levelei`"
+                            >
+                                <SendHorizontal class="size-3.5" />
+                                Kimenő
+                            </Link>
                         </Button>
                     </div>
                 </CardContent>

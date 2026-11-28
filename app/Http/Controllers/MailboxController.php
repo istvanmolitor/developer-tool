@@ -7,7 +7,9 @@ use App\Enums\SearchType;
 use App\Http\Requests\StoreMailboxRequest;
 use App\Http\Requests\UpdateMailboxRequest;
 use App\Models\IncomingEmail;
+use App\Models\MailAddress;
 use App\Models\Mailbox;
+use App\Models\OutgoingEmail;
 use App\Repositories\Contracts\AgentRepository;
 use App\Repositories\Contracts\MailboxRepository;
 use App\Repositories\Contracts\ProjectRepository;
@@ -54,10 +56,22 @@ class MailboxController extends Controller
     }
 
     /**
-     * The mailbox with its received mails from the search index, newest first,
-     * filterable by text (subject, body, sender) and read state, and paginated.
+     * The mailbox's connection details: its agent, project, IMAP/SMTP settings and
+     * mail counts. The mail lists live on their own pages.
      */
-    public function show(Request $request, Mailbox $mailbox, SearchService $search): Response
+    public function show(Mailbox $mailbox): Response
+    {
+        return Inertia::render('Mailboxes/Show', [
+            'mailbox' => $mailbox->load(['agent:id,name', 'project:id,name']),
+            ...$this->mailCounts($mailbox),
+        ]);
+    }
+
+    /**
+     * The mailbox's received mail from the search index, newest first, filterable
+     * by text (subject, body, sender) and read state, and paginated.
+     */
+    public function incoming(Request $request, Mailbox $mailbox, SearchService $search): Response
     {
         $readState = $request->string('read')->toString();
 
@@ -76,24 +90,104 @@ class MailboxController extends Controller
                 ->paginate($request->integer('page', 1), 25),
         );
 
-        return Inertia::render('Mailboxes/Show', [
+        $incomingEmails = $results->paginate(
+            IncomingEmail::query()
+                ->select(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id'])
+                ->with([
+                    'attachments:id,filename,mime_type,size',
+                    'promptRun:id,status',
+                    'replies:id,incoming_email_id,to,subject,body_text,status,error,sent_at,created_at',
+                ]),
+            $request,
+        );
+
+        return Inertia::render('Mailboxes/Incoming', [
             'mailbox' => $mailbox->load(['agent:id,name', 'project:id,name']),
-            // Hydration builder for the search-result paginator.
-            'incomingEmails' => $results->paginate(
-                IncomingEmail::query()
-                    ->select(['id', 'mailbox_id', 'from_address', 'from_name', 'subject', 'body_text', 'received_at', 'read_at', 'prompt_run_id'])
-                    ->with([
-                        'attachments:id,filename,mime_type,size',
-                        'promptRun:id,status',
-                        'replies:id,incoming_email_id,to,subject,body_text,status,error,sent_at,created_at',
-                    ]),
-                $request,
+            'incomingEmails' => $incomingEmails,
+            'mailAddressIds' => $this->mailAddressIds(
+                collect($incomingEmails->items())->pluck('from_address')->all(),
             ),
             'filters' => $filters,
             'search_degraded' => $results->degraded,
+            ...$this->mailCounts($mailbox),
+        ]);
+    }
+
+    /**
+     * The mailbox's outgoing mail (sent and drafts) from the search index, newest
+     * first, filterable by text and paginated.
+     */
+    public function outgoing(Request $request, Mailbox $mailbox, SearchService $search): Response
+    {
+        $filters = ['q' => trim($request->string('q')->toString())];
+
+        $results = $search->search(
+            SearchCriteria::for(SearchType::Mail)
+                ->matching($filters['q'])
+                ->where('mailbox_id', $mailbox->id)
+                ->where('direction', 'outgoing')
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->integer('page', 1), 25),
+        );
+
+        $outgoingEmails = $results->paginate(
+            OutgoingEmail::query()
+                ->select(['id', 'mailbox_id', 'incoming_email_id', 'to', 'subject', 'body_text', 'status', 'error', 'sent_at', 'created_at'])
+                ->with(['attachments:id,filename,mime_type,size']),
+            $request,
+        );
+
+        return Inertia::render('Mailboxes/Outgoing', [
+            'mailbox' => $mailbox->load(['agent:id,name', 'project:id,name']),
+            'outgoingEmails' => $outgoingEmails,
+            'mailAddressIds' => $this->mailAddressIds(
+                collect($outgoingEmails->items())->flatMap(fn (OutgoingEmail $email): array => $email->to ?? [])->all(),
+            ),
+            'filters' => $filters,
+            'search_degraded' => $results->degraded,
+            ...$this->mailCounts($mailbox),
+        ]);
+    }
+
+    /**
+     * The mail counts shared by the connection page and the two list pages, for the
+     * navigation between them.
+     *
+     * @return array{incomingEmailsCount: int, unreadEmailsCount: int, outgoingEmailsCount: int}
+     */
+    private function mailCounts(Mailbox $mailbox): array
+    {
+        return [
             'incomingEmailsCount' => $mailbox->incomingEmails()->count(),
             'unreadEmailsCount' => $mailbox->incomingEmails()->whereNull('read_at')->count(),
-        ]);
+            'outgoingEmailsCount' => $mailbox->outgoingEmails()->count(),
+        ];
+    }
+
+    /**
+     * Map the given addresses (lowercased) to their mail_addresses id, so each mail
+     * row can link to the conversation with that address.
+     *
+     * @param  array<array-key, mixed>  $addresses
+     * @return array<string, int>
+     */
+    private function mailAddressIds(array $addresses): array
+    {
+        $addresses = collect($addresses)
+            ->filter(fn ($address): bool => is_string($address) && $address !== '')
+            ->map(fn (string $address): string => mb_strtolower(trim($address)))
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($addresses === []) {
+            return [];
+        }
+
+        return MailAddress::query()
+            ->whereIn('mail', $addresses)
+            ->pluck('id', 'mail')
+            ->all();
     }
 
     public function edit(Mailbox $mailbox): Response

@@ -28,6 +28,11 @@ final class AgentMcpConfig
     public const REPLY_EMAIL_TOOL = 'mcp__mail__reply-email';
 
     /**
+     * The `mail` MCP server's send tool as Claude Code names it.
+     */
+    public const SEND_EMAIL_TOOL = 'mcp__mail__send-email';
+
+    /**
      * The servers a run can get, each given only to an agent whose tools opt into
      * it (an `mcp__<server>__*` entry) — the same rule for every server, so the
      * agent's tools list alone decides what it may reach.
@@ -107,15 +112,15 @@ final class AgentMcpConfig
 
     /**
      * The MCP tools an agent restricted to a tools list gets beyond that list: the
-     * reply tool, when a mailbox is assigned to the agent, so it can answer that
-     * mailbox's mail. Everything else an agent may reach comes from its own tools
-     * list.
+     * reply and send tools, when a mailbox is assigned to the agent, so it can
+     * answer that mailbox's mail and send new mail from it. Everything else an
+     * agent may reach comes from its own tools list.
      *
      * @return list<string>
      */
     public function sharedTools(): array
     {
-        return $this->hasMailbox() ? [self::REPLY_EMAIL_TOOL] : [];
+        return $this->hasMailbox() ? [self::REPLY_EMAIL_TOOL, self::SEND_EMAIL_TOOL] : [];
     }
 
     /**

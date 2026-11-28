@@ -20,7 +20,7 @@ class EloquentMailboxRepository extends EloquentRepository implements MailboxRep
     public function allForIndex(): Collection
     {
         return $this->newQuery()
-            ->with(['agent:id,name', 'project:id,name'])
+            ->with(['agent:id,name,avatar_path,updated_at', 'project:id,name'])
             ->withCount([
                 'incomingEmails',
                 'incomingEmails as unread_emails_count' => fn (Builder $query) => $query->whereNull('read_at'),

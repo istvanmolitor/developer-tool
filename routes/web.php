@@ -6,6 +6,7 @@ use App\Http\Controllers\AllTasksController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\IncomingEmailController;
+use App\Http\Controllers\MailAddressController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\OutgoingEmailController;
 use App\Http\Controllers\ProjectAttachmentController;
@@ -55,6 +56,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('agents', AgentController::class);
 
     Route::resource('mailboxes', MailboxController::class);
+    // The mailbox's incoming and outgoing mail, each on its own page.
+    Route::get('mailboxes/{mailbox}/incoming', [MailboxController::class, 'incoming'])->name('mailboxes.incoming');
+    Route::get('mailboxes/{mailbox}/outgoing', [MailboxController::class, 'outgoing'])->name('mailboxes.outgoing');
     // Download the mailbox's new messages from its IMAP server.
     Route::post('mailboxes/{mailbox}/fetch', [MailboxController::class, 'fetch'])->name('mailboxes.fetch');
     Route::resource('mailboxes.emails', IncomingEmailController::class)
@@ -68,6 +72,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('mailboxes/{mailbox}/emails/{incomingEmail}/attachments/{attachment}', [IncomingEmailController::class, 'downloadAttachment'])
         ->scopeBindings()
         ->name('mailboxes.emails.attachments.download');
+    // Compose and send a new message from the mailbox (with attachments).
+    Route::get('mailboxes/{mailbox}/compose', [OutgoingEmailController::class, 'create'])->name('mailboxes.compose');
+    Route::post('mailboxes/{mailbox}/compose', [OutgoingEmailController::class, 'store'])->name('mailboxes.compose.store');
     // Approve (send) or discard a reply the mailbox's agent wrote.
     Route::post('mailboxes/{mailbox}/replies/{outgoingEmail}/send', [OutgoingEmailController::class, 'send'])
         ->scopeBindings()
@@ -75,6 +82,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('mailboxes/{mailbox}/replies/{outgoingEmail}', [OutgoingEmailController::class, 'destroy'])
         ->scopeBindings()
         ->name('mailboxes.replies.destroy');
+
+    // Addresses seen in incoming and outgoing mail, with a per-address conversation.
+    Route::resource('mail-addresses', MailAddressController::class)
+        ->parameters(['mail-addresses' => 'mailAddress']);
 
     Route::resource('projects', ProjectController::class);
     Route::get('projects/{project}/prompts', [ProjectController::class, 'prompts'])->name('projects.prompts');
